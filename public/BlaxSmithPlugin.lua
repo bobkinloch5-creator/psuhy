@@ -24,9 +24,9 @@ local ASSET_POLL_INTERVAL = 3 -- seconds for asset queue
 local MAX_RECONNECT_ATTEMPTS = 5
 local RECONNECT_BASE_DELAY = 2 -- seconds
 
--- Supabase Direct Connection (BlaxSmith Production)
+-- Supabase Direct Connection (UPDATED FOR NEW PROJECT)
 local SUPABASE_URL = "https://nwucmybenbnvrtlpdtpz.supabase.co"
-local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53dWNteWJlbmJudnJ0bHBkdHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNzI3MTAsImV4cCI6MjA1MTg0ODcxMH0.cF0cTGjEamxZ4oGUHjJ7xC1rR9g1e0r4TZ2a0kVt0Wk"
+local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53dWNteWJlbmJudnJ0bHBkdHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzY1NjksImV4cCI6MjA4MzM1MjU2OX0.UI9AIFpJYncge-FFK2_aeF_ZRis7wVc_lzoIX18S5HU"
 
 -- ============================================
 -- STATE
@@ -189,27 +189,27 @@ local function createStatusUI()
 	status.TextXAlignment = Enum.TextXAlignment.Left
 	status.Parent = frame
 	
-	-- Discord ID Label
+	-- User ID Label
 	local idLabel = Instance.new("TextLabel")
 	idLabel.Size = UDim2.new(0, 75, 0, 28)
 	idLabel.Position = UDim2.new(0, 10, 0, 72)
 	idLabel.BackgroundTransparency = 1
-	idLabel.Text = "Discord ID:"
+	idLabel.Text = "User ID:"
 	idLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 	idLabel.Font = Enum.Font.Gotham
 	idLabel.TextSize = 11
 	idLabel.TextXAlignment = Enum.TextXAlignment.Left
 	idLabel.Parent = frame
 	
-	-- Discord ID Input
+	-- User ID Input
 	local idInput = Instance.new("TextBox")
-	idInput.Name = "DiscordIDInput"
+	idInput.Name = "UserIDInput"
 	idInput.Size = UDim2.new(0, 220, 0, 28)
 	idInput.Position = UDim2.new(0, 85, 0, 72)
 	idInput.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 	idInput.BorderSizePixel = 0
 	idInput.Text = USER_ID
-	idInput.PlaceholderText = "Paste your Discord ID..."
+	idInput.PlaceholderText = "Paste your User ID from website..."
 	idInput.TextColor3 = Color3.fromRGB(100, 200, 255)
 	idInput.PlaceholderColor3 = Color3.fromRGB(80, 80, 90)
 	idInput.Font = Enum.Font.Code
@@ -299,7 +299,7 @@ local function createStatusUI()
 	instructions.Size = UDim2.new(1, -20, 0, 20)
 	instructions.Position = UDim2.new(0, 10, 0, 170)
 	instructions.BackgroundTransparency = 1
-	instructions.Text = "🌐 blaxsmith.dev/forge → Get your Discord ID"
+	instructions.Text = "🌐 blaxsmith.dev/forge → Copy your User ID"
 	instructions.TextColor3 = Color3.fromRGB(80, 80, 90)
 	instructions.Font = Enum.Font.Gotham
 	instructions.TextSize = 9
@@ -314,7 +314,7 @@ local function createStatusUI()
 			plugin:SetSetting("BlaxSmithDiscordID", newId)
 			saveBtn.Text = "✅ Saved!"
 			saveBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
-			print("[BlaxSmith] ✅ Discord ID saved!")
+			print("[BlaxSmith] ✅ User ID saved!")
 			task.delay(1.5, function()
 				saveBtn.Text = "💾 Save ID"
 				saveBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 90)
@@ -381,7 +381,7 @@ end
 -- ============================================
 local function sendHeartbeat()
 	if USER_ID == "" or #USER_ID < 10 then
-		updateStatus(false, "Set Discord ID first!")
+		updateStatus(false, "Set User ID first!")
 		return false
 	end
 	
@@ -752,6 +752,6 @@ print("  ✅ Script injection")
 print("  ✅ Undo support")
 print("  ✅ Real-time sync")
 print("")
-print("Discord ID:", USER_ID ~= "" and USER_ID or "(not set)")
+print("User ID:", USER_ID ~= "" and USER_ID or "(not set)")
 print("Website:", WEBSITE_URL)
 print("========================================")

@@ -44,9 +44,8 @@ export function PluginStatus({ userId }: PluginStatusProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              connected ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"
-            }`}
+            className={`w-10 h-10 rounded-lg flex items-center justify-center ${connected ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"
+              }`}
           >
             {checking ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -100,8 +99,23 @@ export function PluginStatus({ userId }: PluginStatusProps) {
           <ol className="text-sm text-white/80 space-y-1 ml-4 list-decimal">
             <li>Install the BlaxSmith plugin in Studio</li>
             <li>Open Studio and click the plugin icon</li>
-            <li>
-              Enter your User ID: <code className="px-2 py-0.5 bg-white/10 rounded text-purple-400">{userId}</code>
+            <li className="flex items-center gap-2 flex-wrap">
+              <span>Enter your User ID:</span>
+              <code className="px-2 py-0.5 bg-white/10 rounded text-purple-400">{userId}</code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(userId)
+                  const btn = document.getElementById('copy-user-id-btn')
+                  if (btn) {
+                    btn.textContent = '✓ Copied!'
+                    setTimeout(() => { btn.textContent = '📋 Copy' }, 2000)
+                  }
+                }}
+                id="copy-user-id-btn"
+                className="px-2 py-0.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs rounded transition-colors"
+              >
+                📋 Copy
+              </button>
             </li>
           </ol>
         </div>

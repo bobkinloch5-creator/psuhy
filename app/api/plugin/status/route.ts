@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js"
 // Use Node runtime to access Supabase
 export const runtime = "nodejs"
 
-const HEARTBEAT_TIMEOUT = 60000 // 60 seconds
+const HEARTBEAT_TIMEOUT = 86400000 // 24 hours - only disconnect on manual disconnect
 
 // CORS headers for Roblox Studio plugin
 const corsHeaders = {
@@ -67,11 +67,11 @@ export async function GET(request: Request) {
         success: true,
         studioInfo: studioInfo
           ? {
-              game_name: studioInfo.game_name,
-              place_id: studioInfo.place_id,
-              plugin_version: studioInfo.plugin_version,
-              last_poll: studioInfo.last_poll,
-            }
+            game_name: studioInfo.game_name,
+            place_id: studioInfo.place_id,
+            plugin_version: studioInfo.plugin_version,
+            last_poll: studioInfo.last_poll,
+          }
           : null,
         pendingAssets,
       },

@@ -22,12 +22,25 @@ export async function POST(request: Request) {
         // Get user data
         const { data: userData } = await supabase
             .from("users")
-            .select("id, username, subscription_tier")
+            .select("id, username, subscription_tier, generation_credits")
             .eq("discord_id", user.id)
             .single()
 
         if (!userData) {
             return NextResponse.json({ error: "User not found" }, { status: 404 })
+        }
+
+        // Check if user has credits
+        const currentCredits = userData.generation_credits ?? 0
+        if (currentCredits <= 0) {
+            const isPro = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
+            return NextResponse.json({
+                error: "No prompt credits remaining!",
+                message: isPro
+                    ? "Contact BlaxSmith support for more credits."
+                    : "Upgrade to Pro for 100 prompts/month!",
+                creditsRemaining: 0
+            }, { status: 403 })
         }
 
         let activeConversationId = conversationId
@@ -84,6 +97,8 @@ export async function POST(request: Request) {
         // SUPER INTELLIGENT SYSTEM PROMPT
         const systemPrompt = `You are ForgeMind, an elite Roblox development AI created by BlaxSmith AI. You are one of the most knowledgeable Roblox assistants in existence.
 
+The user you're talking to is "${userData.username}". When greeting them, use their name!
+
 ## YOUR EXPERTISE
 You are a master of:
 - **Luau/Lua scripting** - All APIs, services, best practices, optimization
@@ -114,15 +129,16 @@ When users ask you to ADD, INSERT, SPAWN, or CREATE assets like cars, weapons, t
 
 3. Remind users: "Make sure the BlaxSmith plugin is connected in Roblox Studio!"
 
-## RESPONSE GUIDELINES
+## CRITICAL: RESPONSE STYLE
 
-1. **Be SMART and THOROUGH** - Analyze questions deeply before answering
-2. **Provide WORKING code** - All code should be copy-paste ready
-3. **Explain your reasoning** - Help users understand WHY, not just HOW
-4. **Anticipate follow-ups** - Address likely related questions
-5. **Use Luau syntax** - Use modern Roblox Luau (not old Lua 5.1)
-6. **Security first** - Always include server-side validation in networking code
-7. **Performance focused** - Suggest optimized solutions
+**YOU ARE TALKING TO: ${userData.username}** - Use their name occasionally to make it personal!
+
+1. **BE SHORT AND SWEET** - Keep responses concise. 2-4 sentences for simple questions. Only use code blocks when specifically asked for code.
+2. **Be friendly and casual** - You're their buddy, not a robot. Use emojis sparingly 🔥
+3. **Use their name** - Say "Hey ${userData.username}!" or "Sure thing, ${userData.username}!" sometimes
+4. **Get to the point** - No long intros or unnecessary explanations
+5. **When they ask for code** - Provide clean, working Luau code with minimal explanation
+6. **Be enthusiastic** - You love helping with Roblox dev!
 
 ## CODE STYLE
 \`\`\`lua
@@ -246,12 +262,22 @@ Remember: You're not just helpful - you're BRILLIANT. Show your expertise!`
             .update({ updated_at: new Date().toISOString() })
             .eq("id", activeConversationId)
 
+        // DEDUCT 1 CREDIT after successful generation
+        const newCredits = currentCredits - 1
+        await supabase
+            .from("users")
+            .update({ generation_credits: newCredits })
+            .eq("id", userData.id)
+
+        console.log(`[AI Chat] Deducted 1 credit from user ${userData.username}. Remaining: ${newCredits}`)
+
         return NextResponse.json({
             success: true,
             conversationId: activeConversationId,
             response: aiResponse,
             assetsQueued: assetsToInsert.length > 0 ? assetsToInsert : undefined,
             model: selectedModelName,
+            creditsRemaining: newCredits,
         })
     } catch (error) {
         console.error("[AI Chat] Error:", error)

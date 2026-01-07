@@ -199,9 +199,9 @@ export function AIChatSidebar({ userTier = "free" }: AIChatSidebarProps) {
                     setIsOpen(true)
                     loadConversations()
                 }}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-110 z-50"
+                className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-125 z-50"
             >
-                <MessageSquare className="w-6 h-6 text-white" />
+                <MessageSquare className="w-8 h-8 text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
             </button>
         )
     }
