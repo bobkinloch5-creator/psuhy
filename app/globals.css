@@ -1,0 +1,381 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* BlaxSmith Premium Roblox Theme */
+  --background: oklch(0.08 0.015 250);
+  --foreground: oklch(0.98 0.01 250);
+  --card: oklch(0.12 0.02 250);
+  --card-foreground: oklch(0.98 0.01 250);
+  --popover: oklch(0.1 0.02 250);
+  --popover-foreground: oklch(0.98 0.01 250);
+  --primary: oklch(0.65 0.22 25);
+  /* Roblox Red */
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0.025 250);
+  --secondary-foreground: oklch(0.98 0.01 250);
+  --muted: oklch(0.15 0.02 250);
+  --muted-foreground: oklch(0.6 0.02 250);
+  --accent: oklch(0.7 0.18 55);
+  /* Gold accent */
+  --accent-foreground: oklch(0.1 0.02 250);
+  --destructive: oklch(0.55 0.25 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.22 0.03 250);
+  --input: oklch(0.15 0.025 250);
+  --ring: oklch(0.65 0.22 25);
+  --chart-1: oklch(0.65 0.22 25);
+  --chart-2: oklch(0.7 0.18 55);
+  --chart-3: oklch(0.6 0.2 145);
+  --chart-4: oklch(0.55 0.18 280);
+  --chart-5: oklch(0.5 0.15 200);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.06 0.015 250);
+  --sidebar-foreground: oklch(0.98 0.01 250);
+  --sidebar-primary: oklch(0.65 0.22 25);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.14 0.025 250);
+  --sidebar-accent-foreground: oklch(0.98 0.01 250);
+  --sidebar-border: oklch(0.18 0.02 250);
+  --sidebar-ring: oklch(0.65 0.22 25);
+}
+
+@theme inline {
+  --font-sans: "Inter", "Geist", "Geist Fallback", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Premium Roblox Theme Animations */
+@keyframes roblox-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(226, 35, 26, 0.3), 0 0 40px rgba(226, 35, 26, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(226, 35, 26, 0.5), 0 0 60px rgba(226, 35, 26, 0.2);
+  }
+}
+
+@keyframes forge-glow {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Roblox-style gradients */
+.forge-gradient {
+  background: linear-gradient(135deg,
+      oklch(0.45 0.20 20) 0%,
+      oklch(0.55 0.22 25) 25%,
+      oklch(0.60 0.20 30) 50%,
+      oklch(0.55 0.22 25) 75%,
+      oklch(0.45 0.20 20) 100%);
+  background-size: 200% 200%;
+  animation: forge-glow 6s ease infinite;
+}
+
+.roblox-gradient {
+  background: linear-gradient(135deg, #e23a1a 0%, #ff6b4a 50%, #e23a1a 100%);
+  background-size: 200% 200%;
+  animation: forge-glow 4s ease infinite;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #f7c342 0%, #ffd700 50%, #f7c342 100%);
+  background-size: 200% 200%;
+  animation: forge-glow 5s ease infinite;
+}
+
+/* Premium card styles */
+.premium-card {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.02) 50%,
+      rgba(0, 0, 0, 0.05) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.premium-card:hover {
+  border-color: rgba(226, 35, 26, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(226, 35, 26, 0.1);
+}
+
+/* Roblox button styles */
+.roblox-button {
+  background: linear-gradient(180deg, #e23a1a 0%, #c42e15 100%);
+  box-shadow: 0 4px 0 #8b1e0e, 0 8px 20px rgba(226, 35, 26, 0.3);
+  transition: all 0.15s ease;
+}
+
+.roblox-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #8b1e0e, 0 12px 30px rgba(226, 35, 26, 0.4);
+}
+
+.roblox-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #8b1e0e, 0 4px 10px rgba(226, 35, 26, 0.2);
+}
+
+/* Shine effect */
+.anvil-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.anvil-shine::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 70%);
+  animation: shine 4s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Glow effects */
+.glow-red {
+  box-shadow: 0 0 20px rgba(226, 35, 26, 0.4), 0 0 40px rgba(226, 35, 26, 0.2);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), 0 0 40px rgba(34, 197, 94, 0.2);
+}
+
+.glow-gold {
+  box-shadow: 0 0 20px rgba(247, 195, 66, 0.4), 0 0 40px rgba(247, 195, 66, 0.2);
+}
+
+/* Text effects */
+.text-glow {
+  text-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e23a1a, #c42e15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff4a2a, #e23a1a);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(226, 35, 26, 0.3);
+  color: white;
+}
+
+
+/* Focus ring styling */
+*:focus-visible {
+  outline: 2px solid rgba(226, 35, 26, 0.5);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   MOBILE-FIRST RESPONSIVE ENHANCEMENTS
+   ======================================== */
+
+/* Mobile adjustments (phones) */
+@media (max-width: 768px) {
+
+  /* Base font size */
+  html {
+    font-size: 14px;
+  }
+
+  /* Full width content on mobile */
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Stack buttons vertically */
+  .flex.gap-2,
+  .flex.gap-3,
+  .flex.gap-4 {
+    flex-direction: column;
+  }
+
+  /* Single column grids */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Smaller text sizes */
+  h1 {
+    font-size: 1.75rem !important;
+  }
+
+  h2 {
+    font-size: 1.5rem !important;
+  }
+
+  h3 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Touch-friendly buttons (44px minimum) */
+  button,
+  .btn,
+  a.btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Responsive tables */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Full screen modals on mobile */
+  [role="dialog"],
+  .modal {
+    max-width: 100vw;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Touch optimization */
+a,
+button,
+input,
+select,
+textarea {
+  /* Highlight tap on mobile */
+  -webkit-tap-highlight-color: rgba(255, 165, 0, 0.2);
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on input focus (iOS fix) */
+@media (max-width: 768px) {
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
