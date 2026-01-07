@@ -24,9 +24,9 @@ local ASSET_POLL_INTERVAL = 3 -- seconds for asset queue
 local MAX_RECONNECT_ATTEMPTS = 5
 local RECONNECT_BASE_DELAY = 2 -- seconds
 
--- Supabase Direct Connection
-local SUPABASE_URL = "https://cccmtdxtcajozuqiytov.supabase.co"
-local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjY210ZHh0Y2Fqb3p1cWl5dG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDA4MDEsImV4cCI6MjA4MzI3NjgwMX0.BQ2HHrVJx93Y5w6GJnm6v-1MSol-2qTfu8-01bQAY5I"
+-- Supabase Direct Connection (BlaxSmith Production)
+local SUPABASE_URL = "https://nwucmybenbnvrtlpdtpz.supabase.co"
+local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53dWNteWJlbmJudnJ0bHBkdHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNzI3MTAsImV4cCI6MjA1MTg0ODcxMH0.cF0cTGjEamxZ4oGUHjJ7xC1rR9g1e0r4TZ2a0kVt0Wk"
 
 -- ============================================
 -- STATE
