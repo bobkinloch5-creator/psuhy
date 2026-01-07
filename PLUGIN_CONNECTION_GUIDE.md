@@ -24,7 +24,7 @@ The plugin communicates with your website via REST API:
 **Purpose:** Tell the website your plugin is active
 
 **Example (Luau):**
-```lua
+\`\`\`lua
 local HttpService = game:GetService("HttpService")
 
 -- Send heartbeat every 5 seconds
@@ -44,15 +44,15 @@ while true do
     
     wait(5) -- Wait 5 seconds
 end
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "message": "Heartbeat received"
 }
-```
+\`\`\`
 
 ---
 
@@ -63,11 +63,11 @@ end
 **Purpose:** Check if plugin is connected (used by website)
 
 **Response:**
-```json
+\`\`\`json
 {
   "connected": true
 }
-```
+\`\`\`
 
 ---
 
@@ -76,14 +76,14 @@ end
 **Endpoint:** `POST https://blaxsmith.dev/api/plugin/send-to-studio`
 
 **Body:**
-```json
+\`\`\`json
 {
   "creationId": "uuid-here"
 }
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "creation": {
@@ -93,13 +93,13 @@ end
     "asset_data": { ... }
   }
 }
-```
+\`\`\`
 
 ---
 
 ## Complete Plugin Code Example
 
-```lua
+\`\`\`lua
 -- BlaxSmith AI Plugin
 -- Main Script
 
@@ -194,7 +194,7 @@ local plugin = BlaxSmithPlugin.new()
 plugin:startHeartbeat()
 
 return plugin
-```
+\`\`\`
 
 ---
 

@@ -111,7 +111,7 @@ Already included:
 
 Make sure these are set in Vercel:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SITE_URL=https://blaxsmith.dev
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
@@ -120,7 +120,7 @@ OPENAI_API_KEY=[Your CometAPI key]
 POLYPIZZA_API_KEY=[Your PollyPizza key]
 ROBLOX_OPEN_CLOUD_KEY=[Optional - for uploads]
 ROBLOX_USER_ID=[Optional - for uploads]
-```
+\`\`\`
 
 ### Discord Settings
 

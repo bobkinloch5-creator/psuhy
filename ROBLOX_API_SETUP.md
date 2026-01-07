@@ -4,10 +4,10 @@
 
 Add your Roblox API token to `.env.local`:
 
-```bash
+\`\`\`bash
 # Required for Roblox Studio plugin connection
 ROBLOX_API_TOKEN=your_roblox_token_here
-```
+\`\`\`
 
 ## Token Format
 
@@ -23,17 +23,17 @@ Your Roblox API token is a JWT (JSON Web Token) that contains:
 ## Setup Steps
 
 1. Create or update `.env.local`:
-```bash
+\`\`\`bash
 cd c:\Users\david\Downloads\blax-smith-ai-studio
 
 # Add to .env.local
 ROBLOX_API_TOKEN=<your_token>
-```
+\`\`\`
 
 2. Restart your development server:
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 3. The token will be used for:
 - Roblox Studio plugin authentication

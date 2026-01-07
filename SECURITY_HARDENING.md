@@ -30,7 +30,7 @@ Your BlaxSmith AI platform has these security measures already in place:
 
 Run this in Supabase SQL Editor immediately:
 
-```sql
+\`\`\`sql
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creations ENABLE ROW LEVEL SECURITY;
@@ -97,7 +97,7 @@ CREATE POLICY "Users can create own messages" ON chat_messages
       SELECT id FROM users WHERE discord_id = auth.uid()::text
     )
   ));
-```
+\`\`\`
 
 ---
 
@@ -107,7 +107,7 @@ CREATE POLICY "Users can create own messages" ON chat_messages
 
 Ensure these are **NEVER** in your code:
 
-```bash
+\`\`\`bash
 # ✅ ONLY in Vercel Environment Variables
 SUPABASE_SERVICE_ROLE_KEY=xxx     # CRITICAL - Server only!
 OPENAI_API_KEY=xxx                 # HIGH - Server only
@@ -118,7 +118,7 @@ ROBLOX_OPEN_CLOUD_KEY=xxx          # HIGH - Server only
 NEXT_PUBLIC_SUPABASE_URL=xxx
 NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
 NEXT_PUBLIC_SITE_URL=xxx
-```
+\`\`\`
 
 **Action Required:**
 1. Go to Vercel Dashboard → Project → Settings → Environment Variables
@@ -138,7 +138,7 @@ NEXT_PUBLIC_SITE_URL=xxx
 
 Create `middleware.ts` in project root:
 
-```typescript
+\`\`\`typescript
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -168,7 +168,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: '/api/:path*',
 }
-```
+\`\`\`
 
 ---
 
@@ -181,7 +181,7 @@ export const config = {
 
 ### Additional Headers (Add to `next.config.mjs`):
 
-```javascript
+\`\`\`javascript
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
@@ -212,7 +212,7 @@ const nextConfig = {
 }
 
 export default nextConfig
-```
+\`\`\`
 
 ---
 

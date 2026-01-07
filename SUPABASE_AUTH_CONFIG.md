@@ -17,21 +17,21 @@ You need to configure TWO redirect URLs in Supabase.
 ### 2. Set Site URL
 
 In the **"Site URL"** field, enter:
-```
+\`\`\`
 https://blaxsmith.dev
-```
+\`\`\`
 
 ### 3. Add Redirect URLs
 
 In the **"Redirect URLs"** section, add BOTH of these (click "+ Add URL" for each):
 
-```
+\`\`\`
 https://blaxsmith.dev/auth/callback
-```
+\`\`\`
 
-```
+\`\`\`
 https://blax-smith-ai-studio.vercel.app/auth/callback
-```
+\`\`\`
 
 **IMPORTANT:** You need BOTH URLs. One for your custom domain, one for the Vercel domain.
 
@@ -79,9 +79,9 @@ Total time: 2-3 seconds
 Go to: https://discord.com/developers/applications
 
 Make sure your redirect URL is:
-```
+\`\`\`
 https://cccmtdxtcajozuqiytov.supabase.co/auth/v1/callback
-```
+\`\`\`
 
 (This should already be correct)
 

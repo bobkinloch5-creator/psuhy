@@ -4,42 +4,40 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* BlaxSmith Premium Roblox Theme */
-  --background: oklch(0.08 0.015 250);
-  --foreground: oklch(0.98 0.01 250);
-  --card: oklch(0.12 0.02 250);
-  --card-foreground: oklch(0.98 0.01 250);
-  --popover: oklch(0.1 0.02 250);
-  --popover-foreground: oklch(0.98 0.01 250);
-  --primary: oklch(0.65 0.22 25);
-  /* Roblox Red */
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.18 0.025 250);
-  --secondary-foreground: oklch(0.98 0.01 250);
-  --muted: oklch(0.15 0.02 250);
-  --muted-foreground: oklch(0.6 0.02 250);
-  --accent: oklch(0.7 0.18 55);
-  /* Gold accent */
-  --accent-foreground: oklch(0.1 0.02 250);
-  --destructive: oklch(0.55 0.25 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0.03 250);
-  --input: oklch(0.15 0.025 250);
-  --ring: oklch(0.65 0.22 25);
-  --chart-1: oklch(0.65 0.22 25);
-  --chart-2: oklch(0.7 0.18 55);
-  --chart-3: oklch(0.6 0.2 145);
-  --chart-4: oklch(0.55 0.18 280);
-  --chart-5: oklch(0.5 0.15 200);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.06 0.015 250);
-  --sidebar-foreground: oklch(0.98 0.01 250);
-  --sidebar-primary: oklch(0.65 0.22 25);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.14 0.025 250);
-  --sidebar-accent-foreground: oklch(0.98 0.01 250);
-  --sidebar-border: oklch(0.18 0.02 250);
-  --sidebar-ring: oklch(0.65 0.22 25);
+  /* Enhanced BlaxSmith Premium Roblox Theme with deeper blacks and richer colors */
+  --background: oklch(0.06 0.02 250);
+  --foreground: oklch(0.99 0.005 250);
+  --card: oklch(0.1 0.025 250);
+  --card-foreground: oklch(0.99 0.005 250);
+  --popover: oklch(0.08 0.025 250);
+  --popover-foreground: oklch(0.99 0.005 250);
+  --primary: oklch(0.62 0.26 25); /* Roblox Red - more saturated */
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.16 0.03 250);
+  --secondary-foreground: oklch(0.99 0.005 250);
+  --muted: oklch(0.14 0.025 250);
+  --muted-foreground: oklch(0.58 0.025 250);
+  --accent: oklch(0.68 0.2 55); /* Gold accent - more vibrant */
+  --accent-foreground: oklch(0.08 0.025 250);
+  --destructive: oklch(0.52 0.28 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.2 0.035 250);
+  --input: oklch(0.14 0.03 250);
+  --ring: oklch(0.62 0.26 25);
+  --chart-1: oklch(0.62 0.26 25);
+  --chart-2: oklch(0.68 0.2 55);
+  --chart-3: oklch(0.58 0.22 145);
+  --chart-4: oklch(0.54 0.2 280);
+  --chart-5: oklch(0.48 0.18 200);
+  --radius: 0.875rem;
+  --sidebar: oklch(0.05 0.02 250);
+  --sidebar-foreground: oklch(0.99 0.005 250);
+  --sidebar-primary: oklch(0.62 0.26 25);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.12 0.03 250);
+  --sidebar-accent-foreground: oklch(0.99 0.005 250);
+  --sidebar-border: oklch(0.16 0.025 250);
+  --sidebar-ring: oklch(0.62 0.26 25);
 }
 
 @theme inline {
@@ -94,40 +92,34 @@
   }
 }
 
-/* Premium Roblox Theme Animations */
+/* Enhanced Premium Roblox Theme Animations with more dramatic effects */
 @keyframes roblox-pulse {
-
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(226, 35, 26, 0.3), 0 0 40px rgba(226, 35, 26, 0.1);
+    box-shadow: 0 0 30px rgba(226, 35, 26, 0.4), 0 0 60px rgba(226, 35, 26, 0.15);
   }
-
   50% {
-    box-shadow: 0 0 30px rgba(226, 35, 26, 0.5), 0 0 60px rgba(226, 35, 26, 0.2);
+    box-shadow: 0 0 50px rgba(226, 35, 26, 0.6), 0 0 100px rgba(226, 35, 26, 0.25);
   }
 }
 
 @keyframes forge-glow {
-
   0%,
   100% {
     background-position: 0% 50%;
   }
-
   50% {
     background-position: 100% 50%;
   }
 }
 
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0px);
   }
-
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-10px);
   }
 }
 
@@ -135,69 +127,109 @@
   0% {
     background-position: -200% 0;
   }
-
   100% {
     background-position: 200% 0;
   }
 }
 
-/* Roblox-style gradients */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(255, 107, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(255, 107, 0, 0.7), 0 0 90px rgba(255, 107, 0, 0.4);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced Roblox-style gradients with more vibrant colors */
 .forge-gradient {
-  background: linear-gradient(135deg,
-      oklch(0.45 0.20 20) 0%,
-      oklch(0.55 0.22 25) 25%,
-      oklch(0.60 0.20 30) 50%,
-      oklch(0.55 0.22 25) 75%,
-      oklch(0.45 0.20 20) 100%);
-  background-size: 200% 200%;
-  animation: forge-glow 6s ease infinite;
+  background: linear-gradient(
+    135deg,
+    oklch(0.5 0.24 20) 0%,
+    oklch(0.6 0.26 25) 25%,
+    oklch(0.65 0.24 30) 50%,
+    oklch(0.6 0.26 25) 75%,
+    oklch(0.5 0.24 20) 100%
+  );
+  background-size: 300% 300%;
+  animation: forge-glow 8s ease infinite;
 }
 
 .roblox-gradient {
-  background: linear-gradient(135deg, #e23a1a 0%, #ff6b4a 50%, #e23a1a 100%);
-  background-size: 200% 200%;
-  animation: forge-glow 4s ease infinite;
-}
-
-.gold-gradient {
-  background: linear-gradient(135deg, #f7c342 0%, #ffd700 50%, #f7c342 100%);
-  background-size: 200% 200%;
+  background: linear-gradient(135deg, #e23a1a 0%, #ff5530 25%, #ff6b4a 50%, #ff5530 75%, #e23a1a 100%);
+  background-size: 300% 300%;
   animation: forge-glow 5s ease infinite;
 }
 
-/* Premium card styles */
+.gold-gradient {
+  background: linear-gradient(135deg, #f7c342 0%, #ffd700 25%, #ffe44d 50%, #ffd700 75%, #f7c342 100%);
+  background-size: 300% 300%;
+  animation: forge-glow 6s ease infinite;
+}
+
+/* Enhanced premium card styles with stronger glassmorphism */
 .premium-card {
-  background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.02) 50%,
-      rgba(0, 0, 0, 0.05) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(0, 0, 0, 0.08) 100%
+  );
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .premium-card:hover {
-  border-color: rgba(226, 35, 26, 0.3);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(226, 35, 26, 0.1);
+  border-color: rgba(226, 35, 26, 0.4);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(226, 35, 26, 0.15);
+  transform: translateY(-2px);
 }
 
-/* Roblox button styles */
+/* Enhanced Roblox button styles with 3D depth */
 .roblox-button {
   background: linear-gradient(180deg, #e23a1a 0%, #c42e15 100%);
-  box-shadow: 0 4px 0 #8b1e0e, 0 8px 20px rgba(226, 35, 26, 0.3);
-  transition: all 0.15s ease;
+  box-shadow: 0 6px 0 #8b1e0e, 0 12px 24px rgba(226, 35, 26, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .roblox-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 0 #8b1e0e, 0 12px 30px rgba(226, 35, 26, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 9px 0 #8b1e0e, 0 18px 36px rgba(226, 35, 26, 0.5);
 }
 
 .roblox-button:active {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 #8b1e0e, 0 4px 10px rgba(226, 35, 26, 0.2);
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 #8b1e0e, 0 6px 12px rgba(226, 35, 26, 0.3);
 }
 
-/* Shine effect */
+/* Enhanced shine effect with more dramatic lighting */
 .anvil-shine {
   position: relative;
   overflow: hidden;
@@ -210,55 +242,52 @@
   left: -50%;
   width: 200%;
   height: 200%;
-  background: linear-gradient(45deg,
-      transparent 30%,
-      rgba(255, 255, 255, 0.08) 50%,
-      transparent 70%);
-  animation: shine 4s infinite;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 50%, transparent 70%);
+  animation: shine 5s infinite;
 }
 
 @keyframes shine {
   0% {
     transform: translateX(-100%) translateY(-100%) rotate(45deg);
   }
-
   100% {
     transform: translateX(100%) translateY(100%) rotate(45deg);
   }
 }
 
-/* Glow effects */
+/* Enhanced glow effects with more intensity */
 .glow-red {
-  box-shadow: 0 0 20px rgba(226, 35, 26, 0.4), 0 0 40px rgba(226, 35, 26, 0.2);
+  box-shadow: 0 0 30px rgba(226, 35, 26, 0.5), 0 0 60px rgba(226, 35, 26, 0.3);
 }
 
 .glow-green {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), 0 0 40px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.5), 0 0 60px rgba(34, 197, 94, 0.3);
 }
 
 .glow-gold {
-  box-shadow: 0 0 20px rgba(247, 195, 66, 0.4), 0 0 40px rgba(247, 195, 66, 0.2);
+  box-shadow: 0 0 30px rgba(247, 195, 66, 0.5), 0 0 60px rgba(247, 195, 66, 0.3);
 }
 
 /* Text effects */
 .text-glow {
-  text-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+  text-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
 }
 
-/* Scrollbar styling */
+/* Enhanced scrollbar with Roblox theme */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #e23a1a, #c42e15);
-  border-radius: 4px;
+  border-radius: 5px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -267,15 +296,45 @@
 
 /* Selection styling */
 ::selection {
-  background: rgba(226, 35, 26, 0.3);
+  background: rgba(226, 35, 26, 0.4);
   color: white;
 }
 
+/* Enhanced glassmorphism styles with stronger depth */
+.glassmorphism {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+}
 
-/* Focus ring styling */
+.glassmorphism-dark {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+}
+
+.animated-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.62 0.26 25) 0%,
+    oklch(0.68 0.2 55) 25%,
+    oklch(0.62 0.26 25) 50%,
+    oklch(0.68 0.2 55) 75%,
+    oklch(0.62 0.26 25) 100%
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Enhanced focus ring with Roblox accent */
 *:focus-visible {
-  outline: 2px solid rgba(226, 35, 26, 0.5);
+  outline: 3px solid rgba(226, 35, 26, 0.6);
   outline-offset: 2px;
+  transition: outline-offset 0.2s ease;
 }
 
 /* ========================================
@@ -284,7 +343,6 @@
 
 /* Mobile adjustments (phones) */
 @media (max-width: 768px) {
-
   /* Base font size */
   html {
     font-size: 14px;
@@ -367,7 +425,6 @@ textarea {
 
 /* Prevent zoom on input focus (iOS fix) */
 @media (max-width: 768px) {
-
   input,
   select,
   textarea {

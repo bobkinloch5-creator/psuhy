@@ -49,6 +49,13 @@ export async function GET(request: Request) {
     if (!existingUser) {
       console.log("[Auth Callback] Creating new user for:", data.user.id)
 
+      let avatarUrl = data.user.user_metadata?.avatar_url
+
+      // If we have discord avatar hash, construct proper URL
+      if (data.user.user_metadata?.avatar) {
+        avatarUrl = data.user.user_metadata.avatar
+      }
+
       // Create new user with service role
       const { error: insertError } = await serviceClient.from("users").insert({
         discord_id: data.user.id,
@@ -57,7 +64,7 @@ export async function GET(request: Request) {
           data.user.user_metadata?.full_name ||
           data.user.email?.split("@")[0] ||
           "User",
-        avatar: data.user.user_metadata?.avatar_url,
+        avatar: avatarUrl,
         email: data.user.email,
         generation_credits: 50,
         model_credits: 50,
@@ -76,10 +83,18 @@ export async function GET(request: Request) {
     } else {
       console.log("[Auth Callback] Updating existing user:", existingUser.id)
 
-      // Update last login
+      let avatarUrl = data.user.user_metadata?.avatar_url
+      if (data.user.user_metadata?.avatar) {
+        avatarUrl = data.user.user_metadata.avatar
+      }
+
+      // Update last login and avatar
       await serviceClient
         .from("users")
-        .update({ last_login: new Date().toISOString() })
+        .update({
+          last_login: new Date().toISOString(),
+          avatar: avatarUrl,
+        })
         .eq("id", existingUser.id)
     }
 

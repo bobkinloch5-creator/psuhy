@@ -2,7 +2,7 @@
 
 Add these to your `.env.local` file:
 
-```bash
+\`\`\`bash
 # Existing variables
 OPENAI_API_KEY=your_cometapi_key
 POLYPIZZA_API_KEY=your_polypizza_key
@@ -14,7 +14,7 @@ ROBLOX_USER_ID=your_roblox_user_id
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+\`\`\`
 
 ## Getting Roblox Open Cloud API Key
 

@@ -6,7 +6,7 @@
 
 Set these in your Vercel project settings:
 
-```bash
+\`\`\`bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
@@ -22,7 +22,7 @@ POLYPIZZA_API_KEY=your_polypizza_key
 # Roblox (for uploads)
 ROBLOX_OPEN_CLOUD_KEY=your_roblox_key
 ROBLOX_USER_ID=your_roblox_user_id
-```
+\`\`\`
 
 ### 2. Supabase Configuration
 
@@ -32,47 +32,47 @@ ROBLOX_USER_ID=your_roblox_user_id
 
 #### Redirect URLs
 Add these (one per line):
-```
+\`\`\`
 https://blaxsmith.dev
 https://blaxsmith.dev/auth/callback
 http://localhost:3000
 http://localhost:3000/auth/callback
-```
+\`\`\`
 
 ### 3. Discord Developer Portal
 
 Add redirect URL:
-```
+\`\`\`
 https://cccmtdxtcajozuqiytov.supabase.co/auth/v1/callback
-```
+\`\`\`
 
 ### 4. Database Migration
 
 Run in Supabase SQL Editor:
-```sql
+\`\`\`sql
 -- scripts/008-complete-platform.sql
 -- (Copy and paste the entire file)
-```
+\`\`\`
 
 ---
 
 ## Deployment Commands
 
 ### Option 1: Vercel CLI (Recommended)
-```bash
+\`\`\`bash
 # Install Vercel CLI if needed
 npm i -g vercel
 
 # Deploy to production
 vercel --prod
-```
+\`\`\`
 
 ### Option 2: Git Push (if connected to GitHub)
-```bash
+\`\`\`bash
 git add .
 git commit -m "Complete platform build with all features"
 git push origin main
-```
+\`\`\`
 
 Vercel will auto-deploy from your main branch.
 

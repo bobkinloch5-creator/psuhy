@@ -67,27 +67,27 @@
 ### Get Connection Status
 
 Open Command Bar in Studio:
-```lua
+\`\`\`lua
 print(_G.BlaxSmithAPI.getStatus())
-```
+\`\`\`
 
 ### Manually Import Model
 
-```lua
+\`\`\`lua
 _G.BlaxSmithAPI.importModel({
     name = "My Model",
     url = "https://..."
 })
-```
+\`\`\`
 
 ### Manually Import World
 
-```lua
+\`\`\`lua
 _G.BlaxSmithAPI.importWorld({
     name = "My World",
     assets = {...}
 })
-```
+\`\`\`
 
 ## Next Steps
 

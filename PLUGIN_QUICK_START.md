@@ -4,7 +4,7 @@
 
 Add this code to your BlaxSmith AI plugin:
 
-```lua
+\`\`\`lua
 local HttpService = game:GetService("HttpService")
 
 -- Your Discord/User ID (get from website)
@@ -37,7 +37,7 @@ end
 
 -- Start heartbeat in background
 task.spawn(sendHeartbeat)
-```
+\`\`\`
 
 ## How to Get Your Discord ID
 

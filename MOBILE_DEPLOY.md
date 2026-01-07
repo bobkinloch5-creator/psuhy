@@ -13,13 +13,13 @@
 4. Deploy!
 
 ### Option 2: Vercel CLI
-```bash
+\`\`\`bash
 # Login first
 vercel login
 
 # Then deploy
 vercel --prod
-```
+\`\`\`
 
 ## ✅ Mobile-Friendly Features
 

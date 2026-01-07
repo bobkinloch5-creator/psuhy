@@ -20,11 +20,22 @@ export async function POST(request: Request) {
 
     console.log("[World Gen] User:", user.id, "Prompt:", prompt)
 
-    const { data: userData, error: userError } = await supabase
+    let { data: userData, error: userError } = await supabase
       .from("users")
-      .select("id, world_credits, subscription_tier")
-      .eq("discord_id", user.id)
+      .select("id, discord_id, world_credits, subscription_tier")
+      .eq("id", user.id)
       .single()
+
+    if (userError || !userData) {
+      const result = await supabase
+        .from("users")
+        .select("id, discord_id, world_credits, subscription_tier")
+        .eq("discord_id", user.id)
+        .single()
+
+      userData = result.data
+      userError = result.error
+    }
 
     if (userError || !userData) {
       console.error("[World Gen] User lookup error:", userError)
@@ -32,13 +43,14 @@ export async function POST(request: Request) {
     }
 
     // Check credits (unlimited for premium)
-    const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
+    const isPremium =
+      userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
     if (!isPremium && userData.world_credits <= 0) {
       return NextResponse.json({ error: "No world generation credits remaining" }, { status: 403 })
     }
 
     // Import verified assets
-    const { getRandomAssets, getAssetsForTheme } = await import("@/lib/roblox-assets")
+    const { getRandomAssets } = await import("@/lib/roblox-assets")
 
     // SMART theme detection from prompt
     const detectedThemes = detectThemesFromPrompt(prompt)
@@ -61,7 +73,7 @@ export async function POST(request: Request) {
 
     // Deduplicate by id
     const seen = new Set()
-    allAssets = allAssets.filter(a => {
+    allAssets = allAssets.filter((a) => {
       if (seen.has(a.id)) return false
       seen.add(a.id)
       return true
@@ -87,15 +99,52 @@ export async function POST(request: Request) {
       lighting: worldConfig.lighting,
       terrain: worldConfig.terrain,
       atmosphere: worldConfig.atmosphere,
-      spawnPoints: [
-        { position: { x: 0, y: 5, z: 0 } },
-        { position: { x: 20, y: 5, z: 20 } },
-      ],
+      spawnPoints: [{ position: { x: 0, y: 5, z: 0 } }, { position: { x: 20, y: 5, z: 20 } }],
       generatedAt: new Date().toISOString(),
       prompt: prompt,
     }
 
     console.log(`[World Gen] Created world with ${allAssets.length} assets for themes: ${detectedThemes.join(", ")}`)
+
+    let autoQueued = false
+    const userDiscordId = userData.discord_id || user.id
+
+    try {
+      const { data: connection } = await supabase
+        .from("plugin_connections")
+        .select("*")
+        .eq("user_id", userDiscordId)
+        .eq("is_active", true)
+        .single()
+
+      if (connection) {
+        // Generate the world creation script
+        const worldScript = generateWorldScript(worldPlan)
+
+        // Queue the world script as a command
+        const { error: queueError } = await supabase.from("command_queue").insert({
+          user_id: userDiscordId,
+          type: "EXECUTE_WORLD",
+          code: worldScript,
+          data: {
+            name: worldPlan.name,
+            theme: primaryTheme,
+            assetCount: allAssets.length,
+          },
+          status: "pending",
+        })
+
+        if (!queueError) {
+          autoQueued = true
+          console.log("[World Gen] Auto-queued world script to Studio for user:", userDiscordId)
+        }
+      }
+    } catch (error) {
+      console.error("[World Gen] Auto-queue error:", error)
+      // Don't fail the generation if auto-queue fails
+    }
+
+    worldPlan.auto_queued = autoQueued
 
     // Save creation
     const { data: creation, error: creationError } = await supabase
@@ -203,7 +252,7 @@ function generateWorldConfig(prompt: string, primaryTheme: string, themes: strin
   const lowerPrompt = prompt.toLowerCase()
 
   // Default config
-  let config = {
+  const config = {
     lighting: {
       ambient: "Daylight",
       brightness: 1.5,
@@ -226,31 +275,71 @@ function generateWorldConfig(prompt: string, primaryTheme: string, themes: strin
 
   // Customize based on theme
   if (themes.includes("horror") || themes.includes("dark")) {
-    config.lighting = { ambient: "Night", brightness: 0.5, timeOfDay: "23:00:00", colorShift: { r: 100, g: 100, b: 150 } }
+    config.lighting = {
+      ambient: "Night",
+      brightness: 0.5,
+      timeOfDay: "23:00:00",
+      colorShift: { r: 100, g: 100, b: 150 },
+    }
     config.atmosphere = { fog: true, fogColor: { r: 50, g: 50, b: 60 }, fogDensity: 0.3 }
   } else if (themes.includes("fantasy") || themes.includes("magical")) {
-    config.lighting = { ambient: "Magical", brightness: 1.2, timeOfDay: "18:00:00", colorShift: { r: 200, g: 150, b: 255 } }
+    config.lighting = {
+      ambient: "Magical",
+      brightness: 1.2,
+      timeOfDay: "18:00:00",
+      colorShift: { r: 200, g: 150, b: 255 },
+    }
     config.atmosphere = { fog: true, fogColor: { r: 150, g: 100, b: 200 }, fogDensity: 0.1 }
   } else if (themes.includes("scifi")) {
-    config.lighting = { ambient: "ColdLight", brightness: 1.0, timeOfDay: "12:00:00", colorShift: { r: 150, g: 200, b: 255 } }
+    config.lighting = {
+      ambient: "ColdLight",
+      brightness: 1.0,
+      timeOfDay: "12:00:00",
+      colorShift: { r: 150, g: 200, b: 255 },
+    }
     config.terrain = { type: "Metal", size: "large", color: { r: 100, g: 100, b: 120 } }
   } else if (themes.includes("winter")) {
-    config.lighting = { ambient: "Overcast", brightness: 1.3, timeOfDay: "10:00:00", colorShift: { r: 220, g: 230, b: 255 } }
+    config.lighting = {
+      ambient: "Overcast",
+      brightness: 1.3,
+      timeOfDay: "10:00:00",
+      colorShift: { r: 220, g: 230, b: 255 },
+    }
     config.terrain = { type: "Snow", size: "large", color: { r: 240, g: 240, b: 255 } }
     config.atmosphere = { fog: true, fogColor: { r: 230, g: 235, b: 250 }, fogDensity: 0.15 }
   } else if (themes.includes("desert")) {
-    config.lighting = { ambient: "HotLight", brightness: 2.0, timeOfDay: "13:00:00", colorShift: { r: 255, g: 230, b: 180 } }
+    config.lighting = {
+      ambient: "HotLight",
+      brightness: 2.0,
+      timeOfDay: "13:00:00",
+      colorShift: { r: 255, g: 230, b: 180 },
+    }
     config.terrain = { type: "Sand", size: "large", color: { r: 210, g: 180, b: 140 } }
   } else if (themes.includes("beach") || themes.includes("tropical")) {
-    config.lighting = { ambient: "Sunny", brightness: 1.8, timeOfDay: "11:00:00", colorShift: { r: 255, g: 250, b: 230 } }
+    config.lighting = {
+      ambient: "Sunny",
+      brightness: 1.8,
+      timeOfDay: "11:00:00",
+      colorShift: { r: 255, g: 250, b: 230 },
+    }
     config.terrain = { type: "Sand", size: "large", color: { r: 240, g: 220, b: 180 } }
   } else if (themes.includes("water") || themes.includes("underwater")) {
-    config.lighting = { ambient: "Underwater", brightness: 0.8, timeOfDay: "12:00:00", colorShift: { r: 100, g: 180, b: 220 } }
+    config.lighting = {
+      ambient: "Underwater",
+      brightness: 0.8,
+      timeOfDay: "12:00:00",
+      colorShift: { r: 100, g: 180, b: 220 },
+    }
     config.atmosphere = { fog: true, fogColor: { r: 50, g: 100, b: 150 }, fogDensity: 0.4 }
   } else if (themes.includes("urban") || themes.includes("modern")) {
     config.terrain = { type: "Concrete", size: "large", color: { r: 130, g: 130, b: 130 } }
   } else if (themes.includes("medieval")) {
-    config.lighting = { ambient: "Torch", brightness: 1.0, timeOfDay: "17:00:00", colorShift: { r: 255, g: 200, b: 150 } }
+    config.lighting = {
+      ambient: "Torch",
+      brightness: 1.0,
+      timeOfDay: "17:00:00",
+      colorShift: { r: 255, g: 200, b: 150 },
+    }
     config.terrain = { type: "Cobblestone", size: "large", color: { r: 100, g: 90, b: 80 } }
   }
 
@@ -298,13 +387,94 @@ function generateSmartPosition(index: number, total: number, config: any) {
 
 // Generate a cool name for the world
 function generateWorldName(prompt: string): string {
-  const words = prompt.split(" ").slice(0, 3).map(w =>
-    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-  )
+  const words = prompt
+    .split(" ")
+    .slice(0, 3)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
 
   if (words.length === 0) {
     return "AI Generated World"
   }
 
   return words.join(" ").substring(0, 50)
+}
+
+function generateWorldScript(worldPlan: any): string {
+  return `
+-- BlaxSmith AI Generated World: ${worldPlan.name}
+-- Generated at: ${worldPlan.generatedAt}
+-- Prompt: "${worldPlan.prompt}"
+
+local InsertService = game:GetService("InsertService")
+local Lighting = game:GetService("Lighting")
+
+print("🔨 BlaxSmith AI: Creating world '${worldPlan.name}'...")
+
+-- Configure lighting
+Lighting.Ambient = Color3.fromRGB(${worldPlan.lighting.colorShift.r}, ${worldPlan.lighting.colorShift.g}, ${worldPlan.lighting.colorShift.b})
+Lighting.Brightness = ${worldPlan.lighting.brightness}
+Lighting.ClockTime = "${worldPlan.lighting.timeOfDay}"
+
+-- Configure atmosphere
+${
+  worldPlan.atmosphere.fog
+    ? `Lighting.FogEnabled = true
+Lighting.FogColor = Color3.fromRGB(${worldPlan.atmosphere.fogColor.r}, ${worldPlan.atmosphere.fogColor.g}, ${worldPlan.atmosphere.fogColor.b})
+Lighting.FogEnd = ${500 * (1 - worldPlan.atmosphere.fogDensity)}`
+    : "Lighting.FogEnabled = false"
+}
+
+-- Create world container
+local worldFolder = Instance.new("Folder")
+worldFolder.Name = "${worldPlan.name}"
+worldFolder.Parent = workspace
+
+-- Insert assets
+local assets = {
+${worldPlan.assets
+  .map(
+    (asset: any) =>
+      `  {id = ${asset.assetId}, name = "${asset.name}", pos = Vector3.new(${asset.position.x}, ${asset.position.y}, ${asset.position.z}), rot = ${asset.rotation.y}, scale = ${asset.scale}}`,
+  )
+  .join(",\n")}
+}
+
+local successCount = 0
+for i, assetData in ipairs(assets) do
+    local success, model = pcall(function()
+        return InsertService:LoadAsset(assetData.id)
+    end)
+    
+    if success and model then
+        local primaryPart = model:FindFirstChildWhichIsA("Model") or model:FindFirstChildWhichIsA("Part")
+        if primaryPart then
+            primaryPart.Parent = worldFolder
+            primaryPart:SetPrimaryPartCFrame(CFrame.new(assetData.pos) * CFrame.Angles(0, math.rad(assetData.rot), 0))
+            
+            -- Scale
+            if assetData.scale ~= 1 then
+                for _, descendant in ipairs(primaryPart:GetDescendants()) do
+                    if descendant:IsA("BasePart") then
+                        descendant.Size = descendant.Size * assetData.scale
+                    end
+                end
+            end
+            
+            successCount = successCount + 1
+        end
+        model:Destroy()
+    else
+        warn("Failed to load asset " .. assetData.id .. ": " .. tostring(model))
+    end
+    
+    if i % 5 == 0 then
+        print("Progress: " .. i .. "/" .. #assets .. " assets loaded")
+        wait(0.1)
+    end
+end
+
+print("✅ BlaxSmith AI: World created! Loaded " .. successCount .. "/" .. #assets .. " assets")
+print("Theme: ${worldPlan.theme}")
+print("Location: workspace.${worldPlan.name}")
+`.trim()
 }

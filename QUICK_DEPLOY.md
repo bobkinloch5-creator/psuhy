@@ -5,7 +5,7 @@ Go to: https://supabase.com/dashboard/project/cccmtdxtcajozuqiytov/sql/new
 
 ### Step 2: Copy This Entire Script
 
-```sql
+\`\`\`sql
 -- Complete Platform Database Schema
 -- Chat, Projects, Model Files, and Roblox Integration
 
@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_roblox_assets_status ON roblox_assets(upload_stat
 COMMENT ON TABLE file_attachments IS 'Files attached to AI chat messages for analysis';
 COMMENT ON TABLE model_files IS 'Downloaded 3D model files in various formats';
 COMMENT ON TABLE roblox_assets IS 'Assets uploaded to Roblox via Open Cloud API';
-```
+\`\`\`
 
 ### Step 3: Paste & Run
 1. Paste into the SQL editor

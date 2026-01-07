@@ -16,9 +16,9 @@ You already have the Vercel dashboard open!
 
 If you have `VERCEL_TOKEN` environment variable set:
 
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 ---
 

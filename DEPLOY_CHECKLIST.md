@@ -61,9 +61,9 @@ You have 2 options:
 6. Wait for "Ready" status
 
 **Option B: Via CLI**
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 ### Step 3: Verify Google Search Console
 
@@ -128,7 +128,7 @@ After deployment, test:
 
 Make sure these are set in Vercel Dashboard:
 
-```bash
+\`\`\`bash
 # Core
 NEXT_PUBLIC_SITE_URL=https://blaxsmith.dev
 
@@ -144,7 +144,7 @@ POLYPIZZA_API_KEY=[Your PollyPizza key]
 # Roblox (Optional)
 ROBLOX_OPEN_CLOUD_KEY=[Your key]
 ROBLOX_USER_ID=[Your ID]
-```
+\`\`\`
 
 ---
 

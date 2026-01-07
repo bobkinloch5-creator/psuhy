@@ -8,7 +8,7 @@ All ForgeMind generations are **automatically saved to Supabase** and synced to 
 
 #### `creations` Table
 Stores ALL generated content:
-```sql
+\`\`\`sql
 - id: UUID
 - user_id: UUID
 - type: 'script'|'world'|'system'|'model'
@@ -23,11 +23,11 @@ Stores ALL generated content:
 - metadata: JSONB (tags, complexity, etc.)
 - created_at: TIMESTAMP
 - updated_at: TIMESTAMP
-```
+\`\`\`
 
 #### `sloyd_models` Table
 Stores 3D model generations:
-```sql
+\`\`\`sql
 - id: UUID
 - user_id: UUID
 - prompt: TEXT
@@ -37,17 +37,17 @@ Stores 3D model generations:
 - mesh_data: JSONB
 - status: 'generating'|'ready'|'failed'
 - created_at: TIMESTAMP
-```
+\`\`\`
 
 ### Sync Flow
 
-```
+\`\`\`
 User generates → Saved to Supabase → Plugin polls → Auto-inserts to Studio
                       ↓
                  Updates sync status
                       ↓
                  Marks as synced
-```
+\`\`\`
 
 ### Functions
 
@@ -107,28 +107,28 @@ Every generation is saved immediately:
 ## 🚀 API Endpoints
 
 ### Get Unsynced
-```
+\`\`\`
 GET /api/sync/unsynced
 Returns: Array of creations not yet in Studio
-```
+\`\`\`
 
 ### Mark Synced
-```
+\`\`\`
 POST /api/sync/mark-synced
 Body: { creationId, instancePath }
-```
+\`\`\`
 
 ### Get All Creations
-```
+\`\`\`
 GET /api/creations
 Query: ?type=script&search=combat
 Returns: Filtered creations
-```
+\`\`\`
 
 ### Delete Creation
-```
+\`\`\`
 DELETE /api/creations/:id
-```
+\`\`\`
 
 ---
 
@@ -145,9 +145,9 @@ Everything is stored in Supabase PostgreSQL:
 ## 🔧 Setup
 
 Run migration:
-```sql
+\`\`\`sql
 scripts/006-sync-enhancements.sql
-```
+\`\`\`
 
 This adds:
 - Sync status fields

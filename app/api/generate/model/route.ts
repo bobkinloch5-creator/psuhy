@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 
 // Sloyd API endpoints
 const SLOYD_JOBS_API = "https://horizon-be-server-blue-124265032526.us-central1.run.app/api/jobs"
+const SLOYD_STATUS_API = "https://horizon-be-server-blue-124265032526.us-central1.run.app/api/jobs"
 
 export async function POST(request: Request) {
   try {
@@ -28,21 +29,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
     }
 
-    console.log("[Model Gen] User:", user.id, "Prompt:", prompt)
+    console.log("[v0] [Model Gen] User:", user.id, "Prompt:", prompt)
 
     // Look up user by auth ID
     let { data: userData, error: userError } = await supabase
       .from("users")
-      .select("id, generation_credits, subscription_tier")
+      .select("id, discord_id, generation_credits, model_credits, subscription_tier")
       .eq("id", user.id)
       .single()
 
     // If not found by id, try discord_id for backwards compatibility
     if (userError || !userData) {
-      console.log("[Model Gen] User not found by id, trying discord_id...")
+      console.log("[v0] [Model Gen] User not found by id, trying discord_id...")
       const result = await supabase
         .from("users")
-        .select("id, generation_credits, subscription_tier")
+        .select("id, discord_id, generation_credits, model_credits, subscription_tier")
         .eq("discord_id", user.id)
         .single()
 
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     if (userError || !userData) {
-      console.error("[Model Gen] User lookup error:", userError)
+      console.error("[v0] [Model Gen] User lookup error:", userError)
       // Create user if they don't exist
       const { data: newUser, error: createError } = await supabase
         .from("users")
@@ -59,49 +60,112 @@ export async function POST(request: Request) {
           id: user.id,
           discord_id: user.id,
           email: user.email,
-          generation_credits: 10, // Default credits
+          generation_credits: 10,
+          model_credits: 50,
         })
-        .select("id, generation_credits, subscription_tier")
+        .select("id, discord_id, generation_credits, model_credits, subscription_tier")
         .single()
 
       if (createError || !newUser) {
-        console.error("[Model Gen] Failed to create user:", createError)
+        console.error("[v0] [Model Gen] Failed to create user:", createError)
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
       userData = newUser
     }
 
-    // Check credits (allow unlimited for pro/enterprise users)
-    const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
-    if (!isPremium && userData.generation_credits <= 0) {
-      return NextResponse.json({
-        error: "No generation credits remaining",
-        upgradeUrl: "/upgrade"
-      }, { status: 403 })
+    const isPremium =
+      userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
+    if (!isPremium && userData.model_credits <= 0) {
+      return NextResponse.json(
+        {
+          error: "No model generation credits remaining",
+          upgradeUrl: "/upgrade",
+        },
+        { status: 403 },
+      )
     }
 
     // Check if Sloyd token is configured
     if (!process.env.SLOYD_TOKEN) {
-      console.error("[Model Gen] SLOYD_TOKEN not set")
-      return NextResponse.json({
-        error: "Model generation service not configured",
-        details: "Please configure Sloyd API token in environment variables"
-      }, { status: 500 })
+      console.error("[v0] [Model Gen] SLOYD_TOKEN not set")
+      return NextResponse.json(
+        {
+          error: "Model generation service not configured",
+          details: "Please configure Sloyd API token in environment variables",
+        },
+        { status: 500 },
+      )
     }
 
-    // Call Sloyd API with retry logic
-    console.log("[Model Gen] Calling Sloyd API for:", prompt)
+    console.log("[v0] [Model Gen] Starting Sloyd job for:", prompt)
 
-    const modelData = await callSloydWithRetry(prompt, style, 3)
+    const modelData = await generateSloydModelWithPolling(prompt, style, 3)
 
     if (!modelData) {
-      return NextResponse.json({
-        error: "Model generation failed after retries",
-        details: "The Sloyd service may be temporarily unavailable. Please try again."
-      }, { status: 503 })
+      return NextResponse.json(
+        {
+          error: "Model generation failed after retries",
+          details: "The Sloyd service may be temporarily unavailable. Please try again.",
+        },
+        { status: 503 },
+      )
     }
 
-    console.log("[Model Gen] Sloyd response:", JSON.stringify(modelData).substring(0, 300))
+    console.log("[v0] [Model Gen] Sloyd success:", JSON.stringify(modelData).substring(0, 300))
+
+    const enhancedModelData = {
+      ...modelData,
+      prompt: prompt,
+      style: style || "realistic",
+      formats: {
+        glb: modelData.glb_url || modelData.glbUrl || modelData.files?.glb || null,
+        obj: modelData.obj_url || modelData.objUrl || modelData.files?.obj || null,
+        fbx: modelData.fbx_url || modelData.fbxUrl || modelData.files?.fbx || null,
+        usdz: modelData.usdz_url || modelData.usdzUrl || modelData.files?.usdz || null,
+      },
+      preview_url: modelData.preview_url || modelData.previewUrl || modelData.thumbnail || modelData.image || null,
+      model_url: modelData.glb_url || modelData.glbUrl || modelData.files?.glb || modelData.download_url || null,
+      job_id: modelData.id || modelData.job_id || null,
+    }
+
+    let autoQueued = false
+    const userDiscordId = userData.discord_id || user.id
+
+    try {
+      const { data: connection } = await supabase
+        .from("plugin_connections")
+        .select("*")
+        .eq("user_id", userDiscordId)
+        .eq("is_active", true)
+        .single()
+
+      if (connection && enhancedModelData.model_url) {
+        // Queue the generated model to Studio
+        const { error: queueError } = await supabase.from("asset_queue").insert({
+          user_id: userDiscordId,
+          asset_id: enhancedModelData.model_url,
+          asset_type: "GeneratedModel",
+          asset_name: prompt.slice(0, 50),
+          status: "pending",
+          metadata: {
+            model_url: enhancedModelData.model_url,
+            preview_url: enhancedModelData.preview_url,
+            formats: enhancedModelData.formats,
+            prompt: prompt,
+          },
+        })
+
+        if (!queueError) {
+          autoQueued = true
+          console.log("[v0] [Model Gen] Auto-queued model to Studio for user:", userDiscordId)
+        }
+      }
+    } catch (error) {
+      console.error("[v0] [Model Gen] Auto-queue error:", error)
+      // Don't fail the generation if auto-queue fails
+    }
+
+    enhancedModelData.auto_queued = autoQueued
 
     // Save creation
     const { data: creation, error: creationError } = await supabase
@@ -112,45 +176,44 @@ export async function POST(request: Request) {
         name: prompt.slice(0, 50),
         description: prompt,
         prompt: prompt,
-        preview_url: modelData.preview_url || modelData.previewUrl || modelData.thumbnail || null,
-        asset_data: modelData,
+        preview_url: enhancedModelData.preview_url,
+        asset_data: enhancedModelData,
         status: "ready",
       })
       .select()
       .single()
 
     if (creationError) {
-      console.error("[Model Gen] Creation insert error:", creationError)
+      console.error("[v0] [Model Gen] Creation insert error:", creationError)
       // Don't fail - still return the model
     }
 
-    // Deduct credits only for non-premium users
     if (!isPremium) {
-      const balanceBefore = userData.generation_credits
+      const balanceBefore = userData.model_credits
       const balanceAfter = balanceBefore - 1
 
-      await supabase
-        .from("users")
-        .update({ generation_credits: balanceAfter })
-        .eq("id", userData.id)
+      await supabase.from("users").update({ model_credits: balanceAfter }).eq("id", userData.id)
 
       // Log transaction
-      await supabase.from("credit_transactions").insert({
-        user_id: userData.id,
-        transaction_type: "deduction",
-        credit_type: "generation",
-        amount: 1,
-        balance_before: balanceBefore,
-        balance_after: balanceAfter,
-        reason: "3D model generation",
-        creation_id: creation?.id,
-        ip_address: request.headers.get("x-forwarded-for") || "unknown",
-      }).catch(err => console.error("[Model Gen] Transaction log error:", err))
+      await supabase
+        .from("credit_transactions")
+        .insert({
+          user_id: userData.id,
+          transaction_type: "deduction",
+          credit_type: "model",
+          amount: 1,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          reason: "3D model generation",
+          creation_id: creation?.id,
+          ip_address: request.headers.get("x-forwarded-for") || "unknown",
+        })
+        .catch((err) => console.error("[v0] [Model Gen] Transaction log error:", err))
 
       return NextResponse.json({
         success: true,
         creation: creation,
-        model: modelData,
+        model: enhancedModelData,
         creditsRemaining: balanceAfter,
       })
     }
@@ -158,36 +221,43 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       creation: creation,
-      model: modelData,
+      model: enhancedModelData,
       creditsRemaining: "unlimited",
     })
   } catch (error: any) {
-    console.error("[Model Gen] Unexpected error:", error)
-    return NextResponse.json({
-      error: "Generation failed",
-      details: error.message || "An unexpected error occurred. Please try again."
-    }, { status: 500 })
+    console.error("[v0] [Model Gen] Unexpected error:", error)
+    return NextResponse.json(
+      {
+        error: "Generation failed",
+        details: error.message || "An unexpected error occurred. Please try again.",
+      },
+      { status: 500 },
+    )
   }
 }
 
-// Call Sloyd API with retry logic
-async function callSloydWithRetry(prompt: string, style: string | undefined, maxRetries: number): Promise<any | null> {
+async function generateSloydModelWithPolling(
+  prompt: string,
+  style: string | undefined,
+  maxRetries: number,
+): Promise<any | null> {
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[Model Gen] Sloyd attempt ${attempt}/${maxRetries}`)
+      console.log(`[v0] [Model Gen] Sloyd attempt ${attempt}/${maxRetries}`)
 
+      // Step 1: Create generation job
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
-      const response = await fetch(SLOYD_JOBS_API, {
+      const jobResponse = await fetch(SLOYD_JOBS_API, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": process.env.SLOYD_TOKEN!,
-          "Origin": "https://app.sloyd.ai",
-          "Referer": "https://app.sloyd.ai/",
+          Authorization: process.env.SLOYD_TOKEN!,
+          Origin: "https://app.sloyd.ai",
+          Referer: "https://app.sloyd.ai/",
         },
         body: JSON.stringify({
           prompt: prompt,
@@ -199,41 +269,100 @@ async function callSloydWithRetry(prompt: string, style: string | undefined, max
 
       clearTimeout(timeoutId)
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`[Model Gen] Sloyd API error (attempt ${attempt}):`, response.status, errorText)
-        lastError = new Error(`Sloyd API error: ${response.status}`)
+      if (!jobResponse.ok) {
+        const errorText = await jobResponse.text()
+        console.error(`[v0] [Model Gen] Sloyd job creation error (attempt ${attempt}):`, jobResponse.status, errorText)
+        lastError = new Error(`Sloyd API error: ${jobResponse.status}`)
 
         // Don't retry on auth errors
-        if (response.status === 401 || response.status === 403) {
-          console.error("[Model Gen] Auth error - token may be invalid")
+        if (jobResponse.status === 401 || jobResponse.status === 403) {
+          console.error("[v0] [Model Gen] Auth error - token may be invalid")
           return null
         }
 
         // Wait before retry with exponential backoff
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
         }
         continue
       }
 
-      const modelData = await response.json()
-      return modelData
+      const jobData = await jobResponse.json()
+      console.log("[v0] [Model Gen] Job created:", jobData.id || jobData.job_id)
+
+      // Step 2: Poll for completion (if job ID is provided)
+      if (jobData.id || jobData.job_id) {
+        const jobId = jobData.id || jobData.job_id
+        const modelData = await pollSloydJob(jobId, 60) // Poll for up to 60 seconds
+
+        if (modelData) {
+          return modelData
+        }
+      }
+
+      // If no job ID, return the initial response (synchronous API)
+      return jobData
     } catch (error: any) {
-      console.error(`[Model Gen] Attempt ${attempt} failed:`, error.message)
+      console.error(`[v0] [Model Gen] Attempt ${attempt} failed:`, error.message)
       lastError = error
 
       if (error.name === "AbortError") {
-        console.error("[Model Gen] Request timed out")
+        console.error("[v0] [Model Gen] Request timed out")
       }
 
       // Wait before retry
       if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
       }
     }
   }
 
-  console.error("[Model Gen] All retry attempts failed:", lastError)
+  console.error("[v0] [Model Gen] All retry attempts failed:", lastError)
+  return null
+}
+
+async function pollSloydJob(jobId: string, maxWaitSeconds: number): Promise<any | null> {
+  const startTime = Date.now()
+  const pollInterval = 2000 // Poll every 2 seconds
+
+  while ((Date.now() - startTime) / 1000 < maxWaitSeconds) {
+    try {
+      const statusResponse = await fetch(`${SLOYD_STATUS_API}/${jobId}`, {
+        headers: {
+          Authorization: process.env.SLOYD_TOKEN!,
+          Origin: "https://app.sloyd.ai",
+          Referer: "https://app.sloyd.ai/",
+        },
+      })
+
+      if (!statusResponse.ok) {
+        console.error("[v0] [Model Gen] Job status check failed:", statusResponse.status)
+        return null
+      }
+
+      const statusData = await statusResponse.json()
+      console.log("[v0] [Model Gen] Job status:", statusData.status)
+
+      // Check if job is complete
+      if (statusData.status === "completed" || statusData.status === "success" || statusData.state === "completed") {
+        console.log("[v0] [Model Gen] Job completed successfully")
+        return statusData
+      }
+
+      // Check if job failed
+      if (statusData.status === "failed" || statusData.status === "error" || statusData.state === "failed") {
+        console.error("[v0] [Model Gen] Job failed:", statusData.error || "Unknown error")
+        return null
+      }
+
+      // Wait before next poll
+      await new Promise((resolve) => setTimeout(resolve, pollInterval))
+    } catch (error) {
+      console.error("[v0] [Model Gen] Polling error:", error)
+      return null
+    }
+  }
+
+  console.error("[v0] [Model Gen] Job polling timeout after", maxWaitSeconds, "seconds")
   return null
 }

@@ -10,14 +10,14 @@ All AI models are branded as **ForgeMind™** to users:
 - **ForgeMind Ultra**: Enterprise/Admin (best available models)
 
 ### Actual Models (Internal)
-```typescript
+\`\`\`typescript
 Free: Grok-3 (all tasks)
 Pro: 
   - Scripts: Claude 3.5 Haiku
   - Worlds: GPT-4o-mini
   - Systems: Claude 3.5 Haiku
 Admin: Same as Pro (with 999,999 credits)
-```
+\`\`\`
 
 ## Intelligence Tiers
 

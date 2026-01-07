@@ -20,12 +20,12 @@
 ### B. Redirect URLs
 1. In the same page, find **"Redirect URLs"**
 2. Add these URLs (one per line):
-```
+\`\`\`
 https://blaxsmith.dev/auth/callback
 https://blaxsmith.dev
 http://localhost:3000/auth/callback
 http://localhost:3000
-```
+\`\`\`
 3. Click **Save**
 
 ---
@@ -36,10 +36,10 @@ http://localhost:3000
 2. Select your **BlaxSmith AI** application
 3. Go to **OAuth2** → **General**
 4. Under **"Redirects"**, add:
-```
+\`\`\`
 https://cccmtdxtcajozuqiytov.supabase.co/auth/v1/callback
 https://blaxsmith.dev/auth/callback
-```
+\`\`\`
 5. Click **Save Changes**
 
 ---
@@ -62,7 +62,7 @@ https://blaxsmith.dev/auth/callback
 ### Environment Variables
 In your Vercel project dashboard, ensure these are set:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
@@ -70,7 +70,7 @@ OPENAI_API_KEY=your_cometapi_key
 POLYPIZZA_API_KEY=your_polypizza_key
 ROBLOX_OPEN_CLOUD_KEY=your_roblox_key
 ROBLOX_USER_ID=your_roblox_user_id
-```
+\`\`\`
 
 ### Custom Domain
 If you've added `blaxsmith.dev` as a custom domain in Vercel:

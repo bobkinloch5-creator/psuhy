@@ -31,16 +31,16 @@
    - Environment: Production, Preview, Development
 
 3. **Redeploy:**
-   ```bash
+   \`\`\`bash
    vercel --prod
-   ```
+   \`\`\`
 
 ## Cookie Format Example
 
 Your cookie should look something like:
-```
+\`\`\`
 _sloyd_session=abc123...; user_token=xyz789...; other_cookies=...
-```
+\`\`\`
 
 ## Testing
 

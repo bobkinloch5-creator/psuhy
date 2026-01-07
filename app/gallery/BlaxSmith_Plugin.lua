@@ -1,4 +1,4 @@
-﻿--[[
+--[[
     BlaxSmith AI - Studio Plugin v6.4 ULTIMATE + Command Execution
     250-Module SDK Integration + City Builder Auto-Placement
     
@@ -10904,5 +10904,3 @@ end)
 print("[BlaxSmith]  Command Polling System Active (Always-On)!")
 
 end -- END COMMAND POLLING SCOPE
-
-

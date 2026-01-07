@@ -5,47 +5,47 @@
 Copy these EXACTLY into your `.env.local` file or Vercel Dashboard:
 
 ### ✅ Supabase (Database & Auth)
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_AE3Jkl8LXlvjxiY9hbJpTw_rV1Knph9
-```
+\`\`\`
 
 ### ✅ AI Models (ForgeMind)
-```bash
+\`\`\`bash
 OPENAI_API_KEY=sk-8EKoYMR1zYg8RAZDHzY0RIWo3HFcAyyGwjFAmmJoMz9jXFRP
-```
+\`\`\`
 
 ### Optional
-```bash
+\`\`\`bash
 # Roblox Studio Plugin (Optional)
 ROBLOX_API_TOKEN=your_token_here
 
 # Direct Database Access (Optional - for CLI tools)
 DATABASE_URL=postgresql://postgres:[PASSWORD]@db.cccmtdxtcajozuqiytov.supabase.co:5432/postgres
-```
+\`\`\`
 
 ---
 
 ## 🖥️ Local Development Setup
 
 ### 1. Create `.env.local` File
-```bash
+\`\`\`bash
 cd c:\Users\david\Downloads\blax-smith-ai-studio
-```
+\`\`\`
 
 Create `.env.local` with this content:
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_AE3Jkl8LXlvjxiY9hbJpTw_rV1Knph9
 OPENAI_API_KEY=sk-8EKoYMR1zYg8RAZDHzY0RIWo3HFcAyyGwjFAmmJoMz9jXFRP
-```
+\`\`\`
 
 ### 2. Install Dependencies
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 
 ### 3. Run Database Migrations
 Go to [Supabase SQL Editor](https://supabase.com/dashboard/project/cccmtdxtcajozuqiytov/sql/new)
@@ -59,9 +59,9 @@ Run these files in order:
 6. `scripts/006-sync-enhancements.sql`
 
 ### 4. Start Development Server
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 Visit: `http://localhost:3000`
 
@@ -85,17 +85,17 @@ Add these **4 variables** (Production + Preview + Development):
 ### 2. Deploy to Vercel
 
 **Option A: Git Deploy (Recommended)**
-```bash
+\`\`\`bash
 git add .
 git commit -m "Deploy ForgeMind with Supabase"
 git push
-```
+\`\`\`
 Vercel auto-deploys from GitHub.
 
 **Option B: CLI Deploy**
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 ### 3. Verify Deployment
 - Visit your Vercel URL

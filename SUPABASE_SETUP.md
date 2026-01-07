@@ -10,7 +10,7 @@
 
 Create `.env.local` in project root:
 
-```bash
+\`\`\`bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
@@ -23,7 +23,7 @@ OPENAI_API_KEY=sk-8EKoYMR1zYg8RAZDHzY0RIWo3HFcAyyGwjFAmmJoMz9jXFRP
 
 # Optional
 ROBLOX_API_TOKEN=your_roblox_token_here
-```
+\`\`\`
 
 ## 🔑 Get Service Role Key
 
@@ -38,41 +38,41 @@ ROBLOX_API_TOKEN=your_roblox_token_here
 In Supabase SQL Editor (Dashboard → SQL Editor), run these files in order:
 
 1. **Create Tables**
-   ```sql
+   \`\`\`sql
    -- scripts/001-create-tables.sql
-   ```
+   \`\`\`
 
 2. **Add Subscriptions**
-   ```sql
+   \`\`\`sql
    -- scripts/002-subscriptions.sql
-   ```
+   \`\`\`
 
 3. **Setup Admin**
-   ```sql
+   \`\`\`sql
    -- scripts/003-admin-setup.sql
-   ```
+   \`\`\`
 
 4. **Separate Credits**
-   ```sql
+   \`\`\`sql
    -- scripts/004-separate-credits.sql
-   ```
+   \`\`\`
 
 5. **Sloyd Integration**
-   ```sql
+   \`\`\`sql
    -- scripts/005-sloyd-integration.sql
-   ```
+   \`\`\`
 
 6. **Sync Enhancements**
-   ```sql
+   \`\`\`sql
    -- scripts/006-sync-enhancements.sql
-   ```
+   \`\`\`
 
 ## ✅ Verify Connection
 
 Test locally:
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 Visit: `http://localhost:3000`
 - Login with Discord
@@ -88,8 +88,8 @@ Set environment variables in Vercel Dashboard:
 - `OPENAI_API_KEY`
 
 Then deploy:
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 **All set!** Supabase is fully connected. 🎉

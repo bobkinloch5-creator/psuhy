@@ -10,15 +10,15 @@ After Discord login, you see "Discord App Launched" page but it doesn't redirect
 Go to: **https://supabase.com/dashboard/project/cccmtdxtcajozuqiytov/auth/url-configuration**
 
 #### Set Site URL:
-```
+\`\`\`
 https://blaxsmith.dev
-```
+\`\`\`
 
 #### Set Redirect URLs (add both):
-```
+\`\`\`
 https://blaxsmith.dev/auth/callback
 https://blax-smith-ai-studio.vercel.app/auth/callback
-```
+\`\`\`
 
 ### Step 2: Verify Discord Developer Portal
 
@@ -27,9 +27,9 @@ Go to: **https://discord.com/developers/applications**
 Find your app → OAuth2 → Redirects
 
 **Make sure this is there:**
-```
+\`\`\`
 https://cccmtdxtcajozuqiytov.supabase.co/auth/v1/callback
-```
+\`\`\`
 
 ### Step 3: Test Login Flow
 
@@ -78,12 +78,12 @@ The whole process should take 2-3 seconds.
 
 If you need to reset your session:
 
-```javascript
+\`\`\`javascript
 // In browser console on blaxsmith.dev
 localStorage.clear()
 sessionStorage.clear()
 location.reload()
-```
+\`\`\`
 
 Then try logging in again.
 

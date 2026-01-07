@@ -63,7 +63,7 @@ The auth callback tries to create a user in the `users` table. If RLS policies a
 
 **Temporary Fix:** Try this in Supabase SQL Editor:
 
-```sql
+\`\`\`sql
 -- Check if you have a user record
 SELECT * FROM users WHERE discord_id = 'YOUR_DISCORD_ID';
 
@@ -73,7 +73,7 @@ ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 
 -- Try login again, then re-enable:
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-```
+\`\`\`
 
 **Check #3: Vercel Logs**
 
@@ -123,7 +123,7 @@ Once login works, test these features:
 
 Make sure these are set in Vercel:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SITE_URL=https://blaxsmith.dev
 NEXT_PUBLIC_SUPABASE_URL=https://cccmtdxtcajozuqiytov.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cYyINgI0cnnTPRrzzB4g2Q_XNh6CnD5
@@ -132,7 +132,7 @@ OPENAI_API_KEY=[CometAPI key]
 POLYPIZZA_API_KEY=[Your key]
 ROBLOX_OPEN_CLOUD_KEY=[Optional]
 ROBLOX_USER_ID=[Optional]
-```
+\`\`\`
 
 ---
 
@@ -152,7 +152,7 @@ All should be run in Supabase SQL Editor.
 **If still stuck on Discord page:**
 
 1. **Clear everything:**
-   ```javascript
+   \`\`\`javascript
    // In browser console on blaxsmith.dev:
    localStorage.clear()
    sessionStorage.clear()
@@ -160,7 +160,7 @@ All should be run in Supabase SQL Editor.
      document.cookie = c.trim().split("=")[0] + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC"
    })
    location.reload()
-   ```
+   \`\`\`
 
 2. **Check Network tab:**
    - Open Dev Tools (F12) → Network
@@ -200,19 +200,19 @@ All should be run in Supabase SQL Editor.
 ## 📞 Quick Commands
 
 **Redeploy:**
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 **Check logs:**
-```bash
+\`\`\`bash
 vercel logs blax-smith-ai-studio --prod
-```
+\`\`\`
 
 **Test locally:**
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 ---
 
