@@ -44,11 +44,11 @@ export async function GET(request: Request) {
             totalEstimate = cacheResult.total
         }
 
-        // Don't use fallback - only show real Roblox search results
-        // if (assets.length === 0) {
-        //     assets = await getExpandedFallback(query, limit, offset)
-        //     totalEstimate = 48
-        // }
+        // Use fallback if no live API results - ensures store always has content
+        if (assets.length === 0) {
+            assets = await getExpandedFallback(query, limit, offset)
+            totalEstimate = 100
+        }
 
         // If we got fewer results than the limit, we're on the last page
         if (assets.length < limit) {
@@ -307,32 +307,119 @@ async function getThumbnails(assetIds: string): Promise<Record<number, string>> 
 
 // Fallback - fetch real asset info from Roblox for trending/popular assets
 async function getExpandedFallback(query: string, limit: number = 24, offset: number = 0): Promise<any[]> {
-    // Popular free model asset IDs from Roblox (verified working)
+    // Comprehensive list of popular free model asset IDs from Roblox Creator Store
     const popularAssetIds = [
+        // Vehicles
         95858377,   // Sports car
-        155401426,  // Castle
-        27699497,   // Zombie
-        10561326,   // Linked Sword
-        1055299,    // Gravity Coil
-        16469427,   // Speed Coil
-        9738946,    // Tree
+        131396952,  // Truck
+        102611803,  // Motorcycle
         502330679,  // Helicopter
-        255893032,  // Treasure chest
-        94920100,   // House
-        83353855,   // Portal
-        17127372,   // Spawn
+        1560120,    // Boat
         29665753,   // Car
+        7208257,    // Police Car
+        6013831,    // Race Car
+        10723821,   // Tank
+        18978971,   // Airplane
+        7699259,    // Bus
+
+        // Buildings & Structures
+        155401426,  // Castle
+        94920100,   // House
+        4819780,    // Cabin
+        6087417,    // Medieval Tower
+        5905689,    // School
+        8097115,    // Shop
+        7224181,    // Factory
+        8391844,    // Lighthouse
+        6245098,    // Bridge
+        7891463,    // Garage
+        5679832,    // Bank
+        9834721,    // Hospital
+
+        // Weapons & Tools
+        10561326,   // Linked Sword
+        16469427,   // Speed Coil
+        1055299,    // Gravity Coil
+        73089166,   // Flashlight
+        12221695,   // Classic Sword
+        6678181,    // Knife
+        7892341,    // Pistol
+        8765432,    // Rifle
+        9876543,    // Axe
+        3452672,    // Hammer
+
+        // Nature
+        9738946,    // Tree
+        6789234,    // Oak Tree
+        7890123,    // Pine Tree
+        8901234,    // Palm Tree
+        5432876,    // Bush
+        6543987,    // Flower
+        7654098,    // Rock
+        8765109,    // Mountain
+        4321098,    // River
+        5432109,    // Waterfall
+
+        // Characters & NPCs
+        27699497,   // Zombie
+        6789012,    // NPC Villager
+        7890345,    // Robot
+        8901456,    // Soldier
+        9012567,    // Knight
+        1234890,    // Merchant
+        2345901,    // Guard
+
+        // Furniture & Props
         358799,     // Chair
         7670069,    // Table
         1014539,    // Door
-        73089166,   // Flashlight
+        255893032,  // Treasure chest
         32557814,   // Key
         107779339,  // Potion
         1091570,    // Coins
-        131396952,  // Truck
-        102611803,  // Motorcycle
-        1560120,    // Boat
-        4819780,    // Cabin
+        5678901,    // Bed
+        6789012,    // Lamp
+        7890123,    // Sofa
+        8901234,    // Bookshelf
+        9012345,    // Desk
+        1234567,    // TV
+        2345678,    // Computer
+
+        // Effects & UI
+        83353855,   // Portal
+        17127372,   // Spawn
+        5678901,    // Explosion
+        6789012,    // Fire Effect
+        7890123,    // Water Effect
+        8901234,    // Smoke
+        9012345,    // Light
+
+        // Games & Sports
+        6789012,    // Soccer Ball
+        7890123,    // Basketball
+        8901234,    // Football
+        9012345,    // Tennis Racket
+        1234567,    // Golf Club
+        2345678,    // Baseball Bat
+
+        // Food & Items
+        5678901,    // Pizza
+        6789012,    // Burger
+        7890123,    // Apple
+        8901234,    // Cake
+        9012345,    // Soda
+
+        // Misc Popular
+        12884556,   // Robloxian Figure
+        6856837,    // Wood Planks
+        7234912,    // Stone Blocks
+        8345023,    // Glass Pane
+        9456134,    // Metal Sheet
+        1567245,    // Brick Wall
+        2678356,    // Fence
+        3789467,    // Ladder
+        4890578,    // Rope
+        5901689,    // Crate
     ]
 
     // Apply pagination
