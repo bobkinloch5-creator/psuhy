@@ -187,7 +187,7 @@ export default function DocsPage() {
                     </p>
                     <div className="flex gap-4 justify-center">
                         <a
-                            href="https://discord.gg/sC9A9Fzss3"
+                            href="https://discord.gg/a6wZ2w3vZd"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-bold hover:shadow-lg transition-all hover:scale-105"
