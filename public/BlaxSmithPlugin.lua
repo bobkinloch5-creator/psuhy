@@ -6847,27 +6847,42 @@ print("════════════════════════�
 spawn(function()
     wait(2) -- Wait for Studio to fully load
     
-    print("[BloxSmith] 🔄 Auto-connecting to Desktop App...")
+    print("[BloxSmith] 🔄 Connecting to BlaxSmith Website...")
     
-    local success = httpRequest("POST", "/plugin/connect", {
-        studioId = game.JobId,
-        pluginVersion = CONFIG.PLUGIN_VERSION,
-        sdkVersion = CONFIG.SDK_VERSION,
-        autoConnect = true
-    })
+    -- Connect directly to Supabase for heartbeat
+    local success, result = pcall(function()
+        return HttpService:RequestAsync({
+            Url = SUPABASE_URL .. "/rest/v1/plugin_heartbeats",
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["apikey"] = SUPABASE_ANON_KEY,
+                ["Authorization"] = "Bearer " .. SUPABASE_ANON_KEY
+            },
+            Body = HttpService:JSONEncode({
+                user_id = USER_ID ~= "" and USER_ID or "anonymous",
+                studio_id = game.JobId,
+                plugin_version = CONFIG.PLUGIN_VERSION,
+                status = "connected",
+                place_id = game.PlaceId
+            })
+        })
+    end)
     
-    if success then
+    if success and result and result.Success then
         startPolling()
         isConnected = true
         connectBtn.Text = "✓ CONNECTED"
         connectBtn.BackgroundColor3 = COLORS.GREEN
-        status.Text = "Auto-connected to Desktop App"
+        status.Text = "Connected to www.blaxsmith.dev"
         status.TextColor3 = COLORS.GREEN
-        updateStatus(true) -- Update splash screen status
-        print("[BloxSmith] ✅ Auto-connected to Desktop App!")
+        updateStatus(true)
+        print("[BloxSmith] ✅ Connected to BlaxSmith Website!")
     else
-        print("[BloxSmith] ⚠️ Desktop App not running. Click 'Connect' when ready.")
-        status.Text = "Click Connect when app is running"
+        -- Still start polling even if heartbeat fails (polling uses website URL)
+        startPolling()
+        print("[BloxSmith] ⚠️ Heartbeat failed, but polling started. Check your User ID.")
+        status.Text = "Polling active - Enter your User ID"
         status.TextColor3 = COLORS.GOLD
     end
     
