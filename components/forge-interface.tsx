@@ -13,6 +13,7 @@ import { ModelViewer3D } from "@/components/model-viewer-3d"
 import { InlineModelViewer } from "@/components/inline-model-viewer"
 import { UpgradeModal } from "@/components/upgrade-modal"
 import { PluginStatus } from "@/components/plugin-status"
+import ToolboxBrowser from "@/components/toolbox-browser"
 import { BlaxSmith3DGenerator } from "@/components/blaxsmith-3d-generator"
 import { MyGallery } from "@/components/my-gallery"
 
@@ -344,13 +345,18 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
           />
         </div>
 
-        {/* My Gallery - Large Section for Saved 3D Models */}
-        <div className="mb-8">
+        {/* My Gallery - Large Prominent Section */}
+        <div className="mb-6">
           <MyGallery />
+        </div>
+
+        {/* Toolbox Store - Compact */}
+        <div className="mb-8">
+          <ToolboxBrowser />
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6 border-t border-white/10">
+      <div className="max-w-7xl mx-auto px-6 py-4 border-t border-white/10">
         <div className="text-center">
           <p className="text-xs text-white/40">Crafted with 🔥 by the BlaxSmith Team • © 2026 blaxsmith.dev</p>
         </div>

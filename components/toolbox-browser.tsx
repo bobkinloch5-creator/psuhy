@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Loader2, Star, Grid3X3, Check, Package, Plus, ChevronRight, Car, Building, Lightbulb, Cpu, Swords, Trees, Sofa, Code, Palette, Box } from "lucide-react"
+import { Search, Loader2, Star, Grid3X3, Check, Package, Plus, ChevronRight, ChevronLeft, Car, Building, Lightbulb, Cpu, Swords, Trees, Sofa, Code, Palette, Box } from "lucide-react"
 
 interface Asset {
     id: number
@@ -42,6 +42,12 @@ export default function ToolboxBrowser() {
     const [activeTab, setActiveTab] = useState("Models")
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalResults, setTotalResults] = useState(0)
+    const ITEMS_PER_PAGE = 24
+    const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE)
+
     // Load trending on mount
     useEffect(() => {
         loadTrending()
@@ -59,7 +65,7 @@ export default function ToolboxBrowser() {
         }
     }
 
-    const searchAssets = async (searchQuery: string) => {
+    const searchAssets = async (searchQuery: string, page: number = 1) => {
         if (!searchQuery.trim()) {
             setAssets([])
             return
@@ -70,13 +76,16 @@ export default function ToolboxBrowser() {
         try {
             const params = new URLSearchParams({
                 query: searchQuery,
-                limit: "48",
+                limit: String(ITEMS_PER_PAGE),
+                page: String(page),
             })
             const response = await fetch(`/api/toolbox/search?${params}`)
             const data = await response.json()
 
             if (data.success) {
                 setAssets(data.assets || [])
+                setTotalResults(data.total || data.assets?.length || 0)
+                setCurrentPage(page)
             } else {
                 setError(data.error || "Search failed")
                 setAssets([])
@@ -91,13 +100,22 @@ export default function ToolboxBrowser() {
 
     const handleSearch = () => {
         setSelectedCategory(null)
-        searchAssets(query)
+        setCurrentPage(1)
+        searchAssets(query, 1)
     }
 
     const handleCategoryClick = (categoryId: string) => {
         setSelectedCategory(categoryId)
         setQuery(categoryId)
-        searchAssets(categoryId)
+        setCurrentPage(1)
+        searchAssets(categoryId, 1)
+    }
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            searchAssets(query, newPage)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
     }
 
     return (
@@ -221,14 +239,85 @@ export default function ToolboxBrowser() {
                     </div>
                 ) : assets.length > 0 ? (
                     <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-[10px] text-white/40">{assets.length} results for "{query}"</p>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs text-white/50">
+                                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalResults)} of {totalResults} results for "{query}"
+                            </p>
+                            {totalPages > 1 && (
+                                <p className="text-xs text-white/40">Page {currentPage} of {totalPages}</p>
+                            )}
                         </div>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
                             {assets.map((asset) => (
                                 <AssetCard key={asset.id} asset={asset} />
                             ))}
                         </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-white/10">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronLeft className="w-4 h-4 text-white" />
+                                </button>
+
+                                <div className="flex items-center gap-1">
+                                    {/* First page */}
+                                    {currentPage > 3 && (
+                                        <>
+                                            <button
+                                                onClick={() => handlePageChange(1)}
+                                                className="w-8 h-8 rounded-lg text-xs font-medium bg-white/10 hover:bg-white/20 text-white transition-colors"
+                                            >
+                                                1
+                                            </button>
+                                            {currentPage > 4 && <span className="text-white/40 px-1">...</span>}
+                                        </>
+                                    )}
+
+                                    {/* Page numbers around current */}
+                                    {Array.from({ length: 5 }, (_, i) => currentPage - 2 + i)
+                                        .filter(page => page >= 1 && page <= totalPages)
+                                        .map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => handlePageChange(page)}
+                                                className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${page === currentPage
+                                                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                                                        : "bg-white/10 hover:bg-white/20 text-white"
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))
+                                    }
+
+                                    {/* Last page */}
+                                    {currentPage < totalPages - 2 && (
+                                        <>
+                                            {currentPage < totalPages - 3 && <span className="text-white/40 px-1">...</span>}
+                                            <button
+                                                onClick={() => handlePageChange(totalPages)}
+                                                className="w-8 h-8 rounded-lg text-xs font-medium bg-white/10 hover:bg-white/20 text-white transition-colors"
+                                            >
+                                                {totalPages}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronRight className="w-4 h-4 text-white" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : query && !loading ? (
                     <div className="text-center py-16 text-white/40">
