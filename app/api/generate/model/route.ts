@@ -299,13 +299,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Premium check
-    const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
+    // Check credits for ALL users (premium gets 50, free gets 5)
     const modelCredits = userData.model_credits ?? 0
 
-    if (!isPremium && modelCredits <= 0) {
+    if (modelCredits <= 0) {
+      const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
       return NextResponse.json({
         error: "No model generation credits remaining!",
+        message: isPremium
+          ? "Your 50 model credits have been used. Credits reset monthly."
+          : "Upgrade to Pro for 50 model generations per month!",
         creditsRemaining: 0,
       }, { status: 403 })
     }
@@ -381,26 +384,16 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    // Deduct credits
-    if (!isPremium && modelCredits > 0) {
-      const newCredits = modelCredits - 1
-      await serviceClient.from("users").update({ model_credits: newCredits }).eq("id", userData.id)
-
-      return NextResponse.json({
-        success: true,
-        creation,
-        model: modelData,
-        source: result.source,
-        creditsRemaining: newCredits,
-      })
-    }
+    // Deduct credits for ALL users
+    const newCredits = modelCredits - 1
+    await serviceClient.from("users").update({ model_credits: newCredits }).eq("id", userData.id)
 
     return NextResponse.json({
       success: true,
       creation,
       model: modelData,
       source: result.source,
-      creditsRemaining: "unlimited",
+      creditsRemaining: newCredits,
     })
 
   } catch (error: any) {
