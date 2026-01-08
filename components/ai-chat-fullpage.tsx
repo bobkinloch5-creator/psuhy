@@ -39,6 +39,7 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
     const [isLoading, setIsLoading] = useState(false)
     const [selectedModel, setSelectedModel] = useState("grok-3")
     const [showSidebar, setShowSidebar] = useState(true)
+    const [isConnected, setIsConnected] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const abortControllerRef = useRef<AbortController | null>(null)
     const supabase = createClient()
@@ -46,6 +47,19 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
+
+    // Realtime connection status
+    useEffect(() => {
+        const channel = supabase.channel('connection-status')
+
+        channel.subscribe((status: string) => {
+            setIsConnected(status === 'SUBSCRIBED')
+        })
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [])
 
     useEffect(() => {
         loadConversations()
@@ -324,13 +338,20 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                             {activeConversation ? conversations.find(c => c.id === activeConversation)?.title || "Chat" : "New Conversation"}
                         </h2>
                     </div>
-                    {/* Real-time Credit Counter in Header */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30">
-                        <Sparkles className="w-4 h-4 text-orange-400" />
-                        <span className={`font-bold ${user.generation_credits > 10 ? 'text-green-400' : user.generation_credits > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
-                            {user.generation_credits}
-                        </span>
-                        <span className="text-xs text-white/50">prompts</span>
+                    <div className="flex items-center gap-3">
+                        {/* Connection Status */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10">
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                            <span className="text-xs text-white/70">{isConnected ? 'Connected' : 'Connecting...'}</span>
+                        </div>
+                        {/* Real-time Credit Counter */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30">
+                            <Sparkles className="w-4 h-4 text-orange-400" />
+                            <span className={`font-bold ${user.generation_credits > 10 ? 'text-green-400' : user.generation_credits > 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {user.generation_credits}
+                            </span>
+                            <span className="text-xs text-white/50">prompts</span>
+                        </div>
                     </div>
                 </div>
 
