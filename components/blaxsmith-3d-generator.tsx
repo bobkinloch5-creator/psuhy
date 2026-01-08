@@ -130,9 +130,9 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         setElapsedTime(0)
         setRemainingTime(90)
 
-        // Start progress simulation (Cube3D typically takes 60-120 seconds)
+        // Start progress simulation (LGM typically takes 60-120 seconds)
         const startTime = Date.now()
-        const estimatedDuration = 90000 // 90 seconds estimate for Cube3D
+        const estimatedDuration = 15000 // 15 seconds estimate for LGM
 
         progressIntervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTime
@@ -267,7 +267,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     </div>
                     <div>
                         <h4 className="text-white font-semibold text-sm">Text-to-3D</h4>
-                        <p className="text-white/50 text-xs">Powered by Roblox Cube3D</p>
+                        <p className="text-white/50 text-xs">Powered by LGM AI</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10">
@@ -388,7 +388,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
                     {/* Progress Percentage */}
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/50">Powered by Cube3D</span>
+                        <span className="text-xs text-white/50">Powered by LGM</span>
                         <span className="text-sm font-bold text-white/80">{Math.round(progress)}%</span>
                     </div>
                 </div>

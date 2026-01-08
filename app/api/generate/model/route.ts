@@ -2,36 +2,36 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { Client } from "@gradio/client"
 
-// Hugging Face Cube3D Space  
-const CUBE3D_SPACE = "Roblox/cube3d-interactive"
+// LGM (Large Multi-View Gaussian) - Fast text-to-3D (5 seconds)
+const LGM_SPACE = "ashawkey/LGM"
 
 // Max duration for Vercel Pro
 export const maxDuration = 300
 
 // Helper function to connect with retries
-async function connectToCube3D(maxRetries: number = 3): Promise<any> {
+async function connectToLGM(maxRetries: number = 3): Promise<any> {
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[Cube3D] Connection attempt ${attempt}/${maxRetries}...`)
-      const client = await Client.connect(CUBE3D_SPACE)
-      console.log(`[Cube3D] Connected successfully on attempt ${attempt}`)
+      console.log(`[LGM] Connection attempt ${attempt}/${maxRetries}...`)
+      const client = await Client.connect(LGM_SPACE)
+      console.log(`[LGM] Connected successfully on attempt ${attempt}`)
       return client
     } catch (error: any) {
-      console.error(`[Cube3D] Connection attempt ${attempt} failed:`, error.message)
+      console.error(`[LGM] Connection attempt ${attempt} failed:`, error.message)
       lastError = error
 
       if (attempt < maxRetries) {
         // Wait before retry with exponential backoff
         const waitTime = 2000 * attempt
-        console.log(`[Cube3D] Waiting ${waitTime}ms before retry...`)
+        console.log(`[LGM] Waiting ${waitTime}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
   }
 
-  throw lastError || new Error("Failed to connect to Cube3D")
+  throw lastError || new Error("Failed to connect to LGM")
 }
 
 // Helper to upload model to Supabase Storage
@@ -52,7 +52,7 @@ async function uploadModelToSupabase(
       })
 
     if (error) {
-      console.error("[Cube3D] Storage upload error:", error)
+      console.error("[LGM] Storage upload error:", error)
       return null
     }
 
@@ -63,7 +63,7 @@ async function uploadModelToSupabase(
 
     return urlData?.publicUrl || null
   } catch (err) {
-    console.error("[Cube3D] Upload failed:", err)
+    console.error("[LGM] Upload failed:", err)
     return null
   }
 }
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
     }
 
-    console.log("[Cube3D] User:", user.id, "Prompt:", prompt)
+    console.log("[LGM] User:", user.id, "Prompt:", prompt)
 
     // Look up user by auth ID
     let { data: userData, error: userError } = await supabase
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     // If not found by id, try discord_id for backwards compatibility
     if (userError || !userData) {
-      console.log("[Cube3D] User not found by id, trying discord_id...")
+      console.log("[LGM] User not found by id, trying discord_id...")
       const result = await supabase
         .from("users")
         .select("id, discord_id, generation_credits, model_credits, subscription_tier")
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     }
 
     if (userError || !userData) {
-      console.error("[Cube3D] User lookup error:", userError)
+      console.error("[LGM] User lookup error:", userError)
       // Create user if they don't exist
       const { data: newUser, error: createError } = await supabase
         .from("users")
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
         .single()
 
       if (createError || !newUser) {
-        console.error("[Cube3D] Failed to create user:", createError)
+        console.error("[LGM] Failed to create user:", createError)
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
       userData = newUser
@@ -148,26 +148,21 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("[Cube3D] Connecting to Hugging Face Space...")
+    console.log("[LGM] Connecting to Hugging Face Space...")
 
     try {
-      // Connect to the Cube3D Hugging Face Space with retries
-      const client = await connectToCube3D(3)
+      // Connect to LGM Hugging Face Space with retries
+      const client = await connectToLGM(3)
 
-      console.log("[Cube3D] Connected! Generating model for:", prompt)
+      console.log("[LGM] Connected! Generating model for:", prompt)
 
-      // Bounding box defaults (x, y, z)
-      const bbox = boundingBox || { x: 1.0, y: 1.0, z: 1.0 }
-
-      // Call the Cube3D generation endpoint
-      const result = await client.predict("/generate", {
+      // LGM uses text-to-3D generation
+      // The API takes a text prompt and returns GLB model + video preview
+      const result = await client.predict("/run", {
         prompt: prompt,
-        bounding_box_x: bbox.x || 1.0,
-        bounding_box_y: bbox.y || 1.0,
-        bounding_box_z: bbox.z || 1.0,
       })
 
-      console.log("[Cube3D] Generation result:", JSON.stringify(result))
+      console.log("[LGM] Generation result:", JSON.stringify(result))
 
       // Extract the model file from result
       const resultData = result.data as any[]
@@ -198,12 +193,12 @@ export async function POST(request: Request) {
         }
       }
 
-      console.log("[Cube3D] Original Model URL:", originalModelUrl)
+      console.log("[LGM] Original Model URL:", originalModelUrl)
 
       // Download and store the model in Supabase Storage
       if (originalModelUrl) {
         try {
-          console.log("[Cube3D] Downloading model for Supabase storage...")
+          console.log("[LGM] Downloading model for Supabase storage...")
           const modelResponse = await fetch(originalModelUrl)
 
           if (modelResponse.ok) {
@@ -218,11 +213,11 @@ export async function POST(request: Request) {
             )
 
             if (storedModelUrl) {
-              console.log("[Cube3D] Model stored in Supabase:", storedModelUrl)
+              console.log("[LGM] Model stored in Supabase:", storedModelUrl)
             }
           }
         } catch (downloadErr) {
-          console.error("[Cube3D] Failed to download/store model:", downloadErr)
+          console.error("[LGM] Failed to download/store model:", downloadErr)
           // Fall back to original URL
         }
       }
@@ -248,7 +243,7 @@ export async function POST(request: Request) {
           glb: finalModelUrl?.includes('.glb') ? finalModelUrl : null,
           obj: finalModelUrl?.includes('.obj') ? finalModelUrl : null,
         },
-        source: "cube3d",
+        source: "LGM",
         original_url: originalModelUrl,
       }
 
@@ -281,11 +276,11 @@ export async function POST(request: Request) {
 
           if (!queueError) {
             autoQueued = true
-            console.log("[Cube3D] Auto-queued model to Studio for user:", userDiscordId)
+            console.log("[LGM] Auto-queued model to Studio for user:", userDiscordId)
           }
         }
       } catch (error) {
-        console.error("[Cube3D] Auto-queue error:", error)
+        console.error("[LGM] Auto-queue error:", error)
       }
 
       enhancedModelData.auto_queued = autoQueued
@@ -307,7 +302,7 @@ export async function POST(request: Request) {
         .single()
 
       if (creationError) {
-        console.error("[Cube3D] Creation insert error:", creationError)
+        console.error("[LGM] Creation insert error:", creationError)
       }
 
       // Deduct credits for non-premium users
@@ -326,11 +321,11 @@ export async function POST(request: Request) {
             amount: 1,
             balance_before: balanceBefore,
             balance_after: balanceAfter,
-            reason: "Cube3D model generation",
+            reason: "LGM model generation",
             creation_id: creation?.id,
             ip_address: request.headers.get("x-forwarded-for") || "unknown",
           })
-          .catch((err) => console.error("[Cube3D] Transaction log error:", err))
+          .catch((err) => console.error("[LGM] Transaction log error:", err))
 
         return NextResponse.json({
           success: true,
@@ -350,18 +345,18 @@ export async function POST(request: Request) {
       })
 
     } catch (gradioError: any) {
-      console.error("[Cube3D] Gradio API error:", gradioError)
+      console.error("[LGM] Gradio API error:", gradioError)
       return NextResponse.json(
         {
           error: "Model generation failed",
-          details: gradioError.message || "Cube3D service temporarily unavailable. Please try again.",
+          details: gradioError.message || "LGM service temporarily unavailable. Please try again.",
         },
         { status: 503 },
       )
     }
 
   } catch (error: any) {
-    console.error("[Cube3D] Unexpected error:", error)
+    console.error("[LGM] Unexpected error:", error)
     return NextResponse.json(
       {
         error: "Generation failed",
