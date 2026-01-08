@@ -427,14 +427,14 @@ export async function POST(request: Request) {
     // Find user
     let { data: userData } = await serviceClient
       .from("users")
-      .select("id, discord_id, model_credits, subscription_tier")
+      .select("id, discord_id, generation_credits, subscription_tier")
       .eq("discord_id", user.id)
       .single()
 
     if (!userData) {
       const result = await serviceClient
         .from("users")
-        .select("id, discord_id, model_credits, subscription_tier")
+        .select("id, discord_id, generation_credits, subscription_tier")
         .eq("id", user.id)
         .single()
       userData = result.data
@@ -444,16 +444,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Check credits for ALL users (premium gets 50, free gets 5)
-    const modelCredits = userData.model_credits ?? 0
+    // Check credits - uses the same generation_credits as chat (100 total for everything)
+    const credits = userData.generation_credits ?? 0
 
-    if (modelCredits <= 0) {
+    if (credits <= 0) {
       const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
       return NextResponse.json({
-        error: "No model generation credits remaining!",
+        error: "No credits remaining!",
         message: isPremium
-          ? "Your 50 model credits have been used. Credits reset monthly."
-          : "Upgrade to Pro for 50 model generations per month!",
+          ? "Your 100 credits have been used. Credits reset monthly."
+          : "Upgrade to Pro for 100 credits per month!",
         creditsRemaining: 0,
       }, { status: 403 })
     }
@@ -529,9 +529,9 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    // Deduct credits for ALL users
-    const newCredits = modelCredits - 1
-    await serviceClient.from("users").update({ model_credits: newCredits }).eq("id", userData.id)
+    // Deduct credits from unified generation_credits pool
+    const newCredits = credits - 1
+    await serviceClient.from("users").update({ generation_credits: newCredits }).eq("id", userData.id)
 
     return NextResponse.json({
       success: true,

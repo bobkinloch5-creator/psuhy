@@ -216,8 +216,7 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
               </button>
 
               <div className="flex gap-3">
-                <CreditBadge icon={<Sparkles className="w-4 h-4" />} count={user.generation_credits} label="Gen" />
-                <CreditBadge icon={<Box className="w-4 h-4" />} count={user.model_credits} label="Model" />
+                <CreditBadge icon={<Sparkles className="w-4 h-4" />} count={user.generation_credits} label="Credits" />
               </div>
 
               <ProfileDropdown

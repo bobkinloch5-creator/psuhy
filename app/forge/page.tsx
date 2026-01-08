@@ -54,9 +54,9 @@ export default async function ForgePage() {
       username: user.user_metadata?.global_name || user.email?.split('@')[0] || 'User',
       avatar: user.user_metadata?.avatar_url,
       email: user.email || '',
-      generation_credits: 50,
-      model_credits: 50,
-      world_credits: 50,
+      generation_credits: 25,
+      model_credits: 0,
+      world_credits: 0,
       subscription_tier: 'free',
       is_admin: false
     }

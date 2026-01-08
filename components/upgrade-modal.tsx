@@ -22,9 +22,9 @@ export function UpgradeModal({ isOpen, onClose, currentTier }: UpgradeModalProps
             icon: <Sparkles className="w-8 h-8" />,
             gradient: "from-gray-500 to-gray-700",
             features: [
-                { text: "50 AI Chat Prompts/month", included: true },
-                { text: "5 Model Generations/month", included: true },
-                { text: "2 World Generations/month", included: true },
+                { text: "25 Credits/month", included: true },
+                { text: "AI Chat & Scripting", included: true },
+                { text: "3D Model Generation", included: true },
                 { text: "Basic 3D Preview", included: true },
                 { text: "Roblox Plugin Access", included: true },
                 { text: "Advanced AI Models", included: false },
@@ -41,9 +41,9 @@ export function UpgradeModal({ isOpen, onClose, currentTier }: UpgradeModalProps
             icon: <Crown className="w-8 h-8" />,
             gradient: "from-purple-500 via-pink-500 to-orange-500",
             features: [
-                { text: "100 AI Chat Prompts/month", included: true },
-                { text: "50 Model Generations/month", included: true },
-                { text: "20 World Generations/month", included: true },
+                { text: "100 Credits/month", included: true },
+                { text: "AI Chat & Scripting", included: true },
+                { text: "3D Model Generation", included: true },
                 { text: "Advanced 3D Preview", included: true },
                 { text: "Roblox Plugin Access", included: true },
                 { text: "Advanced AI Models", included: true },
@@ -93,8 +93,8 @@ export function UpgradeModal({ isOpen, onClose, currentTier }: UpgradeModalProps
                         <div
                             key={tier.name}
                             className={`relative overflow-hidden rounded-2xl border-2 transition-all ${tier.current
-                                    ? "border-orange-500/50 shadow-lg shadow-orange-500/20"
-                                    : "border-white/10 hover:border-white/20"
+                                ? "border-orange-500/50 shadow-lg shadow-orange-500/20"
+                                : "border-white/10 hover:border-white/20"
                                 } ${tier.name === "Pro" ? "md:scale-105" : ""}`}
                         >
                             {/* Background gradient */}
@@ -153,8 +153,8 @@ export function UpgradeModal({ isOpen, onClose, currentTier }: UpgradeModalProps
                                     <button
                                         disabled={tier.current}
                                         className={`w-full px-6 py-3 rounded-lg font-semibold transition-all ${tier.current
-                                                ? "bg-white/5 text-white/40 cursor-not-allowed"
-                                                : "bg-gradient-to-r from-gray-600 to-gray-800 text-white hover:shadow-lg"
+                                            ? "bg-white/5 text-white/40 cursor-not-allowed"
+                                            : "bg-gradient-to-r from-gray-600 to-gray-800 text-white hover:shadow-lg"
                                             }`}
                                     >
                                         {tier.current ? "Current Plan" : "Downgrade"}
@@ -169,8 +169,8 @@ export function UpgradeModal({ isOpen, onClose, currentTier }: UpgradeModalProps
                                             }
                                         }}
                                         className={`w-full px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${tier.available
-                                                ? "bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white hover:shadow-lg hover:shadow-purple-500/50"
-                                                : "bg-gradient-to-r from-purple-900 to-pink-900 text-white/60 cursor-not-allowed"
+                                            ? "bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white hover:shadow-lg hover:shadow-purple-500/50"
+                                            : "bg-gradient-to-r from-purple-900 to-pink-900 text-white/60 cursor-not-allowed"
                                             }`}
                                     >
                                         {isLoading ? (
