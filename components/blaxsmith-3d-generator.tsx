@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Sparkles, Loader2, Download, Eye, Check, AlertCircle, Box, Palette, Wand2, RotateCcw, Maximize2, ZoomIn, RotateCw } from "lucide-react"
+import { Sparkles, Loader2, Download, Eye, Check, AlertCircle, Box, Palette, Wand2, RotateCcw, Maximize2, ZoomIn, RotateCw, ChevronDown } from "lucide-react"
 
 // Declare model-viewer as a valid JSX element
 declare global {
@@ -107,6 +107,10 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
     const [error, setError] = useState<string | null>(null)
     const [localCredits, setLocalCredits] = useState(modelCredits)
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [progress, setProgress] = useState(0)
+    const [progressText, setProgressText] = useState("")
+    const [showExportDropdown, setShowExportDropdown] = useState(false)
+    const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     // Load model-viewer on mount
     useEffect(() => {
@@ -119,6 +123,30 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         setIsGenerating(true)
         setGeneratedModel(null)
         setError(null)
+        setProgress(0)
+        setProgressText("Initializing...")
+
+        // Start progress simulation (typically takes 15-30 seconds)
+        const startTime = Date.now()
+        const estimatedDuration = 25000 // 25 seconds estimate
+
+        progressIntervalRef.current = setInterval(() => {
+            const elapsed = Date.now() - startTime
+            const progressPercent = Math.min(95, (elapsed / estimatedDuration) * 100)
+            setProgress(progressPercent)
+
+            if (progressPercent < 20) {
+                setProgressText("Analyzing prompt...")
+            } else if (progressPercent < 40) {
+                setProgressText("Generating mesh...")
+            } else if (progressPercent < 60) {
+                setProgressText("Adding textures...")
+            } else if (progressPercent < 80) {
+                setProgressText("Optimizing model...")
+            } else {
+                setProgressText("Finalizing...")
+            }
+        }, 200)
 
         try {
             const res = await fetch("/api/generate/model", {
@@ -129,6 +157,14 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
             const data = await res.json()
             console.log("[3D Generator] API Response:", data)
 
+            // Clear progress interval
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current)
+                progressIntervalRef.current = null
+            }
+            setProgress(100)
+            setProgressText("Complete!")
+
             if (data.success) {
                 const newCredits = typeof data.creditsRemaining === "number"
                     ? data.creditsRemaining
@@ -138,14 +174,22 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
                 // Extract model data from various possible response structures
                 const modelData = data.model || data.creation?.asset_data || data.creation || {}
+                const formats = modelData.formats || modelData.asset_data?.formats || {}
+
                 const extractedModel = {
                     name: modelData.name || modelData.prompt || prompt,
                     model_url: modelData.model_url || modelData.glb_url || modelData.glbUrl ||
-                        modelData.files?.glb || modelData.formats?.glb ||
+                        modelData.files?.glb || formats.glb ||
                         modelData.asset_data?.model_url || null,
                     preview_url: modelData.preview_url || modelData.previewUrl ||
                         modelData.thumbnail || modelData.image ||
                         modelData.asset_data?.preview_url || null,
+                    formats: {
+                        glb: formats.glb || modelData.model_url || modelData.glb_url || null,
+                        fbx: formats.fbx || modelData.fbx_url || null,
+                        obj: formats.obj || modelData.obj_url || null,
+                        usdz: formats.usdz || modelData.usdz_url || null,
+                    },
                     asset_data: modelData.asset_data || modelData,
                 }
                 console.log("[3D Generator] Extracted model:", extractedModel)
@@ -156,8 +200,16 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         } catch (err) {
             console.error("[3D Generator] Error:", err)
             setError("Generation failed. Please try again.")
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current)
+                progressIntervalRef.current = null
+            }
         } finally {
             setIsGenerating(false)
+            setTimeout(() => {
+                setProgress(0)
+                setProgressText("")
+            }, 1000)
         }
     }
 
@@ -235,7 +287,6 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     <>
                         <Loader2 className="w-5 h-5 animate-spin" />
                         <span>Generating 3D Model...</span>
-                        <span className="text-xs opacity-80">(may take 30-60s)</span>
                     </>
                 ) : (
                     <>
@@ -244,6 +295,28 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     </>
                 )}
             </button>
+
+            {/* Progress Bar */}
+            {isGenerating && (
+                <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 border border-purple-500/30">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-white/80 text-sm font-medium">{progressText}</span>
+                        <span className="text-white/60 text-xs">{Math.round(progress)}%</span>
+                    </div>
+                    <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full transition-all duration-300"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                        <span className="text-white/40 text-xs">Estimated time: ~25 seconds</span>
+                        <span className="text-white/40 text-xs">
+                            {progress < 95 ? `${Math.round((100 - progress) / 4)}s remaining` : "Almost done..."}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* No Credits Warning */}
             {localCredits <= 0 && (
@@ -347,20 +420,79 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                             <span className="text-purple-400 font-medium">Prompt:</span> {generatedModel.name || prompt}
                         </p>
 
-                        {/* Action Buttons */}
+                        {/* Export Buttons - Sloyd style */}
                         <div className="flex gap-3">
                             {generatedModel.model_url && (
                                 <>
-                                    <a
-                                        href={generatedModel.model_url}
-                                        download
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/30 transition-all flex items-center justify-center gap-2 text-sm"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        Download GLB
-                                    </a>
+                                    {/* Export Dropdown */}
+                                    <div className="relative flex-1">
+                                        <button
+                                            onClick={() => setShowExportDropdown(!showExportDropdown)}
+                                            className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/30 transition-all flex items-center justify-center gap-2 text-sm"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            Export GLB
+                                            <ChevronDown className={`w-4 h-4 transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {/* Dropdown Menu */}
+                                        {showExportDropdown && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden shadow-xl z-10">
+                                                <a
+                                                    href={generatedModel.model_url}
+                                                    download
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
+                                                    onClick={() => setShowExportDropdown(false)}
+                                                >
+                                                    <Download className="w-4 h-4 text-green-400" />
+                                                    <div>
+                                                        <p className="text-white text-sm font-medium">GLB Format</p>
+                                                        <p className="text-white/50 text-xs">Best for Roblox Studio</p>
+                                                    </div>
+                                                </a>
+                                                {generatedModel.formats?.fbx && (
+                                                    <a
+                                                        href={generatedModel.formats.fbx}
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
+                                                        onClick={() => setShowExportDropdown(false)}
+                                                    >
+                                                        <Download className="w-4 h-4 text-blue-400" />
+                                                        <div>
+                                                            <p className="text-white text-sm font-medium">FBX Format</p>
+                                                            <p className="text-white/50 text-xs">For Unity, Unreal, Blender</p>
+                                                        </div>
+                                                    </a>
+                                                )}
+                                                {generatedModel.formats?.obj && (
+                                                    <a
+                                                        href={generatedModel.formats.obj}
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                                                        onClick={() => setShowExportDropdown(false)}
+                                                    >
+                                                        <Download className="w-4 h-4 text-orange-400" />
+                                                        <div>
+                                                            <p className="text-white text-sm font-medium">OBJ Format</p>
+                                                            <p className="text-white/50 text-xs">Universal 3D format</p>
+                                                        </div>
+                                                    </a>
+                                                )}
+                                                {!generatedModel.formats?.fbx && !generatedModel.formats?.obj && (
+                                                    <div className="px-4 py-3 text-white/40 text-xs text-center">
+                                                        Only GLB format available
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <a
                                         href={generatedModel.model_url}
                                         target="_blank"
@@ -368,7 +500,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                         className="px-4 py-3 bg-white/10 border border-white/20 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2 text-sm"
                                     >
                                         <Eye className="w-4 h-4" />
-                                        Open in New Tab
+                                        View
                                     </a>
                                 </>
                             )}
