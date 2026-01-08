@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
+// CometAPI for high-quality 3D models (Hunyuan3D-2)
+const COMETAPI_KEY = process.env.COMETAPI_KEY || ""
+const COMETAPI_URL = "https://api.cometapi.com/v1"
+
 // Max duration for Vercel Pro
 export const maxDuration = 300
 
@@ -12,104 +16,154 @@ interface ModelResult {
   source: string
 }
 
-// ============ FREE HUGGING FACE SPACES - UNLIMITED GENERATIONS ============
-
-// LGM (Large Multimodal Model) - Good quality text-to-3D
-async function generateWithLGM(prompt: string): Promise<ModelResult> {
-  console.log("[LGM] Generating with LGM:", prompt)
-
-  try {
-    const { Client } = await import("@gradio/client")
-    const client = await Client.connect("ashawkey/LGM")
-
-    // LGM accepts text prompt directly
-    const result = await client.predict("run", [
-      prompt,     // text prompt
-      42,         // seed
-      40,         // num_steps  
-    ])
-
-    const resultData = result.data as any[]
-
-    if (resultData && resultData.length > 0) {
-      const modelFile = resultData[0]
-      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
-
-      if (modelUrl) {
-        return {
-          model_url: modelUrl,
-          preview_url: resultData[1]?.url || resultData[1] || null,
-          formats: {
-            glb: modelUrl.includes('.glb') ? modelUrl : modelUrl,
-            obj: null,
-            fbx: null
-          },
-          source: "LGM"
-        }
-      }
-    }
-    throw new Error("No model returned")
-  } catch (error: any) {
-    console.error("[LGM] Error:", error.message)
-    throw error
+// ============ COMETAPI - HUNYUAN3D-2 (HIGH QUALITY) ============
+async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
+  if (!COMETAPI_KEY) {
+    console.log("[CometAPI] No API key configured")
+    throw new Error("No CometAPI key")
   }
-}
 
-// OpenLRM - High quality 3D reconstruction
-async function generateWithOpenLRM(prompt: string): Promise<ModelResult> {
-  console.log("[OpenLRM] Generating:", prompt)
+  console.log("[CometAPI] Generating with Hunyuan3D-2:", prompt)
 
   try {
-    const { Client } = await import("@gradio/client")
-    const client = await Client.connect("zxhezexin/OpenLRM")
+    // CometAPI uses OpenAI-compatible format
+    const response = await fetch(`${COMETAPI_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${COMETAPI_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "hunyuan3d-2",
+        messages: [
+          {
+            role: "user",
+            content: `Generate a high-quality 3D model: ${prompt}. Output detailed textured mesh in GLB format.`
+          }
+        ],
+        max_tokens: 4096,
+      }),
+    })
 
-    const result = await client.predict("process", [
-      prompt,
-    ])
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.log("[CometAPI] Response error:", response.status, errorText)
 
-    const resultData = result.data as any[]
+      // Try alternate generation endpoint
+      return await tryAlternateEndpoint(prompt)
+    }
 
-    if (resultData && resultData.length > 0) {
-      const modelFile = resultData[0]
-      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
+    const data = await response.json()
+    console.log("[CometAPI] Response:", JSON.stringify(data).slice(0, 500))
 
-      if (modelUrl) {
+    // Extract model URL from response
+    if (data.choices && data.choices[0]?.message?.content) {
+      const content = data.choices[0].message.content
+
+      // Look for model URL in response
+      const urlMatch = content.match(/https?:\/\/[^\s"']+\.(glb|obj|fbx|gltf)/i)
+      if (urlMatch) {
         return {
-          model_url: modelUrl,
+          model_url: urlMatch[0],
           preview_url: null,
-          formats: { glb: modelUrl, obj: null, fbx: null },
-          source: "OpenLRM"
+          formats: {
+            glb: urlMatch[0].toLowerCase().includes('.glb') ? urlMatch[0] : null,
+            obj: urlMatch[0].toLowerCase().includes('.obj') ? urlMatch[0] : null,
+            fbx: urlMatch[0].toLowerCase().includes('.fbx') ? urlMatch[0] : null,
+          },
+          source: "Hunyuan3D-2"
+        }
+      }
+
+      // Check for base64 or other format
+      if (content.includes('data:') || content.includes('model_url')) {
+        const jsonMatch = content.match(/\{[^}]+model_url[^}]+\}/i)
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0])
+            if (parsed.model_url) {
+              return {
+                model_url: parsed.model_url,
+                preview_url: parsed.preview_url || null,
+                formats: { glb: parsed.model_url, obj: null, fbx: null },
+                source: "Hunyuan3D-2"
+              }
+            }
+          } catch { }
         }
       }
     }
-    throw new Error("No model returned")
+
+    // Try data field
+    if (data.data && data.data[0]) {
+      const result = data.data[0]
+      const modelUrl = result.url || result.model_url || result.output
+      if (modelUrl) {
+        return {
+          model_url: modelUrl,
+          preview_url: result.preview_url || result.thumbnail || null,
+          formats: { glb: modelUrl, obj: null, fbx: null },
+          source: "Hunyuan3D-2"
+        }
+      }
+    }
+
+    throw new Error("No model URL in response")
   } catch (error: any) {
-    console.error("[OpenLRM] Error:", error.message)
+    console.error("[CometAPI] Error:", error.message)
     throw error
   }
 }
 
-// Shap-E by OpenAI - Reliable text-to-3D
-async function generateWithShapE(prompt: string): Promise<ModelResult> {
-  console.log("[Shap-E] Generating:", prompt)
+// Try alternate CometAPI endpoint for 3D generation
+async function tryAlternateEndpoint(prompt: string): Promise<ModelResult> {
+  console.log("[CometAPI] Trying alternate endpoint...")
 
   try {
-    const { Client } = await import("@gradio/client")
+    const response = await fetch(`${COMETAPI_URL}/images/generations`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${COMETAPI_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "hunyuan3d-2",
+        prompt: `3D model: ${prompt}, high quality textured mesh`,
+        n: 1,
+        response_format: "url",
+      }),
+    })
 
-    // Try multiple Shap-E hosts
-    const hosts = ["hysts/Shap-E", "radames/Shap-E"]
-    let client = null
+    if (!response.ok) {
+      throw new Error(`Alternate endpoint failed: ${response.status}`)
+    }
 
-    for (const host of hosts) {
-      try {
-        client = await Client.connect(host)
-        break
-      } catch {
-        continue
+    const data = await response.json()
+
+    if (data.data && data.data[0]) {
+      const result = data.data[0]
+      return {
+        model_url: result.url || result.model_url,
+        preview_url: result.preview_url || null,
+        formats: { glb: result.url, obj: null, fbx: null },
+        source: "Hunyuan3D-2"
       }
     }
 
-    if (!client) throw new Error("No Shap-E host available")
+    throw new Error("No data in alternate response")
+  } catch (error: any) {
+    console.error("[CometAPI] Alternate error:", error.message)
+    throw error
+  }
+}
+
+// ============ FREE FALLBACK - SHAP-E ============
+async function generateWithShapE(prompt: string): Promise<ModelResult> {
+  console.log("[Shap-E] Using free fallback:", prompt)
+
+  try {
+    const { Client } = await import("@gradio/client")
+    const client = await Client.connect("hysts/Shap-E")
 
     const result = await client.predict("text-to-3d", [
       prompt,
@@ -145,53 +199,16 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
   }
 }
 
-// Point-E by OpenAI - Fast point cloud to mesh
-async function generateWithPointE(prompt: string): Promise<ModelResult> {
-  console.log("[Point-E] Generating:", prompt)
-
-  try {
-    const { Client } = await import("@gradio/client")
-    const client = await Client.connect("openai/point-e")
-
-    const result = await client.predict("generate", [
-      prompt,
-    ])
-
-    const resultData = result.data as any[]
-
-    if (resultData && resultData.length > 0) {
-      const modelFile = resultData[0]
-      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
-
-      if (modelUrl) {
-        return {
-          model_url: modelUrl,
-          preview_url: null,
-          formats: { glb: modelUrl, obj: null, fbx: null },
-          source: "Point-E"
-        }
-      }
-    }
-    throw new Error("No model returned")
-  } catch (error: any) {
-    console.error("[Point-E] Error:", error.message)
-    throw error
-  }
-}
-
-// ============ MAIN GENERATION - ALL FREE, UNLIMITED ============
+// ============ MAIN GENERATION ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // Enhanced prompt for better quality
   const enhancedPrompt = style
-    ? `${prompt}, ${style} style, 3D model, detailed`
-    : `${prompt}, 3D model, game asset, detailed mesh`
+    ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
+    : `${prompt}, high quality 3D game asset, detailed textured mesh`
 
-  // All free services - try in order of quality
+  // Try CometAPI first (high quality), then free fallback
   const services = [
-    { name: "LGM", fn: () => generateWithLGM(enhancedPrompt) },
-    { name: "Shap-E", fn: () => generateWithShapE(enhancedPrompt) },
-    { name: "OpenLRM", fn: () => generateWithOpenLRM(enhancedPrompt) },
-    { name: "Point-E", fn: () => generateWithPointE(prompt) },
+    { name: "CometAPI", fn: () => generateWithCometAPI(enhancedPrompt) },
+    { name: "Shap-E", fn: () => generateWithShapE(prompt) },
   ]
 
   for (const service of services) {
@@ -216,7 +233,7 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   }
 }
 
-// ============ STORAGE HELPER ============
+// ============ STORAGE ============
 async function uploadModelToSupabase(
   supabase: any,
   modelBuffer: Buffer,
@@ -256,7 +273,6 @@ export async function POST(request: Request) {
     const { prompt, style } = body
     console.log("[3D-Gen] User:", user.id, "Prompt:", prompt)
 
-    // Service client for database
     const serviceClient = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -283,11 +299,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Check credits (but for you, we make it unlimited below)
+    // Premium check
     const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
     const modelCredits = userData.model_credits ?? 0
 
-    // For non-premium users, check credits
     if (!isPremium && modelCredits <= 0) {
       return NextResponse.json({
         error: "No model generation credits remaining!",
@@ -295,13 +310,13 @@ export async function POST(request: Request) {
       }, { status: 403 })
     }
 
-    // Generate model (FREE - unlimited)
+    // Generate with CometAPI (high quality)
     const result = await generateModel(prompt, style)
 
     if (!result.model_url) {
       return NextResponse.json({
         error: "Model generation temporarily unavailable",
-        details: "Please try again in a moment.",
+        details: "Please try again.",
       }, { status: 503 })
     }
 
@@ -366,7 +381,7 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    // Deduct credits for non-premium (but services are free so this is just for tracking)
+    // Deduct credits
     if (!isPremium && modelCredits > 0) {
       const newCredits = modelCredits - 1
       await serviceClient.from("users").update({ model_credits: newCredits }).eq("id", userData.id)
@@ -377,7 +392,6 @@ export async function POST(request: Request) {
         model: modelData,
         source: result.source,
         creditsRemaining: newCredits,
-        freeGeneration: true,
       })
     }
 
@@ -387,7 +401,6 @@ export async function POST(request: Request) {
       model: modelData,
       source: result.source,
       creditsRemaining: "unlimited",
-      freeGeneration: true,
     })
 
   } catch (error: any) {
