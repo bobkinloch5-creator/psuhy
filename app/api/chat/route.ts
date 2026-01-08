@@ -37,8 +37,8 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 error: "No prompt credits remaining!",
                 message: isPro
-                    ? "Contact BlaxSmith support for more credits."
-                    : "Upgrade to Pro for 100 prompts/month!",
+                    ? "Your 100 prompt credits have been used. Credits reset monthly."
+                    : "You've used your 50 free prompts! Upgrade to Pro for 100 prompts/month.",
                 creditsRemaining: 0
             }, { status: 403 })
         }
