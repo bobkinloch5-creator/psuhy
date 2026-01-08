@@ -1,9 +1,4 @@
 {
-    "functions": {
-        "api/generate/model": {
-            "maxDuration": 300
-        }
-    },
     "headers": [
         {
             "source": "/(.*)",
