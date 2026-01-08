@@ -344,18 +344,20 @@ local function startPolling()
                                 print("[BloxSmith] 📜 Creating Script:", scriptName)
                                 
                                 local success, result = pcall(function()
+                                    -- Create BlaxSmith folder for organization
+                                    local folder = ensureFolder(game:GetService("ServerScriptService"), "BlaxSmith_Scripts")
                                     local newScript = Instance.new("Script")
                                     newScript.Name = scriptName
                                     newScript.Source = code
-                                    newScript.Parent = game:GetService("ServerScriptService")
+                                    newScript.Parent = folder
                                     return newScript
                                 end)
                                 
                                 if success then
-                                    print("[BloxSmith] ✅ Script created:", scriptName)
+                                    print("[BloxSmith] ✅ Script created in BlaxSmith_Scripts:", scriptName)
                                     Selection:Set({result})
                                 else
-                                    warn("[BlaxSmith] ❌ Failed to create script:", result)
+                                    warn("[BloxSmith] ❌ Failed to create script:", result)
                                 end
                             elseif cmd.type == "INSERT_LOCALSCRIPT" then
                                 -- Create a LocalScript in StarterPlayerScripts
@@ -364,15 +366,17 @@ local function startPolling()
                                 print("[BlaxSmith] 📱 Creating LocalScript:", scriptName)
                                 
                                 local success, result = pcall(function()
+                                    local starterPlayerScripts = game:GetService("StarterPlayer"):FindFirstChild("StarterPlayerScripts")
+                                    local folder = ensureFolder(starterPlayerScripts, "BlaxSmith_ClientScripts")
                                     local newScript = Instance.new("LocalScript")
                                     newScript.Name = scriptName
                                     newScript.Source = code
-                                    newScript.Parent = game:GetService("StarterPlayer"):FindFirstChild("StarterPlayerScripts")
+                                    newScript.Parent = folder
                                     return newScript
                                 end)
                                 
                                 if success then
-                                    print("[BlaxSmith] ✅ LocalScript created:", scriptName)
+                                    print("[BlaxSmith] ✅ LocalScript created in BlaxSmith_ClientScripts:", scriptName)
                                     Selection:Set({result})
                                 else
                                     warn("[BlaxSmith] ❌ Failed to create local script:", result)
@@ -405,15 +409,16 @@ local function startPolling()
                                 print("[BlaxSmith] 📦 Creating ModuleScript:", moduleName)
                                 
                                 local success, result = pcall(function()
+                                    local folder = ensureFolder(game:GetService("ReplicatedStorage"), "BlaxSmith_Modules")
                                     local newModule = Instance.new("ModuleScript")
                                     newModule.Name = moduleName
                                     newModule.Source = code
-                                    newModule.Parent = game:GetService("ReplicatedStorage")
+                                    newModule.Parent = folder
                                     return newModule
                                 end)
                                 
                                 if success then
-                                    print("[BlaxSmith] ✅ ModuleScript created:", moduleName)
+                                    print("[BlaxSmith] ✅ ModuleScript created in BlaxSmith_Modules:", moduleName)
                                     Selection:Set({result})
                                 else
                                     warn("[BlaxSmith] ❌ Failed to create module:", result)
