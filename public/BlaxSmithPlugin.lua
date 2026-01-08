@@ -645,8 +645,10 @@ local function connectToWebsite()
         local connectUrl = CONFIG.APP_URL .. "/api/plugin/connect"
         local payload = {
             userId = USER_ID,
+            studioId = game.JobId ~= "" and game.JobId or HttpService:GenerateGUID(false),
             studioVersion = game:GetService("RunService"):IsStudio() and "Studio" or "Unknown",
             pluginVersion = CONFIG.PLUGIN_VERSION,
+            game = game.Name ~= "Game" and game.Name or "Untitled Game",
             gameId = game.GameId,
             placeId = game.PlaceId
         }
