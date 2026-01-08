@@ -14,7 +14,8 @@ import { InlineModelViewer } from "@/components/inline-model-viewer"
 import { UpgradeModal } from "@/components/upgrade-modal"
 import ToolboxBrowser from "@/components/toolbox-browser"
 import { PluginStatus } from "@/components/plugin-status"
-import { SloydInlineEmbed } from "@/components/sloyd-embed"
+import { BlaxSmith3DGenerator } from "@/components/blaxsmith-3d-generator"
+import { MyGallery } from "@/components/my-gallery"
 
 interface User {
   id: string
@@ -322,7 +323,7 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
           <PluginStatus userId={user.discord_id} />
         </div>
 
-        {/* Sloyd AI Embed - Uses BlaxSmith's Sloyd Account */}
+        {/* BlaxSmith AI 3D Model Generator - Uses Credits */}
         <div className="mb-8 glassmorphism rounded-2xl p-6 border-cyan-500/30">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -331,195 +332,22 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  Sloyd AI 3D Creator
+                  AI 3D Model Generator
                   <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded-full">POWERED BY BLAXSMITH</span>
                 </h3>
-                <p className="text-xs text-white/60">Create unlimited 3D models using BlaxSmith credits</p>
+                <p className="text-xs text-white/60">Create 3D models with AI using your model credits</p>
               </div>
             </div>
           </div>
-          <SloydInlineEmbed />
-          <div className="mt-3 p-3 rounded-lg bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border border-cyan-500/10">
-            <p className="text-[10px] text-white/50">
-              💡 <span className="font-semibold">To import:</span> Download as FBX or OBJ → In Roblox Studio: Home → Import 3D → Select your file
-            </p>
-          </div>
+          <BlaxSmith3DGenerator
+            modelCredits={user.model_credits}
+            onCreditsUpdate={(newCredits) => setUser({ ...user, model_credits: newCredits })}
+          />
         </div>
 
-        {/* AI 3D Model Generator - Uses Sloyd API with user's token */}
-        <div className="mb-8 glassmorphism rounded-2xl p-6 border-purple-500/20">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30">
-                <Box className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">AI 3D Model Generator</h3>
-                <p className="text-xs text-white/60">Create 3D models with AI • {user.model_credits} credits remaining</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={modelPrompt}
-              onChange={(e) => setModelPrompt(e.target.value)}
-              placeholder="Describe your 3D model... (e.g., medieval sword, treasure chest, spaceship)"
-              className="w-full px-4 py-3 bg-black/60 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all text-sm"
-              disabled={isGeneratingModel}
-              onKeyDown={(e) => e.key === "Enter" && !isGeneratingModel && modelPrompt.trim() && user.model_credits > 0 && generateModel()}
-            />
-            <button
-              onClick={generateModel}
-              disabled={isGeneratingModel || user.model_credits <= 0 || !modelPrompt.trim()}
-              className="w-full px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm hover:scale-[1.01] active:scale-[0.99]"
-            >
-              {isGeneratingModel ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating 3D Model...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate 3D Model
-                </>
-              )}
-            </button>
-
-            {modelError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-red-400 font-semibold text-xs">Generation Failed</p>
-                  <p className="text-red-300/80 text-xs mt-0.5">{modelError}</p>
-                </div>
-              </div>
-            )}
-
-            {generatedModel && (
-              <div className="mt-3 space-y-3 animate-[slide-up_0.3s_ease-out]">
-                {generatedModel.asset_data?.model_url && (
-                  <div className="relative">
-                    <InlineModelViewer
-                      modelUrl={generatedModel.asset_data.model_url}
-                      modelName={generatedModel.name}
-                    />
-                    {generatedModel.asset_data?.auto_queued && studioConnected && (
-                      <div className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-green-500/20 border border-green-500/40 backdrop-blur-sm">
-                        <p className="text-[10px] text-green-400 font-semibold flex items-center gap-1">
-                          <Check className="w-3 h-3" />
-                          Auto-queued
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                  <h4 className="text-white font-semibold text-sm mb-2 flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-400" />
-                    Model Generated!
-                  </h4>
-                  <p className="text-white/70 text-xs mb-2">{generatedModel.name}</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {studioConnected && !generatedModel.asset_data?.auto_queued && (
-                      <button
-                        onClick={() => sendModelToStudio(generatedModel)}
-                        className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/40 text-purple-400 rounded-lg text-xs hover:bg-purple-500/30 transition-colors flex items-center gap-1.5"
-                      >
-                        <Send className="w-3 h-3" />
-                        Send to Studio
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setShow3DViewer(true)}
-                      className="px-3 py-1.5 bg-blue-500/20 border border-blue-500/40 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition-colors flex items-center gap-1.5"
-                    >
-                      <Eye className="w-3 h-3" />
-                      Full View
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (generatedModel.asset_data?.model_url) {
-                          window.open(generatedModel.asset_data.model_url, "_blank")
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-green-500/20 border border-green-500/40 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition-colors flex items-center gap-1.5"
-                    >
-                      <Download className="w-3 h-3" />
-                      Download
-                    </button>
-                    <button
-                      onClick={() => setGeneratedModel(null)}
-                      className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/60 rounded-lg text-xs hover:bg-white/10 transition-colors"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Import Instructions */}
-          <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-purple-500/5 to-pink-500/5 border border-purple-500/10">
-            <p className="text-[10px] text-white/50">
-              💡 <span className="font-semibold">Tip:</span> Download as FBX or OBJ, then in Roblox Studio go to Home → Import 3D
-            </p>
-          </div>
-        </div>
-
-        {/* Plugin Download Section */}
-        <div className="mb-8 glassmorphism rounded-2xl p-6 border-orange-500/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/30">
-                <Download className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">BlaxSmith Studio Plugin</h3>
-                <p className="text-sm text-white/60">Required for sending assets to Roblox Studio</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <a
-                href="/BlaxSmithPlugin.lua"
-                download="BlaxSmithPlugin.lua"
-                className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-orange-500/50 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Download className="w-4 h-4" />
-                Download Plugin
-              </a>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <p className="text-sm text-white/60 mb-3">Quick Setup:</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-black/40 border border-white/5">
-                <div className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">1</div>
-                <div>
-                  <p className="text-white text-sm font-medium">Download Plugin</p>
-                  <p className="text-white/50 text-xs">Save the .lua file</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-black/40 border border-white/5">
-                <div className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">2</div>
-                <div>
-                  <p className="text-white text-sm font-medium">Install in Studio</p>
-                  <p className="text-white/50 text-xs">Place in Roblox/Plugins folder</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-black/40 border border-white/5">
-                <div className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">3</div>
-                <div>
-                  <p className="text-white text-sm font-medium">Connect</p>
-                  <p className="text-white/50 text-xs">Enter ID: <code className="px-1 py-0.5 bg-white/10 rounded text-orange-400 text-[10px]">{user.discord_id}</code></p>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* My Gallery - Saved 3D Models */}
+        <div className="mb-8">
+          <MyGallery />
         </div>
       </div>
 

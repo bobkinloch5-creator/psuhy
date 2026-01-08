@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
-// Use multiple Roblox API endpoints for reliability
-const CATALOG_SEARCH_API = "https://catalog.roblox.com/v1/search/items"
+// Roblox API endpoints for full catalog access
+const ROBLOX_CATALOG_API = "https://catalog.roblox.com/v1/search/items"
+const ROBLOX_TOOLBOX_API = "https://apis.roblox.com/toolbox-service/v1/items/details"
+const ROBLOX_MARKETPLACE_API = "https://www.roblox.com/catalog/json"
 const THUMBNAIL_API = "https://thumbnails.roblox.com/v1/assets"
+
+// Supabase for caching
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const query = searchParams.get("query") || ""
-        const limit = Math.min(parseInt(searchParams.get("limit") || "48"), 100) // Increased limit
-        const cursor = searchParams.get("cursor") || ""
+        const limit = Math.min(parseInt(searchParams.get("limit") || "48"), 100)
 
         if (!query.trim()) {
             return NextResponse.json({
@@ -19,89 +26,222 @@ export async function GET(request: Request) {
             })
         }
 
-        console.log("[Toolbox] Searching:", query, "limit:", limit)
+        console.log("[Toolbox] Searching full catalog:", query, "limit:", limit)
 
-        // Try Roblox Catalog Search API (works better than toolbox-service)
-        const catalogParams = new URLSearchParams({
-            Category: "3", // Models
-            Keyword: query,
-            Limit: limit.toString(),
-            SortType: "2", // Relevance
-            IncludeNotForSale: "true",
-        })
-        if (cursor) catalogParams.set("Cursor", cursor)
+        // Try Roblox search API first
+        let assets = await searchRobloxCatalog(query, limit)
 
-        const response = await fetch(`${CATALOG_SEARCH_API}?${catalogParams}`, {
-            headers: {
-                "Accept": "application/json",
-            },
-            cache: "no-store",
-        })
-
-        if (!response.ok) {
-            console.log("[Toolbox] Catalog API failed, using fallback")
-            return NextResponse.json({
-                success: true,
-                assets: await getExpandedFallback(query),
-                query,
-                fallback: true,
-            })
+        // If no results from live API, try Supabase cache
+        if (assets.length === 0 && supabase) {
+            assets = await searchSupabaseCache(query, limit)
         }
 
-        const data = await response.json()
-        console.log("[Toolbox] Raw response:", JSON.stringify(data).slice(0, 500))
-
-        const items = data.data || []
-        if (items.length === 0) {
-            console.log("[Toolbox] No results from API, using fallback")
-            return NextResponse.json({
-                success: true,
-                assets: await getExpandedFallback(query),
-                query,
-                fallback: true,
-            })
+        // Final fallback to curated models
+        if (assets.length === 0) {
+            assets = await getExpandedFallback(query)
         }
 
-        // Get thumbnails for all assets
-        const assetIds = items.map((item: any) => item.id).join(",")
-        const thumbnails = await getThumbnails(assetIds)
+        // Cache results in Supabase in background
+        if (assets.length > 0 && supabase) {
+            cacheResultsInSupabase(assets).catch((err: Error) =>
+                console.log("[Toolbox] Cache error:", err.message)
+            )
+        }
 
-        const assets = items.map((item: any) => ({
-            id: item.id,
-            name: item.name || "Unnamed",
-            description: item.description || "",
-            price: item.price ?? 0,
-            priceLabel: item.price === 0 ? "Free" : `R$ ${item.price}`,
-            assetType: "Model",
-            creatorName: item.creatorName || "Roblox",
-            creatorVerified: item.creatorHasVerifiedBadge || false,
-            favoriteCount: item.favoriteCount || 0,
-            thumbnailUrl: thumbnails[item.id] || `https://tr.rbxcdn.com/${item.id}/420/420/Image/Png`,
-            productUrl: `https://www.roblox.com/library/${item.id}`,
-        }))
-
-        console.log("[Toolbox] Found:", assets.length, "results with thumbnails")
+        console.log("[Toolbox] Returning:", assets.length, "results")
 
         return NextResponse.json({
             success: true,
             assets,
             query,
             totalResults: assets.length,
-            nextCursor: data.nextPageCursor,
         })
-    } catch (error: any) {
-        console.error("[Toolbox] Error:", error.message)
+    } catch (error: unknown) {
+        const err = error as Error
+        console.error("[Toolbox] Error:", err.message)
         return NextResponse.json({
             success: true,
             assets: await getExpandedFallback(""),
-            query: request.url,
+            query: "",
             fallback: true,
-            error: error.message,
+            error: err.message,
         })
     }
 }
 
+// Search Roblox catalog API - tries multiple endpoints for best results
+async function searchRobloxCatalog(query: string, limit: number): Promise<any[]> {
+    // Try multiple search approaches
+    let results = await tryMarketplaceSearch(query, limit)
+
+    if (results.length === 0) {
+        results = await tryCatalogSearch(query, limit)
+    }
+
+    return results
+}
+
+// Try the marketplace/catalog JSON endpoint
+async function tryMarketplaceSearch(query: string, limit: number): Promise<any[]> {
+    try {
+        const params = new URLSearchParams({
+            Keyword: query,
+            Category: "6", // Models
+            Subcategory: "0",
+            SortType: "Relevance",
+            SortAggregation: "5",
+            ResultsPerPage: Math.min(limit, 100).toString(),
+            IncludeNotForSale: "false",
+        })
+
+        const response = await fetch(`${ROBLOX_MARKETPLACE_API}?${params}`, {
+            headers: {
+                "Accept": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            cache: "no-store",
+        })
+
+        if (!response.ok) {
+            console.log("[Toolbox] Marketplace API failed:", response.status)
+            return []
+        }
+
+        const items = await response.json()
+        if (!Array.isArray(items) || items.length === 0) {
+            return []
+        }
+
+        // Get thumbnails
+        const assetIds = items.map((item: any) => item.AssetId || item.Id).filter(Boolean).join(",")
+        const thumbnails = await getThumbnails(assetIds)
+
+        return items.slice(0, limit).map((item: any) => ({
+            id: item.AssetId || item.Id,
+            name: item.Name || "Unnamed",
+            description: item.Description || "",
+            price: item.Price || 0,
+            priceLabel: (item.Price === 0 || !item.Price) ? "Free" : `R$ ${item.Price}`,
+            assetType: "Model",
+            creatorName: item.Creator?.Name || item.CreatorName || "Roblox",
+            creatorVerified: item.Creator?.HasVerifiedBadge || false,
+            favoriteCount: item.FavoriteCount || 0,
+            thumbnailUrl: thumbnails[item.AssetId || item.Id] || `https://tr.rbxcdn.com/${item.AssetId || item.Id}/420/420/Image/Png`,
+            productUrl: `https://www.roblox.com/library/${item.AssetId || item.Id}`,
+        }))
+    } catch (err) {
+        console.log("[Toolbox] Marketplace search error:", err)
+        return []
+    }
+}
+
+// Try the catalog v1 API
+async function tryCatalogSearch(query: string, limit: number): Promise<any[]> {
+    try {
+        const params = new URLSearchParams({
+            keyword: query,
+            category: "Models",
+            limit: Math.min(limit, 30).toString(),
+            sortType: "Relevance",
+        })
+
+        const response = await fetch(`${ROBLOX_CATALOG_API}?${params}`, {
+            headers: { "Accept": "application/json" },
+            cache: "no-store",
+        })
+
+        if (!response.ok) {
+            console.log("[Toolbox] Catalog API failed:", response.status)
+            return []
+        }
+
+        const data = await response.json()
+        const items = data.data || []
+
+        if (items.length === 0) return []
+
+        // Get thumbnails
+        const assetIds = items.map((item: any) => item.id).filter(Boolean).join(",")
+        const thumbnails = await getThumbnails(assetIds)
+
+        return items.slice(0, limit).map((item: any) => ({
+            id: item.id,
+            name: item.name || "Unnamed",
+            description: item.description || "",
+            price: item.price || 0,
+            priceLabel: (item.price === 0 || !item.price) ? "Free" : `R$ ${item.price}`,
+            assetType: item.assetType || "Model",
+            creatorName: item.creatorName || "Roblox",
+            creatorVerified: false,
+            favoriteCount: item.favoriteCount || 0,
+            thumbnailUrl: thumbnails[item.id] || `https://tr.rbxcdn.com/${item.id}/420/420/Image/Png`,
+            productUrl: `https://www.roblox.com/library/${item.id}`,
+        }))
+    } catch (err) {
+        console.log("[Toolbox] Catalog search error:", err)
+        return []
+    }
+}
+
+// Search cached results in Supabase
+async function searchSupabaseCache(query: string, limit: number): Promise<any[]> {
+    if (!supabase) return []
+
+    try {
+        const { data, error } = await supabase
+            .from("toolbox_cache")
+            .select("*")
+            .ilike("name", `%${query}%`)
+            .limit(limit)
+            .order("favorite_count", { ascending: false })
+
+        if (error || !data) return []
+
+        return data.map(item => ({
+            id: item.id,
+            name: item.name,
+            description: item.description || "",
+            price: item.price || 0,
+            priceLabel: (item.price === 0 || !item.price) ? "Free" : `R$ ${item.price}`,
+            assetType: item.asset_type || "Model",
+            creatorName: item.creator_name || "Roblox",
+            creatorVerified: item.creator_verified || false,
+            favoriteCount: item.favorite_count || 0,
+            thumbnailUrl: item.thumbnail_url,
+            productUrl: item.product_url,
+        }))
+    } catch {
+        return []
+    }
+}
+
+// Cache results to Supabase
+async function cacheResultsInSupabase(assets: any[]): Promise<void> {
+    if (!supabase || assets.length === 0) return
+
+    const records = assets.slice(0, 50).map(asset => ({
+        id: asset.id,
+        name: asset.name,
+        description: asset.description,
+        creator_name: asset.creatorName,
+        creator_verified: asset.creatorVerified,
+        favorite_count: asset.favoriteCount,
+        price: asset.price,
+        asset_type: asset.assetType,
+        thumbnail_url: asset.thumbnailUrl,
+        product_url: asset.productUrl,
+        updated_at: new Date().toISOString(),
+    }))
+
+    await supabase
+        .from("toolbox_cache")
+        .upsert(records, { onConflict: "id" })
+}
+
+// Get thumbnails from Roblox API
 async function getThumbnails(assetIds: string): Promise<Record<number, string>> {
+    if (!assetIds) return {}
+
     try {
         const response = await fetch(
             `${THUMBNAIL_API}?assetIds=${assetIds}&size=420x420&format=Png&isCircular=false`,
@@ -123,8 +263,8 @@ async function getThumbnails(assetIds: string): Promise<Record<number, string>> 
     }
 }
 
+// Expanded curated fallback models (50+ popular models)
 async function getExpandedFallback(query: string): Promise<any[]> {
-    // Expanded curated free models library (50+ popular models)
     const curatedModels = [
         // Weapons
         { id: 920587473, name: "Basic Sword", favoriteCount: 15000, tags: ["sword", "weapon", "melee"] },
