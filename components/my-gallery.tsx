@@ -119,43 +119,44 @@ export function MyGallery() {
     }
 
     return (
-        <div className="glassmorphism rounded-2xl overflow-hidden border-white/10">
+        <div className="glassmorphism rounded-2xl overflow-hidden border-purple-500/30">
             {/* Header */}
-            <div className="bg-[#1a1a2e] border-b border-white/5 p-3">
+            <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border-b border-white/10 p-4">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30">
-                            <Box className="w-4 h-4 text-white" />
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30">
+                            <Box className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-sm font-bold text-white">My Gallery</h2>
-                            <p className="text-[10px] text-white/50">{models.length} saved models</p>
+                            <h2 className="text-lg font-bold text-white">My Gallery</h2>
+                            <p className="text-xs text-white/60">{models.length} saved 3D models</p>
                         </div>
                     </div>
                     <button
                         onClick={fetchModels}
-                        className="p-2 rounded-lg hover:bg-white/5 transition-colors text-white/50 hover:text-white"
+                        className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white/70 hover:text-white flex items-center gap-2 text-sm"
                     >
                         <RotateCw className="w-4 h-4" />
+                        Refresh
                     </button>
                 </div>
             </div>
 
-            {/* Gallery Grid */}
-            <div className="p-3">
+            {/* Gallery Grid - Larger */}
+            <div className="p-4 min-h-[300px]">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-400 mb-2" />
-                        <p className="text-white/50 text-xs">Loading gallery...</p>
+                    <div className="flex flex-col items-center justify-center py-16">
+                        <Loader2 className="w-10 h-10 animate-spin text-purple-400 mb-3" />
+                        <p className="text-white/50 text-sm">Loading your gallery...</p>
                     </div>
                 ) : models.length === 0 ? (
-                    <div className="text-center py-12 text-white/40">
-                        <Box className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">No models yet</p>
-                        <p className="text-xs mt-1">Generate 3D models to see them here</p>
+                    <div className="text-center py-16 text-white/40">
+                        <Box className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                        <p className="text-base font-medium">No models yet</p>
+                        <p className="text-sm mt-2">Generate 3D models above to see them here</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {models.map((model) => (
                             <div
                                 key={model.id}
