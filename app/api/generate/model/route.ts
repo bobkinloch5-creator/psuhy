@@ -139,7 +139,15 @@ export async function POST(request: Request) {
 
       console.log("[Cube3D] Model URL:", modelUrl, "Preview:", previewUrl)
 
-      const enhancedModelData = {
+      const enhancedModelData: {
+        prompt: string;
+        style: string;
+        model_url: any;
+        preview_url: any;
+        formats: { glb: any; obj: any };
+        source: string;
+        auto_queued?: boolean;
+      } = {
         prompt: prompt,
         style: style || "realistic",
         model_url: modelUrl,
