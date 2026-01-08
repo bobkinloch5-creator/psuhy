@@ -43,15 +43,28 @@ local PathfindingService = game:GetService("PathfindingService")
 -- CONFIGURATION
 -- ============================================
 local CONFIG = {
-    APP_URL = "http://127.0.0.1:3005",  -- Backend server with command queue (port 3005)
-    PLUGIN_VERSION = "6.4.0",  -- Version bump: Server Controls UI + v4.2.0 App
+    APP_URL = "https://www.blaxsmith.dev",  -- Production website URL
+    WEBSITE_URL = "https://www.blaxsmith.dev",
+    API_URL = "https://www.blaxsmith.dev/api/plugin",
+    PLUGIN_VERSION = "7.0.0",  -- Version bump: Website Connected ULTIMATE Edition
     SDK_VERSION = "6.1",
     TOTAL_MODULES = 250,
     -- City Builder Placement Settings
     GRID_SIZE = 8,              -- 8-stud grid for alignment
     MIN_SPACING = 10,           -- Minimum studs between assets
     REQUIRE_ROAD_FACING = true, -- Buildings must face roads
+    -- Polling Intervals
+    HEARTBEAT_INTERVAL = 25,    -- seconds
+    POLL_INTERVAL = 2,          -- seconds for command polling
+    ASSET_POLL_INTERVAL = 3,    -- seconds for asset queue
 }
+
+-- Supabase Direct Connection
+local SUPABASE_URL = "https://nwucmybenbnvrtlpdtpz.supabase.co"
+local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53dWNteWJlbmJudnJ0bHBkdHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzY1NjksImV4cCI6MjA4MzM1MjU2OX0.UI9AIFpJYncge-FFK2_aeF_ZRis7wVc_lzoIX18S5HU"
+
+-- User ID (stored in plugin settings)
+local USER_ID = plugin:GetSetting("BlaxSmithDiscordID") or ""
 
 -- =========================
 -- 🌐 CRITICAL HELPER FUNCTIONS (Must be at top level)
