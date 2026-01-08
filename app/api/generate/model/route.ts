@@ -5,6 +5,40 @@ import { Client } from "@gradio/client"
 // Hugging Face Cube3D Space
 const CUBE3D_SPACE = "Roblox/cube3d-interactive"
 
+// Helper to upload model to Supabase Storage
+async function uploadModelToSupabase(
+  supabase: any,
+  modelBuffer: Buffer,
+  userId: string,
+  filename: string
+): Promise<string | null> {
+  try {
+    const path = `models/${userId}/${Date.now()}_${filename}`
+
+    const { data, error } = await supabase.storage
+      .from("generated-models")
+      .upload(path, modelBuffer, {
+        contentType: "model/gltf-binary",
+        upsert: false,
+      })
+
+    if (error) {
+      console.error("[Cube3D] Storage upload error:", error)
+      return null
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from("generated-models")
+      .getPublicUrl(path)
+
+    return urlData?.publicUrl || null
+  } catch (err) {
+    console.error("[Cube3D] Upload failed:", err)
+    return null
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -97,7 +131,6 @@ export async function POST(request: Request) {
       const bbox = boundingBox || { x: 1.0, y: 1.0, z: 1.0 }
 
       // Call the Cube3D generation endpoint
-      // The API accepts: prompt, bounding_box_x, bounding_box_y, bounding_box_z
       const result = await client.predict("/generate", {
         prompt: prompt,
         bounding_box_x: bbox.x || 1.0,
@@ -108,22 +141,21 @@ export async function POST(request: Request) {
       console.log("[Cube3D] Generation result:", JSON.stringify(result))
 
       // Extract the model file from result
-      // Gradio returns data in result.data array
       const resultData = result.data as any[]
 
-      // The result typically contains the GLB/OBJ file path or URL
-      let modelUrl = null
+      let originalModelUrl = null
       let previewUrl = null
+      let storedModelUrl = null
 
       if (resultData && resultData.length > 0) {
         // First result is usually the 3D model file
         const modelFile = resultData[0]
         if (typeof modelFile === 'string') {
-          modelUrl = modelFile
+          originalModelUrl = modelFile
         } else if (modelFile?.url) {
-          modelUrl = modelFile.url
+          originalModelUrl = modelFile.url
         } else if (modelFile?.path) {
-          modelUrl = modelFile.path
+          originalModelUrl = modelFile.path
         }
 
         // Second result might be a preview image
@@ -137,7 +169,37 @@ export async function POST(request: Request) {
         }
       }
 
-      console.log("[Cube3D] Model URL:", modelUrl, "Preview:", previewUrl)
+      console.log("[Cube3D] Original Model URL:", originalModelUrl)
+
+      // Download and store the model in Supabase Storage
+      if (originalModelUrl) {
+        try {
+          console.log("[Cube3D] Downloading model for Supabase storage...")
+          const modelResponse = await fetch(originalModelUrl)
+
+          if (modelResponse.ok) {
+            const modelBuffer = Buffer.from(await modelResponse.arrayBuffer())
+            const filename = originalModelUrl.includes('.glb') ? 'model.glb' : 'model.obj'
+
+            storedModelUrl = await uploadModelToSupabase(
+              supabase,
+              modelBuffer,
+              userData.id,
+              filename
+            )
+
+            if (storedModelUrl) {
+              console.log("[Cube3D] Model stored in Supabase:", storedModelUrl)
+            }
+          }
+        } catch (downloadErr) {
+          console.error("[Cube3D] Failed to download/store model:", downloadErr)
+          // Fall back to original URL
+        }
+      }
+
+      // Use Supabase URL if available, otherwise fall back to original
+      const finalModelUrl = storedModelUrl || originalModelUrl
 
       const enhancedModelData: {
         prompt: string;
@@ -146,17 +208,19 @@ export async function POST(request: Request) {
         preview_url: any;
         formats: { glb: any; obj: any };
         source: string;
+        original_url?: string;
         auto_queued?: boolean;
       } = {
         prompt: prompt,
         style: style || "realistic",
-        model_url: modelUrl,
+        model_url: finalModelUrl,
         preview_url: previewUrl,
         formats: {
-          glb: modelUrl?.includes('.glb') ? modelUrl : null,
-          obj: modelUrl?.includes('.obj') ? modelUrl : null,
+          glb: finalModelUrl?.includes('.glb') ? finalModelUrl : null,
+          obj: finalModelUrl?.includes('.obj') ? finalModelUrl : null,
         },
         source: "cube3d",
+        original_url: originalModelUrl,
       }
 
       // Auto-queue to Studio if connected
@@ -244,6 +308,7 @@ export async function POST(request: Request) {
           creation: creation,
           model: enhancedModelData,
           creditsRemaining: balanceAfter,
+          storedInSupabase: !!storedModelUrl,
         })
       }
 
@@ -252,6 +317,7 @@ export async function POST(request: Request) {
         creation: creation,
         model: enhancedModelData,
         creditsRemaining: "unlimited",
+        storedInSupabase: !!storedModelUrl,
       })
 
     } catch (gradioError: any) {
