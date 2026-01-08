@@ -19,19 +19,19 @@ interface Asset {
 
 // Categories matching Roblox Creator Store - with real Roblox asset thumbnails
 const CATEGORIES = [
-    { id: "vehicle", name: "Vehicles", assetId: 95858377, color: "from-blue-500 to-cyan-500" },
-    { id: "building", name: "Buildings", assetId: 155401426, color: "from-amber-500 to-orange-500" },
-    { id: "weapon", name: "Weapons", assetId: 10561326, color: "from-red-500 to-orange-500" },
-    { id: "tree", name: "Nature", assetId: 9738946, color: "from-green-500 to-emerald-500" },
-    { id: "furniture", name: "Furniture", assetId: 358799, color: "from-purple-500 to-pink-500" },
-    { id: "zombie", name: "NPCs", assetId: 27699497, color: "from-gray-600 to-gray-800" },
-    { id: "sword", name: "Classic", assetId: 12221695, color: "from-yellow-500 to-orange-500" },
-    { id: "effect", name: "Effects", assetId: 83353855, color: "from-cyan-400 to-blue-500" },
-    { id: "treasure", name: "Items", assetId: 255893032, color: "from-yellow-400 to-amber-500" },
+    { id: "vehicle", name: "Vehicles", assetId: 95858377, color: "from-blue-500 to-cyan-500", thumbnail: "https://tr.rbxcdn.com/180DAY-3821eb047bf76b51d7ed2a5fdc9aa98f/150/150/Model/Webp/noFilter" },
+    { id: "building", name: "Buildings", assetId: 155401426, color: "from-amber-500 to-orange-500", thumbnail: "https://tr.rbxcdn.com/180DAY-7a8f8ac47d14d38d83d8a1d0a84cdccf/150/150/Model/Webp/noFilter" },
+    { id: "weapon", name: "Weapons", assetId: 10561326, color: "from-red-500 to-orange-500", thumbnail: "https://tr.rbxcdn.com/180DAY-c5de937c5eb38e3c8f3e0e4a5c73c4df/150/150/Model/Webp/noFilter" },
+    { id: "tree", name: "Nature", assetId: 9738946, color: "from-green-500 to-emerald-500", thumbnail: "https://tr.rbxcdn.com/180DAY-0c7ea7bea5bbb85f5d9f0e67e9ad8f89/150/150/Model/Webp/noFilter" },
+    { id: "furniture", name: "Furniture", assetId: 358799, color: "from-purple-500 to-pink-500", thumbnail: "https://tr.rbxcdn.com/180DAY-b64f0c55c2c42fad8f8c05d8e8f8d4e3/150/150/Model/Webp/noFilter" },
+    { id: "zombie", name: "NPCs", assetId: 27699497, color: "from-gray-600 to-gray-800", thumbnail: "https://tr.rbxcdn.com/180DAY-7b7ce59f5eb9ccdb4b6e3c9b0f6a7c8d/150/150/Model/Webp/noFilter" },
+    { id: "sword", name: "Classic", assetId: 12221695, color: "from-yellow-500 to-orange-500", thumbnail: "https://tr.rbxcdn.com/180DAY-f7c05e35a5b0d7a4c3b7e9f8d2a4c6e1/150/150/Model/Webp/noFilter" },
+    { id: "effect", name: "Effects", assetId: 83353855, color: "from-cyan-400 to-blue-500", thumbnail: "https://tr.rbxcdn.com/180DAY-9a3f5c7d8e2b4a6c0d8e2f4a6c8e0a2c/150/150/Model/Webp/noFilter" },
+    { id: "treasure", name: "Items", assetId: 255893032, color: "from-yellow-400 to-amber-500", thumbnail: "https://tr.rbxcdn.com/180DAY-d5c8a3e7f9b2c4d6e8a0c2e4f6a8c0e2/150/150/Model/Webp/noFilter" },
 ]
 
-// Tab types matching Roblox
-const TABS = ["Models", "Plugins", "Audio", "Decals", "MeshParts"]
+// Tab types - Models, Plugins, Audio only
+const TABS = ["Models", "Plugins", "Audio"]
 
 export default function ToolboxBrowser() {
     const [query, setQuery] = useState("")
@@ -191,17 +191,21 @@ export default function ToolboxBrowser() {
                                         className={`aspect-square rounded-lg overflow-hidden relative group hover:scale-105 transition-transform shadow-lg ${selectedCategory === cat.id ? "ring-2 ring-white" : ""
                                             }`}
                                     >
-                                        <img
-                                            src={`https://tr.rbxcdn.com/${cat.assetId}/150/150/Image/Png`}
-                                            alt={cat.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement
-                                                target.style.display = 'none'
-                                            }}
-                                        />
-                                        <div className={`absolute inset-0 bg-gradient-to-t ${cat.color} opacity-40 group-hover:opacity-20 transition-opacity`} />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                        {/* Gradient Background */}
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${cat.color}`} />
+                                        {/* Category Icon */}
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            {cat.id === "vehicle" && <Car className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "building" && <Building className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "weapon" && <Swords className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "tree" && <Trees className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "furniture" && <Sofa className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "zombie" && <Box className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "sword" && <Swords className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "effect" && <Lightbulb className="w-6 h-6 text-white/80" />}
+                                            {cat.id === "treasure" && <Package className="w-6 h-6 text-white/80" />}
+                                        </div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                         <span className="absolute bottom-1 left-0 right-0 text-[8px] font-bold text-white text-center drop-shadow-lg">{cat.name}</span>
                                     </button>
                                 ))}
@@ -286,8 +290,8 @@ export default function ToolboxBrowser() {
                                                 key={page}
                                                 onClick={() => handlePageChange(page)}
                                                 className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${page === currentPage
-                                                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                                                        : "bg-white/10 hover:bg-white/20 text-white"
+                                                    ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                                                    : "bg-white/10 hover:bg-white/20 text-white"
                                                     }`}
                                             >
                                                 {page}

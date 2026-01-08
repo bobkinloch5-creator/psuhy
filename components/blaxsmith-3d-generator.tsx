@@ -128,16 +128,16 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         setProgress(0)
         setProgressText("Initializing...")
         setElapsedTime(0)
-        setRemainingTime(25)
+        setRemainingTime(90)
 
-        // Start progress simulation (typically takes 15-30 seconds)
+        // Start progress simulation (Cube3D typically takes 60-120 seconds)
         const startTime = Date.now()
-        const estimatedDuration = 25000 // 25 seconds estimate
+        const estimatedDuration = 90000 // 90 seconds estimate for Cube3D
 
         progressIntervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTime
             const elapsedSeconds = Math.floor(elapsed / 1000)
-            const remainingSeconds = Math.max(0, 25 - elapsedSeconds)
+            const remainingSeconds = Math.max(0, 90 - elapsedSeconds)
             const progressPercent = Math.min(95, (elapsed / estimatedDuration) * 100)
 
             setProgress(progressPercent)
