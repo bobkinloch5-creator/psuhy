@@ -2,10 +2,6 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
-// Synexa API - High quality Hunyuan3D-2 models (PRIMARY)
-const SYNEXA_API_KEY = process.env.SYNEXA_API_KEY || ""
-const SYNEXA_API_URL = "https://api.synexa.ai/v1/predictions"
-
 // Max duration for Vercel Pro
 export const maxDuration = 300
 
@@ -16,189 +12,67 @@ interface ModelResult {
   source: string
 }
 
-// ============ SYNEXA HUNYUAN3D-2 - PRIMARY (HIGH QUALITY) ============
-// This is an image-to-3D API, so we first generate a concept image
-async function generateWithSynexa(prompt: string): Promise<ModelResult> {
-  if (!SYNEXA_API_KEY) {
-    console.log("[Synexa] No API key configured")
-    throw new Error("No Synexa API key")
-  }
-
-  console.log("[Synexa] Generating 3D model with Hunyuan3D-2:", prompt)
-
-  try {
-    // Step 1: Generate concept image from text using FLUX or similar
-    // For now, we'll use a sample image approach - in production, generate real image
-    const conceptImageUrl = await generateConceptImage(prompt)
-    console.log("[Synexa] Concept image URL:", conceptImageUrl)
-
-    // Step 2: Create 3D generation prediction
-    const createResponse = await fetch(SYNEXA_API_URL, {
-      method: "POST",
-      headers: {
-        "x-api-key": SYNEXA_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "tencent/hunyuan3d-2",
-        input: {
-          seed: Math.floor(Math.random() * 10000),
-          image: conceptImageUrl,
-          steps: 5,
-          caption: prompt,
-          shape_only: false, // We want textures
-          guidance_scale: 5.5,
-          check_box_rembg: true,
-          octree_resolution: "256"
-        }
-      }),
-    })
-
-    if (!createResponse.ok) {
-      const errorText = await createResponse.text()
-      console.log("[Synexa] Create task failed:", createResponse.status, errorText)
-      throw new Error(`Synexa create failed: ${createResponse.status}`)
-    }
-
-    const taskData = await createResponse.json()
-    const predictionId = taskData.id || taskData.prediction_id
-    console.log("[Synexa] Prediction created:", predictionId)
-
-    if (!predictionId) {
-      throw new Error("No prediction ID returned from Synexa")
-    }
-
-    // Step 3: Poll for completion (max 180 seconds)
-    for (let i = 0; i < 90; i++) {
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      const statusResponse = await fetch(`${SYNEXA_API_URL}/${predictionId}`, {
-        headers: {
-          "x-api-key": SYNEXA_API_KEY,
-        },
-      })
-
-      if (!statusResponse.ok) {
-        console.log("[Synexa] Status check failed:", statusResponse.status)
-        continue
-      }
-
-      const statusData = await statusResponse.json()
-      console.log("[Synexa] Status:", statusData.status)
-
-      if (statusData.status === "succeeded" || statusData.status === "completed") {
-        // Get the model URL from output
-        const output = statusData.output
-        let modelUrl: string | null = null
-
-        // Try to find GLB URL in various locations
-        if (typeof output === 'string') {
-          modelUrl = output
-        } else if (Array.isArray(output)) {
-          modelUrl = output.find((url: string) => url.includes('.glb') || url.includes('.obj')) || output[0]
-        } else if (output?.glb) {
-          modelUrl = output.glb
-        } else if (output?.mesh) {
-          modelUrl = output.mesh
-        } else if (output?.model) {
-          modelUrl = output.model
-        }
-
-        if (modelUrl) {
-          console.log("[Synexa] ✅ Got model URL:", modelUrl)
-          return {
-            model_url: modelUrl,
-            preview_url: output?.preview || output?.thumbnail || null,
-            formats: {
-              glb: modelUrl.includes('.glb') ? modelUrl : modelUrl,
-              obj: output?.obj || null,
-              fbx: null,
-            },
-            source: "Hunyuan3D-2 (Synexa)"
-          }
-        }
-      }
-
-      if (statusData.status === "failed" || statusData.status === "error") {
-        throw new Error("Synexa generation failed: " + (statusData.error || "Unknown error"))
-      }
-    }
-
-    throw new Error("Synexa generation timed out")
-  } catch (error: any) {
-    console.error("[Synexa] Error:", error.message)
-    throw error
-  }
-}
-
-// Generate concept image from text prompt
-async function generateConceptImage(prompt: string): Promise<string> {
-  // Use a sample concept image for now
-  // In production, integrate with FLUX or similar image generation
-  const sampleImages = [
-    "https://synexa.s3.us-east-005.backblazeb2.com/models/tencent-hunyuan3d-2-demo.png",
-  ]
-
-  // Try to generate with Together.ai FLUX if API key available
-  const togetherKey = process.env.TOGETHER_API_KEY
-  if (togetherKey) {
-    try {
-      console.log("[Image] Generating concept image with FLUX...")
-      const response = await fetch("https://api.together.xyz/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${togetherKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "black-forest-labs/FLUX.1-schnell-Free",
-          prompt: `3D game asset concept art, isometric view, white background: ${prompt}`,
-          width: 512,
-          height: 512,
-          steps: 4,
-          n: 1,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.data?.[0]?.url) {
-          console.log("[Image] ✅ Generated concept image")
-          return data.data[0].url
-        }
-      }
-    } catch (e) {
-      console.log("[Image] FLUX generation failed, using sample")
-    }
-  }
-
-  // Fallback to sample image
-  return sampleImages[0]
-}
-
-// ============ FREE FALLBACK - SHAP-E ============
-async function generateWithShapE(prompt: string): Promise<ModelResult> {
-  console.log("[Shap-E] Using free fallback:", prompt)
+// ============ HUNYUAN3D-2 (FREE - OFFICIAL TENCENT SPACE) ============
+async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
+  console.log("[Hunyuan3D-2] Generating with official Tencent space:", prompt)
 
   try {
     const { Client } = await import("@gradio/client")
-    const client = await Client.connect("hysts/Shap-E")
 
-    const result = await client.predict("text-to-3d", [
-      prompt,
-      0,        // seed
-      15.0,     // guidance_scale
-      64,       // num_steps
-    ])
+    // Connect to the official Tencent Hunyuan3D-2 space
+    const client = await Client.connect("tencent/Hunyuan3D-2")
+
+    console.log("[Hunyuan3D-2] Connected to Hugging Face space")
+
+    // The space supports text-to-3D generation
+    // Try the generation endpoint
+    const result = await client.predict("/generation", {
+      caption: prompt,
+      image: null, // No input image for text-to-3D
+      steps: 25,
+      guidance_scale: 7.5,
+      seed: Math.floor(Math.random() * 999999),
+      octree_resolution: 256,
+      remove_bg: true,
+    })
+
+    console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
 
     const resultData = result.data as any[]
 
     if (resultData && resultData.length > 0) {
-      const modelFile = resultData[0]
-      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
-      const previewUrl = resultData[1] ? (typeof resultData[1] === 'string' ? resultData[1] : resultData[1]?.url) : null
+      // Find the GLB file in the outputs
+      let modelUrl: string | null = null
+      let previewUrl: string | null = null
+
+      for (const item of resultData) {
+        if (typeof item === 'string') {
+          if (item.includes('.glb') || item.includes('.obj')) {
+            modelUrl = item
+          } else if (item.includes('.png') || item.includes('.jpg')) {
+            previewUrl = item
+          }
+        } else if (item?.url) {
+          if (item.url.includes('.glb') || item.url.includes('.obj')) {
+            modelUrl = item.url
+          } else if (item.url.includes('.png') || item.url.includes('.jpg')) {
+            previewUrl = item.url
+          }
+        } else if (item?.path) {
+          if (item.path.includes('.glb') || item.path.includes('.obj')) {
+            modelUrl = item.path
+          }
+        }
+      }
+
+      // If no specific file found, try the first output
+      if (!modelUrl && resultData[0]) {
+        const first = resultData[0]
+        modelUrl = typeof first === 'string' ? first : first?.url || first?.path
+      }
 
       if (modelUrl) {
+        console.log("[Hunyuan3D-2] ✅ Got model URL:", modelUrl)
         return {
           model_url: modelUrl,
           preview_url: previewUrl,
@@ -207,18 +81,18 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
             obj: modelUrl.includes('.obj') ? modelUrl : modelUrl,
             fbx: null,
           },
-          source: "Shap-E"
+          source: "Hunyuan3D-2 (Free)"
         }
       }
     }
-    throw new Error("No model returned")
+    throw new Error("No model returned from Hunyuan3D-2")
   } catch (error: any) {
-    console.error("[Shap-E] Error:", error.message)
+    console.error("[Hunyuan3D-2] Error:", error.message)
     throw error
   }
 }
 
-// ============ CUBE3D FALLBACK ============
+// ============ CUBE3D FALLBACK (FREE - ROBLOX) ============
 async function generateWithCube3D(prompt: string): Promise<ModelResult> {
   console.log("[Cube3D] Generating with Roblox Cube3D:", prompt)
 
@@ -260,25 +134,61 @@ async function generateWithCube3D(prompt: string): Promise<ModelResult> {
   }
 }
 
+// ============ SHAP-E FALLBACK (FREE) ============
+async function generateWithShapE(prompt: string): Promise<ModelResult> {
+  console.log("[Shap-E] Using free fallback:", prompt)
+
+  try {
+    const { Client } = await import("@gradio/client")
+    const client = await Client.connect("hysts/Shap-E")
+
+    const result = await client.predict("text-to-3d", [
+      prompt,
+      0,        // seed
+      15.0,     // guidance_scale
+      64,       // num_steps
+    ])
+
+    const resultData = result.data as any[]
+
+    if (resultData && resultData.length > 0) {
+      const modelFile = resultData[0]
+      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
+      const previewUrl = resultData[1] ? (typeof resultData[1] === 'string' ? resultData[1] : resultData[1]?.url) : null
+
+      if (modelUrl) {
+        console.log("[Shap-E] ✅ Got model URL:", modelUrl)
+        return {
+          model_url: modelUrl,
+          preview_url: previewUrl,
+          formats: {
+            glb: modelUrl.includes('.glb') ? modelUrl : null,
+            obj: modelUrl.includes('.obj') ? modelUrl : modelUrl,
+            fbx: null,
+          },
+          source: "Shap-E"
+        }
+      }
+    }
+    throw new Error("No model returned from Shap-E")
+  } catch (error: any) {
+    console.error("[Shap-E] Error:", error.message)
+    throw error
+  }
+}
+
 // ============ MAIN GENERATION ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
   const enhancedPrompt = style
-    ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
-    : `${prompt}, high quality 3D game asset, detailed textured mesh`
+    ? `${prompt}, ${style} style, high quality 3D model`
+    : `${prompt}, high quality 3D game asset`
 
-  // Priority: Synexa (paid, reliable) → Cube3D → Shap-E (fallbacks)
-  const services: { name: string; fn: () => Promise<ModelResult> }[] = []
-
-  // Add Synexa first if key exists (best quality, paid)
-  if (SYNEXA_API_KEY) {
-    services.push({ name: "Synexa-Hunyuan3D", fn: () => generateWithSynexa(enhancedPrompt) })
-  }
-
-  // Free fallbacks
-  services.push(
+  // Priority: Hunyuan3D-2 (best quality, free) → Cube3D → Shap-E
+  const services: { name: string; fn: () => Promise<ModelResult> }[] = [
+    { name: "Hunyuan3D-2", fn: () => generateWithHunyuan3D(enhancedPrompt) },
     { name: "Cube3D", fn: () => generateWithCube3D(prompt) },
     { name: "Shap-E", fn: () => generateWithShapE(prompt) },
-  )
+  ]
 
   for (const service of services) {
     try {
