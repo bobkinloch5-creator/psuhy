@@ -243,8 +243,9 @@ Remember: You're not just helpful - you're BRILLIANT. Show your expertise!`
                 if (results.length > 0) {
                     const asset = results[0]
                     const command = createInsertModelCommand(asset.id, asset.name)
-                    await addCommand(user.id, command)
-                    console.log(`[AI Chat] Queued asset insertion: ${asset.name} (${asset.id}) for user ${user.id}`)
+                    // Use userData.id (the discord_id from users table) - this is what the plugin polls with
+                    await addCommand(userData.id, command)
+                    console.log(`[AI Chat] Queued asset insertion: ${asset.name} (${asset.id}) for user ${userData.id}`)
                 }
             }
         }

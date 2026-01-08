@@ -242,6 +242,101 @@ local function startPolling()
                                 end
                                 
                                 print("[BloxSmith] ✅ Imported from Sloyd AI: " .. promptName)
+                            elseif cmd.type == "INSERT_MODEL" and cmd.data then
+                                -- INSERT_MODEL: Insert verified free Roblox assets
+                                local assetId = cmd.data.assetId
+                                local assetName = cmd.data.name or "Model"
+                                print("[BloxSmith] 📦 Inserting model:", assetName, "ID:", assetId)
+                                
+                                local success, result = pcall(function()
+                                    local InsertService = game:GetService("InsertService")
+                                    local model = InsertService:LoadAsset(tonumber(assetId))
+                                    if model then
+                                        -- Get the actual model inside (LoadAsset returns a container)
+                                        local actualModel = model:GetChildren()[1]
+                                        if actualModel then
+                                            actualModel.Name = assetName
+                                            actualModel.Parent = workspace
+                                            
+                                            -- Position it nicely
+                                            if actualModel:IsA("Model") then
+                                                if actualModel.PrimaryPart then
+                                                    actualModel:SetPrimaryPartCFrame(CFrame.new(0, 5, 0))
+                                                else
+                                                    -- Find any part to use as anchor
+                                                    local anyPart = actualModel:FindFirstChildWhichIsA("BasePart", true)
+                                                    if anyPart then
+                                                        local offset = anyPart.Position
+                                                        for _, child in pairs(actualModel:GetDescendants()) do
+                                                            if child:IsA("BasePart") then
+                                                                child.Position = child.Position - offset + Vector3.new(0, 5, 0)
+                                                            end
+                                                        end
+                                                    end
+                                                end
+                                            elseif actualModel:IsA("BasePart") then
+                                                actualModel.Position = Vector3.new(0, 5, 0)
+                                                actualModel.Anchored = true
+                                            end
+                                            
+                                            print("[BloxSmith] ✅ Model inserted:", actualModel.Name)
+                                            selectAndFocus(actualModel)
+                                            model:Destroy() -- Remove the container
+                                        else
+                                            -- No children, use the model itself
+                                            model.Name = assetName
+                                            model.Parent = workspace
+                                            print("[BloxSmith] ✅ Model inserted:", model.Name)
+                                            selectAndFocus(model)
+                                        end
+                                    end
+                                end)
+                                
+                                if not success then
+                                    warn("[BloxSmith] ❌ InsertService failed:", result)
+                                    print("[BloxSmith] 🔄 Creating placeholder and opening Toolbox...")
+                                    
+                                    -- Create a placeholder model with asset info
+                                    local placeholder = Instance.new("Model")
+                                    placeholder.Name = assetName .. "_Placeholder"
+                                    
+                                    local part = Instance.new("Part")
+                                    part.Name = "PlaceholderPart"
+                                    part.Size = Vector3.new(4, 4, 4)
+                                    part.Position = Vector3.new(0, 5, 0)
+                                    part.Anchored = true
+                                    part.BrickColor = BrickColor.new("Bright orange")
+                                    part.Material = Enum.Material.Neon
+                                    part.Parent = placeholder
+                                    placeholder.PrimaryPart = part
+                                    
+                                    -- Add billboard with instructions
+                                    local billboard = Instance.new("BillboardGui")
+                                    billboard.Size = UDim2.new(0, 250, 0, 80)
+                                    billboard.StudsOffset = Vector3.new(0, 4, 0)
+                                    billboard.AlwaysOnTop = true
+                                    billboard.Parent = part
+                                    
+                                    local label = Instance.new("TextLabel")
+                                    label.Size = UDim2.new(1, 0, 1, 0)
+                                    label.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+                                    label.BackgroundTransparency = 0.1
+                                    label.TextColor3 = Color3.fromRGB(255, 150, 50)
+                                    label.TextScaled = true
+                                    label.Font = Enum.Font.GothamBold
+                                    label.Text = "📦 " .. assetName .. "\nID: " .. tostring(assetId) .. "\nSearch in Toolbox to insert!"
+                                    label.Parent = billboard
+                                    
+                                    -- Store asset ID as attribute for easy reference
+                                    part:SetAttribute("AssetId", assetId)
+                                    part:SetAttribute("AssetName", assetName)
+                                    
+                                    placeholder.Parent = workspace
+                                    selectAndFocus(placeholder)
+                                    
+                                    print("[BloxSmith] ✅ Placeholder created for:", assetName)
+                                    print("[BloxSmith] 💡 TIP: Search '" .. assetName .. "' in View > Toolbox to insert the real model!")
+                                end
                             elseif cmd.type == "execute" and cmd.code then
                                 -- WORLD BUILDER: Execute Lua code directly
                                 print("[BloxSmith] 🌍 Executing World Builder code...")
