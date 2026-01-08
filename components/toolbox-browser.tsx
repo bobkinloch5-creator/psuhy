@@ -17,17 +17,17 @@ interface Asset {
     productUrl: string
 }
 
-// Categories matching Roblox Creator Store
+// Categories matching Roblox Creator Store - with real Roblox asset thumbnails
 const CATEGORIES = [
-    { id: "vehicle", name: "Vehicle", icon: Car, color: "from-blue-500 to-cyan-500" },
-    { id: "structure", name: "Structure", icon: Building, color: "from-amber-500 to-orange-500" },
-    { id: "light", name: "Light", icon: Lightbulb, color: "from-yellow-400 to-amber-400" },
-    { id: "tech", name: "Tech", icon: Cpu, color: "from-cyan-500 to-blue-500" },
-    { id: "weapons", name: "Weapons", icon: Swords, color: "from-red-500 to-orange-500" },
-    { id: "landscape", name: "Landscape", icon: Trees, color: "from-green-500 to-emerald-500" },
-    { id: "furniture", name: "Furniture", icon: Sofa, color: "from-purple-500 to-pink-500" },
-    { id: "packages", name: "Packages", icon: Code, color: "from-indigo-500 to-purple-500" },
-    { id: "materials", name: "Materials", icon: Palette, color: "from-pink-500 to-rose-500" },
+    { id: "vehicle", name: "Vehicles", assetId: 95858377, color: "from-blue-500 to-cyan-500" },
+    { id: "building", name: "Buildings", assetId: 155401426, color: "from-amber-500 to-orange-500" },
+    { id: "weapon", name: "Weapons", assetId: 10561326, color: "from-red-500 to-orange-500" },
+    { id: "tree", name: "Nature", assetId: 9738946, color: "from-green-500 to-emerald-500" },
+    { id: "furniture", name: "Furniture", assetId: 358799, color: "from-purple-500 to-pink-500" },
+    { id: "zombie", name: "NPCs", assetId: 27699497, color: "from-gray-600 to-gray-800" },
+    { id: "sword", name: "Classic", assetId: 12221695, color: "from-yellow-500 to-orange-500" },
+    { id: "effect", name: "Effects", assetId: 83353855, color: "from-cyan-400 to-blue-500" },
+    { id: "treasure", name: "Items", assetId: 255893032, color: "from-yellow-400 to-amber-500" },
 ]
 
 // Tab types matching Roblox
@@ -166,20 +166,27 @@ export default function ToolboxBrowser() {
                                 </h3>
                             </div>
                             <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
-                                {CATEGORIES.map((cat) => {
-                                    const Icon = cat.icon
-                                    return (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => handleCategoryClick(cat.id)}
-                                            className={`aspect-square rounded-lg bg-gradient-to-br ${cat.color} p-2 flex flex-col items-center justify-center gap-0.5 hover:scale-105 transition-transform shadow-lg ${selectedCategory === cat.id ? "ring-2 ring-white" : ""
-                                                }`}
-                                        >
-                                            <Icon className="w-4 h-4 text-white" />
-                                            <span className="text-[8px] font-semibold text-white text-center leading-tight">{cat.name}</span>
-                                        </button>
-                                    )
-                                })}
+                                {CATEGORIES.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => handleCategoryClick(cat.id)}
+                                        className={`aspect-square rounded-lg overflow-hidden relative group hover:scale-105 transition-transform shadow-lg ${selectedCategory === cat.id ? "ring-2 ring-white" : ""
+                                            }`}
+                                    >
+                                        <img
+                                            src={`https://tr.rbxcdn.com/${cat.assetId}/150/150/Image/Png`}
+                                            alt={cat.name}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement
+                                                target.style.display = 'none'
+                                            }}
+                                        />
+                                        <div className={`absolute inset-0 bg-gradient-to-t ${cat.color} opacity-40 group-hover:opacity-20 transition-opacity`} />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                        <span className="absolute bottom-1 left-0 right-0 text-[8px] font-bold text-white text-center drop-shadow-lg">{cat.name}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
 

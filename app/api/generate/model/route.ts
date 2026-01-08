@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { getSloydToken, clearSloydTokenCache } from "@/lib/sloyd"
 
 // Sloyd API endpoints - using the correct text-to-3d endpoint
 const SLOYD_JOBS_API = "https://horizon-be-server-blue-124265032526.us-central1.run.app/api/jobs/text-to-3d"
@@ -85,13 +86,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if Sloyd token is configured
-    if (!process.env.SLOYD_TOKEN) {
-      console.error("[v0] [Model Gen] SLOYD_TOKEN not set")
+    // Get Sloyd token (auto-refreshes using cookies if available)
+    const sloydToken = await getSloydToken()
+    if (!sloydToken) {
+      console.error("[v0] [Model Gen] No Sloyd token available")
       return NextResponse.json(
         {
           error: "Model generation service not configured",
-          details: "Please configure Sloyd API token in environment variables",
+          details: "Please configure SLOYD_TOKEN or SLOYD_COOKIE in environment variables",
         },
         { status: 500 },
       )
@@ -99,7 +101,7 @@ export async function POST(request: Request) {
 
     console.log("[v0] [Model Gen] Starting Sloyd job for:", prompt)
 
-    const modelData = await generateSloydModelWithPolling(prompt, style, 3)
+    const modelData = await generateSloydModelWithPolling(prompt, style, sloydToken, 3)
 
     if (!modelData) {
       return NextResponse.json(
@@ -239,6 +241,7 @@ export async function POST(request: Request) {
 async function generateSloydModelWithPolling(
   prompt: string,
   style: string | undefined,
+  token: string,
   maxRetries: number,
 ): Promise<any | null> {
   let lastError: Error | null = null
@@ -255,7 +258,7 @@ async function generateSloydModelWithPolling(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: process.env.SLOYD_TOKEN!,
+          Authorization: token,
           Origin: "https://app.sloyd.ai",
           Referer: "https://app.sloyd.ai/",
         },
