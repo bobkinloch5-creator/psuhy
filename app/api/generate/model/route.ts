@@ -2,36 +2,36 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { Client } from "@gradio/client"
 
-// LGM (Large Multi-View Gaussian) - Fast text-to-3D (5 seconds)
-const LGM_SPACE = "ashawkey/LGM"
+// Shap-E - OpenAI's text-to-3D model (more reliable)
+const SHAP_E_SPACE = "hysts/Shap-E"
 
 // Max duration for Vercel Pro
 export const maxDuration = 300
 
 // Helper function to connect with retries
-async function connectToLGM(maxRetries: number = 3): Promise<any> {
+async function connectToShapE(maxRetries: number = 3): Promise<any> {
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[LGM] Connection attempt ${attempt}/${maxRetries}...`)
-      const client = await Client.connect(LGM_SPACE)
-      console.log(`[LGM] Connected successfully on attempt ${attempt}`)
+      console.log(`[Shap-E] Connection attempt ${attempt}/${maxRetries}...`)
+      const client = await Client.connect(SHAP_E_SPACE)
+      console.log(`[Shap-E] Connected successfully on attempt ${attempt}`)
       return client
     } catch (error: any) {
-      console.error(`[LGM] Connection attempt ${attempt} failed:`, error.message)
+      console.error(`[Shap-E] Connection attempt ${attempt} failed:`, error.message)
       lastError = error
 
       if (attempt < maxRetries) {
         // Wait before retry with exponential backoff
         const waitTime = 2000 * attempt
-        console.log(`[LGM] Waiting ${waitTime}ms before retry...`)
+        console.log(`[Shap-E] Waiting ${waitTime}ms before retry...`)
         await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
   }
 
-  throw lastError || new Error("Failed to connect to LGM")
+  throw lastError || new Error("Failed to connect to Shap-E")
 }
 
 // Helper to upload model to Supabase Storage
@@ -52,7 +52,7 @@ async function uploadModelToSupabase(
       })
 
     if (error) {
-      console.error("[LGM] Storage upload error:", error)
+      console.error("[Shap-E] Storage upload error:", error)
       return null
     }
 
@@ -63,7 +63,7 @@ async function uploadModelToSupabase(
 
     return urlData?.publicUrl || null
   } catch (err) {
-    console.error("[LGM] Upload failed:", err)
+    console.error("[Shap-E] Upload failed:", err)
     return null
   }
 }
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
     }
 
-    console.log("[LGM] User:", user.id, "Prompt:", prompt)
+    console.log("[Shap-E] User:", user.id, "Prompt:", prompt)
 
     // Look up user by auth ID
     let { data: userData, error: userError } = await supabase
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     // If not found by id, try discord_id for backwards compatibility
     if (userError || !userData) {
-      console.log("[LGM] User not found by id, trying discord_id...")
+      console.log("[Shap-E] User not found by id, trying discord_id...")
       const result = await supabase
         .from("users")
         .select("id, discord_id, generation_credits, model_credits, subscription_tier")
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     }
 
     if (userError || !userData) {
-      console.error("[LGM] User lookup error:", userError)
+      console.error("[Shap-E] User lookup error:", userError)
       // Create user if they don't exist
       const { data: newUser, error: createError } = await supabase
         .from("users")
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
         .single()
 
       if (createError || !newUser) {
-        console.error("[LGM] Failed to create user:", createError)
+        console.error("[Shap-E] Failed to create user:", createError)
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
       userData = newUser
@@ -148,21 +148,24 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("[LGM] Connecting to Hugging Face Space...")
+    console.log("[Shap-E] Connecting to Hugging Face Space...")
 
     try {
-      // Connect to LGM Hugging Face Space with retries
-      const client = await connectToLGM(3)
+      // Connect to Shap-E Hugging Face Space with retries
+      const client = await connectToShapE(3)
 
-      console.log("[LGM] Connected! Generating model for:", prompt)
+      console.log("[Shap-E] Connected! Generating model for:", prompt)
 
-      // LGM uses text-to-3D generation
-      // The API takes a text prompt and returns GLB model + video preview
-      const result = await client.predict("/run", {
+      // Shap-E uses text-to-3D generation
+      // API endpoint: /text-to-3d with prompt, seed, guidance_scale, num_steps
+      const result = await client.predict("/text-to-3d", {
         prompt: prompt,
+        seed: 0,
+        guidance_scale: 15,
+        num_steps: 64,
       })
 
-      console.log("[LGM] Generation result:", JSON.stringify(result))
+      console.log("[Shap-E] Generation result:", JSON.stringify(result))
 
       // Extract the model file from result
       const resultData = result.data as any[]
@@ -193,12 +196,12 @@ export async function POST(request: Request) {
         }
       }
 
-      console.log("[LGM] Original Model URL:", originalModelUrl)
+      console.log("[Shap-E] Original Model URL:", originalModelUrl)
 
       // Download and store the model in Supabase Storage
       if (originalModelUrl) {
         try {
-          console.log("[LGM] Downloading model for Supabase storage...")
+          console.log("[Shap-E] Downloading model for Supabase storage...")
           const modelResponse = await fetch(originalModelUrl)
 
           if (modelResponse.ok) {
@@ -213,11 +216,11 @@ export async function POST(request: Request) {
             )
 
             if (storedModelUrl) {
-              console.log("[LGM] Model stored in Supabase:", storedModelUrl)
+              console.log("[Shap-E] Model stored in Supabase:", storedModelUrl)
             }
           }
         } catch (downloadErr) {
-          console.error("[LGM] Failed to download/store model:", downloadErr)
+          console.error("[Shap-E] Failed to download/store model:", downloadErr)
           // Fall back to original URL
         }
       }
@@ -276,11 +279,11 @@ export async function POST(request: Request) {
 
           if (!queueError) {
             autoQueued = true
-            console.log("[LGM] Auto-queued model to Studio for user:", userDiscordId)
+            console.log("[Shap-E] Auto-queued model to Studio for user:", userDiscordId)
           }
         }
       } catch (error) {
-        console.error("[LGM] Auto-queue error:", error)
+        console.error("[Shap-E] Auto-queue error:", error)
       }
 
       enhancedModelData.auto_queued = autoQueued
@@ -302,7 +305,7 @@ export async function POST(request: Request) {
         .single()
 
       if (creationError) {
-        console.error("[LGM] Creation insert error:", creationError)
+        console.error("[Shap-E] Creation insert error:", creationError)
       }
 
       // Deduct credits for non-premium users
@@ -325,7 +328,7 @@ export async function POST(request: Request) {
             creation_id: creation?.id,
             ip_address: request.headers.get("x-forwarded-for") || "unknown",
           })
-          .catch((err) => console.error("[LGM] Transaction log error:", err))
+          .catch((err) => console.error("[Shap-E] Transaction log error:", err))
 
         return NextResponse.json({
           success: true,
@@ -345,7 +348,7 @@ export async function POST(request: Request) {
       })
 
     } catch (gradioError: any) {
-      console.error("[LGM] Gradio API error:", gradioError)
+      console.error("[Shap-E] Gradio API error:", gradioError)
       return NextResponse.json(
         {
           error: "Model generation failed",
@@ -356,7 +359,7 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
-    console.error("[LGM] Unexpected error:", error)
+    console.error("[Shap-E] Unexpected error:", error)
     return NextResponse.json(
       {
         error: "Generation failed",
