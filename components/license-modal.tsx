@@ -135,7 +135,7 @@ export function LicenseModal({ isOpen, onClose, onSuccess }: LicenseModalProps) 
                             <div className="mt-6 text-center">
                                 <p className="text-xs text-muted-foreground">
                                     Don't have a license?{" "}
-                                    <a href="https://discord.gg/a6wZ2w3vZd" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">
+                                    <a href="https://discord.gg/xdFVu6cagw" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">
                                         Get one here
                                     </a>
                                 </p>

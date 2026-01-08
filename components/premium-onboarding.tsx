@@ -192,7 +192,7 @@ export default function PremiumOnboarding() {
                     <p className="text-sm text-muted-foreground text-center">
                         Need help? Join our{" "}
                         <a
-                            href="https://discord.gg/a6wZ2w3vZd"
+                            href="https://discord.gg/xdFVu6cagw"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-400 hover:underline"

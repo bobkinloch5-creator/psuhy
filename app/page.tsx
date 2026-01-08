@@ -268,7 +268,7 @@ export default async function HomePage() {
               </div>
               <div className="flex items-center gap-6">
                 <a
-                  href="https://discord.gg/a6wZ2w3vZd"
+                  href="https://discord.gg/xdFVu6cagw"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-orange-400 transition-colors font-semibold"

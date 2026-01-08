@@ -170,7 +170,7 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm">
           <span className="px-2 py-0.5 bg-yellow-500 text-black font-bold rounded text-xs">BETA</span>
           <span className="text-white/90">Some features may not work perfectly. We're working hard on fixes!</span>
-          <a href="https://discord.gg/a6wZ2w3vZd" target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 underline font-medium">
+          <a href="https://discord.gg/xdFVu6cagw" target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 underline font-medium">
             Report issues on Discord
           </a>
         </div>
@@ -218,7 +218,6 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
               <div className="flex gap-3">
                 <CreditBadge icon={<Sparkles className="w-4 h-4" />} count={user.generation_credits} label="Gen" />
                 <CreditBadge icon={<Box className="w-4 h-4" />} count={user.model_credits} label="Model" />
-                <CreditBadge icon={<Map className="w-4 h-4" />} count={user.world_credits} label="World" />
               </div>
 
               <ProfileDropdown
@@ -288,44 +287,6 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
             </div>
           </div>
         )}
-
-        {/* World Generator - Coming Soon */}
-        <div className="mb-8 glassmorphism rounded-2xl p-6 border-green-500/20 opacity-75">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 shadow-lg shadow-green-500/30">
-                <Map className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold text-white">World Generator</h3>
-                  <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full">
-                    COMING SOON
-                  </span>
-                </div>
-                <p className="text-sm text-white/60">Create entire Roblox worlds with AI</p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Describe your world... (e.g., tropical island with volcano)"
-              className="w-full px-4 py-3 bg-black/60 border border-white/10 rounded-xl text-white placeholder-white/40 cursor-not-allowed opacity-50"
-              disabled
-            />
-            <button
-              disabled
-              className="w-full px-6 py-3 bg-gradient-to-r from-green-500/50 to-emerald-500/50 text-white/70 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-5 h-5" />
-              Coming Soon...
-            </button>
-            <p className="text-center text-sm text-white/40">
-              🚀 World generation is currently in development. Stay tuned!
-            </p>
-          </div>
-        </div>
 
         <div className="mb-8">
           <PluginStatus userId={user.discord_id} />

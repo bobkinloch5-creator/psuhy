@@ -344,7 +344,7 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                     {/* Discord Link */}
                     <div className="p-3 border-t border-white/10">
                         <a
-                            href="https://discord.gg/a6wZ2w3vZd"
+                            href="https://discord.gg/xdFVu6cagw"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 px-4 py-2 bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-[#5865F2] rounded-lg transition-colors text-sm font-medium"
