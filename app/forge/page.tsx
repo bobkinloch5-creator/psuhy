@@ -41,3 +41,4 @@ export default async function ForgePage() {
   // Allow access even without active project - user can create one in the interface
   return <ForgeInterface user={userData} />
 }
+

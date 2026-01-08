@@ -400,3 +400,4 @@ export function AIChatSidebar({ userTier = "free" }: AIChatSidebarProps) {
         </div>
     )
 }
+

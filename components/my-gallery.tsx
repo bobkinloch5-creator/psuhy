@@ -292,3 +292,4 @@ export function MyGallery() {
         </div>
     )
 }
+

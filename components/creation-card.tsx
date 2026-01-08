@@ -69,3 +69,4 @@ export function CreationCard({ id, type, title, description, timestamp, thumbnai
     </Link>
   )
 }
+

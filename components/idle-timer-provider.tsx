@@ -11,3 +11,4 @@ export function IdleTimerProvider({ children }: { children: React.ReactNode }) {
 
     return <>{children}</>
 }
+

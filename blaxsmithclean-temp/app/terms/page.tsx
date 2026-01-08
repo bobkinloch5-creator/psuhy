@@ -150,7 +150,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-foreground mb-4">11. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
-              For questions about these Terms of Service, please join our Discord support server at <a href="https://discord.gg/XMG5DbkEuB" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">https://discord.gg/XMG5DbkEuB</a>
+              For questions about these Terms of Service, please join our Discord support server at <a href="https://discord.gg/sC9A9Fzss3" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">https://discord.gg/sC9A9Fzss3</a>
             </p>
           </section>
         </div>

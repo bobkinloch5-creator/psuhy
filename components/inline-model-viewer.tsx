@@ -187,3 +187,4 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
         </div>
     )
 }
+

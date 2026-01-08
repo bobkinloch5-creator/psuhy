@@ -171,7 +171,7 @@ export default async function HomePage() {
               <div>© 2026 BlaxSmith AI. Powered by AI and passion for creation.</div>
               <div className="flex items-center gap-6">
                 <a
-                  href="https://discord.gg/XMG5DbkEuB"
+                  href="https://discord.gg/sC9A9Fzss3"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-orange-400 transition-colors font-semibold flex items-center gap-2"

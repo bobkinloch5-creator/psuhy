@@ -195,3 +195,4 @@ export function AIChat({ conversationId, userId }: AIChatProps) {
         </div>
     )
 }
+

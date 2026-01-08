@@ -437,3 +437,4 @@ function AssetCard({ asset, compact = false }: { asset: Asset; compact?: boolean
         </div>
     )
 }
+

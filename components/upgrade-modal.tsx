@@ -206,3 +206,4 @@ export function UpgradeModal({ isOpen, onClose, currentTier }: UpgradeModalProps
         </div>
     )
 }
+

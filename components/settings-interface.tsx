@@ -102,3 +102,4 @@ export function SettingsInterface({ user, subscription }: SettingsInterfaceProps
         </div>
     )
 }
+

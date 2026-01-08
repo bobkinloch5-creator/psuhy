@@ -400,3 +400,4 @@ export function ModelViewer3D({ modelUrl, modelName, onClose, vertices = 21000, 
         </>
     )
 }
+

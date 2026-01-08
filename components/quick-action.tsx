@@ -31,3 +31,4 @@ export function QuickAction({ icon: Icon, label, description, badge, onClick }: 
     </button>
   )
 }
+

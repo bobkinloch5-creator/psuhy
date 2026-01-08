@@ -170,7 +170,7 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm">
           <span className="px-2 py-0.5 bg-yellow-500 text-black font-bold rounded text-xs">BETA</span>
           <span className="text-white/90">Some features may not work perfectly. We're working hard on fixes!</span>
-          <a href="https://discord.gg/blaxsmith" target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 underline font-medium">
+          <a href="https://discord.gg/sC9A9Fzss3" target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 underline font-medium">
             Report issues on Discord
           </a>
         </div>
@@ -426,3 +426,4 @@ function CreditBadge({ icon, count, label }: { icon: React.ReactNode; count: num
     </div>
   )
 }
+
