@@ -43,19 +43,25 @@ const loadModelViewer = () => {
     }
 }
 
-// Model Viewer Component using ref-based approach
+// Model Viewer Component using ref-based approach with robust DOM handling
 function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
     const containerRef = useRef<HTMLDivElement>(null)
     const viewerRef = useRef<HTMLElement | null>(null)
+    const mountedRef = useRef(true)
     const [isLoading, setIsLoading] = useState(true)
+    const [viewerKey] = useState(() => `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
 
     useEffect(() => {
+        mountedRef.current = true
         loadModelViewer()
         let timeoutId: NodeJS.Timeout | null = null
 
         // Wait for script to load then create the element
         const checkAndCreate = () => {
+            if (!mountedRef.current) return
+
             if (containerRef.current && customElements.get('model-viewer')) {
+                // Create new viewer element
                 const viewer = document.createElement('model-viewer')
                 viewer.setAttribute('src', src)
                 viewer.setAttribute('alt', alt)
@@ -64,26 +70,33 @@ function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
                 viewer.setAttribute('shadow-intensity', '1')
                 viewer.setAttribute('exposure', '1')
                 viewer.setAttribute('environment-image', 'neutral')
+                viewer.setAttribute('data-viewer-key', viewerKey)
                 viewer.style.width = '100%'
                 viewer.style.height = '100%'
                 viewer.style.backgroundColor = 'transparent'
 
-                viewer.addEventListener('load', () => setIsLoading(false))
+                viewer.addEventListener('load', () => {
+                    if (mountedRef.current) setIsLoading(false)
+                })
 
-                // Clear existing content safely
-                try {
-                    while (containerRef.current && containerRef.current.firstChild) {
-                        containerRef.current.removeChild(containerRef.current.firstChild)
-                    }
-                } catch {
-                    // Ignore removal errors
-                }
+                viewer.addEventListener('error', () => {
+                    if (mountedRef.current) setIsLoading(false)
+                })
 
+                // Clear existing content safely - use innerHTML to avoid React reconciliation issues
                 if (containerRef.current) {
+                    try {
+                        // Disconnect any existing viewers first
+                        const existingViewers = containerRef.current.querySelectorAll('model-viewer')
+                        existingViewers.forEach(v => {
+                            try { v.remove() } catch { /* ignore */ }
+                        })
+                    } catch { /* ignore */ }
+
                     containerRef.current.appendChild(viewer)
                     viewerRef.current = viewer
                 }
-            } else {
+            } else if (mountedRef.current) {
                 // Retry after a short delay
                 timeoutId = setTimeout(checkAndCreate, 100)
             }
@@ -92,24 +105,28 @@ function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
         checkAndCreate()
 
         return () => {
+            mountedRef.current = false
             if (timeoutId) {
                 clearTimeout(timeoutId)
             }
+            // Clean up by removing our specific viewer only
             try {
-                if (viewerRef.current && containerRef.current && containerRef.current.contains(viewerRef.current)) {
-                    containerRef.current.removeChild(viewerRef.current)
+                if (viewerRef.current) {
+                    viewerRef.current.remove() // Use remove() instead of removeChild for safety
+                    viewerRef.current = null
                 }
-                viewerRef.current = null
             } catch {
-                // Ignore removal errors
+                // Ignore removal errors - element may already be removed
             }
         }
-    }, [src, alt])
+    }, [src, alt, viewerKey])
 
+    // Use a wrapper to prevent React from managing the model-viewer's DOM
     return (
-        <div ref={containerRef} className="w-full h-full">
+        <div className="w-full h-full relative">
+            <div ref={containerRef} className="w-full h-full" style={{ isolation: 'isolate' }} />
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
                     <div className="flex flex-col items-center gap-2">
                         <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
                         <span className="text-white/70 text-sm">Loading 3D Model...</span>

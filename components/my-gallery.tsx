@@ -23,17 +23,22 @@ const loadModelViewer = () => {
     }
 }
 
-// 3D Viewer Component
+// 3D Viewer Component with robust DOM handling
 function ModelViewer3D({ src, alt }: { src: string; alt: string }) {
     const containerRef = useRef<HTMLDivElement>(null)
     const viewerRef = useRef<HTMLElement | null>(null)
+    const mountedRef = useRef(true)
     const [isLoading, setIsLoading] = useState(true)
+    const [viewerKey] = useState(() => `gallery-viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
 
     useEffect(() => {
+        mountedRef.current = true
         loadModelViewer()
         let timeoutId: NodeJS.Timeout | null = null
 
         const checkAndCreate = () => {
+            if (!mountedRef.current) return
+
             if (containerRef.current && customElements.get('model-viewer')) {
                 const viewer = document.createElement('model-viewer')
                 viewer.setAttribute('src', src)
@@ -41,26 +46,32 @@ function ModelViewer3D({ src, alt }: { src: string; alt: string }) {
                 viewer.setAttribute('camera-controls', '')
                 viewer.setAttribute('auto-rotate', '')
                 viewer.setAttribute('shadow-intensity', '1')
+                viewer.setAttribute('data-viewer-key', viewerKey)
                 viewer.style.width = '100%'
                 viewer.style.height = '100%'
                 viewer.style.backgroundColor = 'transparent'
 
-                viewer.addEventListener('load', () => setIsLoading(false))
+                viewer.addEventListener('load', () => {
+                    if (mountedRef.current) setIsLoading(false)
+                })
 
-                // Clear existing content safely
-                try {
-                    while (containerRef.current && containerRef.current.firstChild) {
-                        containerRef.current.removeChild(containerRef.current.firstChild)
-                    }
-                } catch {
-                    // Ignore removal errors
-                }
+                viewer.addEventListener('error', () => {
+                    if (mountedRef.current) setIsLoading(false)
+                })
 
+                // Clear existing viewers safely
                 if (containerRef.current) {
+                    try {
+                        const existingViewers = containerRef.current.querySelectorAll('model-viewer')
+                        existingViewers.forEach(v => {
+                            try { v.remove() } catch { /* ignore */ }
+                        })
+                    } catch { /* ignore */ }
+
                     containerRef.current.appendChild(viewer)
                     viewerRef.current = viewer
                 }
-            } else {
+            } else if (mountedRef.current) {
                 timeoutId = setTimeout(checkAndCreate, 100)
             }
         }
@@ -68,24 +79,26 @@ function ModelViewer3D({ src, alt }: { src: string; alt: string }) {
         checkAndCreate()
 
         return () => {
+            mountedRef.current = false
             if (timeoutId) {
                 clearTimeout(timeoutId)
             }
             try {
-                if (viewerRef.current && containerRef.current && containerRef.current.contains(viewerRef.current)) {
-                    containerRef.current.removeChild(viewerRef.current)
+                if (viewerRef.current) {
+                    viewerRef.current.remove()
+                    viewerRef.current = null
                 }
-                viewerRef.current = null
             } catch {
                 // Ignore removal errors
             }
         }
-    }, [src, alt])
+    }, [src, alt, viewerKey])
 
     return (
-        <div ref={containerRef} className="w-full h-full relative">
+        <div className="w-full h-full relative">
+            <div ref={containerRef} className="w-full h-full" style={{ isolation: 'isolate' }} />
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
                     <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
                 </div>
             )}
