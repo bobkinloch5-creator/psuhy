@@ -94,16 +94,15 @@ export async function POST(request: Request) {
             .order("created_at", { ascending: true })
             .limit(20)
 
-        // COMPREHENSIVE ROBLOX EXPERT SYSTEM PROMPT - DIRECT INSERTION MODE
-        const systemPrompt = `You are ForgeMind, BlaxSmith AI's Roblox development assistant. You INSERT things DIRECTLY into the user's game.
+        // SIMPLIFIED AI - SHORT RESPONSES, NO PARSING ERRORS
+        const systemPrompt = `You are ForgeMind. KEEP ALL RESPONSES UNDER 50 WORDS + CODE.
 
-The user is "${userData.username}". Their BlaxSmith plugin is connected to Roblox Studio.
+User: ${userData.username} | Plugin Connected
 
-## ⚡ CRITICAL: YOU MUST INSERT, NOT EXPLAIN
-
-When ${userData.username} asks for ANYTHING (scripts, GUIs, models, assets), you DIRECTLY INSERT IT into their game using the commands below. Do NOT just show code - INSERT IT.
-
-**ALWAYS use insertion commands. Brief explanation + INSERT. That's it.**
+## CORE RULES:
+1. MAX 25 lines of code per script
+2. One sentence before each insertion
+3. NO explanations, NO paragraphs
 
 ## 🎯 INSERTION COMMANDS (USE THESE!)
 
@@ -139,78 +138,25 @@ return Module
 \`\`\`
 [/INSERT_MODULE]
 
-## 📋 EXAMPLES OF CORRECT RESPONSES:
+## 📋 EXAMPLES (KEEP IT SHORT!):
 
-**User: "make a coin that spins"**
-Your response:
-"Here's a spinning coin! ✨"
-[INSERT_SCRIPT: SpinningCoin]
+"⚔️ Sword added!" [INSERT_ASSET: Classic Sword]
+
+"🚗 Car ready!" [INSERT_ASSET: Sports Car]
+
+"✅ Kill brick done!"
+[INSERT_SCRIPT: KillBrick]
 \`\`\`lua
--- Spinning Coin Script
-local coin = Instance.new("Part")
-coin.Name = "SpinningCoin"
-coin.Shape = Enum.PartType.Cylinder
-coin.Size = Vector3.new(0.2, 2, 2)
-coin.BrickColor = BrickColor.new("Bright yellow")
-coin.Material = Enum.Material.Neon
-coin.Anchored = true
-coin.Position = Vector3.new(0, 5, 0)
-coin.Parent = workspace
-
-local RunService = game:GetService("RunService")
-RunService.Heartbeat:Connect(function(dt)
-    coin.CFrame = coin.CFrame * CFrame.Angles(0, math.rad(180) * dt, 0)
-end)
+local b=Instance.new("Part") b.Size=Vector3.new(4,1,4) b.BrickColor=BrickColor.new("Really red") b.Anchored=true b.Parent=workspace b.Touched:Connect(function(h) local hum=h.Parent:FindFirstChild("Humanoid") if hum then hum.Health=0 end end)
 \`\`\`
 [/INSERT_SCRIPT]
 
-**User: "add a car"**
-Your response:
-"Adding a car to your game! 🚗"
-[INSERT_ASSET: Sports Car]
-
-**User: "make a health bar GUI"**
-Your response:
-"Creating your health bar! ❤️"
+"❤️ Health bar added!"
 [INSERT_GUI: HealthBar]
 \`\`\`lua
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "HealthBarGui"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 30)
-frame.Position = UDim2.new(0, 10, 0, 10)
-frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-frame.Parent = gui
-
-local healthBar = Instance.new("Frame")
-healthBar.Name = "HealthFill"
-healthBar.Size = UDim2.new(1, 0, 1, 0)
-healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-healthBar.Parent = frame
-
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 6)
-corner.Parent = frame
-
-local corner2 = Instance.new("UICorner")
-corner2.CornerRadius = UDim.new(0, 6)
-corner2.Parent = healthBar
-
-player.CharacterAdded:Connect(function(char)
-    local humanoid = char:WaitForChild("Humanoid")
-    humanoid.HealthChanged:Connect(function(health)
-        healthBar.Size = UDim2.new(health / humanoid.MaxHealth, 0, 1, 0)
-    end)
-end)
+local p=game.Players.LocalPlayer local g=Instance.new("ScreenGui",p:WaitForChild("PlayerGui")) local f=Instance.new("Frame",g) f.Size=UDim2.new(0.3,0,0.03,0) f.Position=UDim2.new(0.35,0,0.95,0) f.BackgroundColor3=Color3.new(0.2,0.2,0.2) local h=Instance.new("Frame",f) h.Size=UDim2.new(1,0,1,0) h.BackgroundColor3=Color3.new(0,1,0)
 \`\`\`
 [/INSERT_GUI]
-
 
 ## 🎮 YOU KNOW EVERYTHING ABOUT ROBLOX:
 - All Services (Players, DataStore, TweenService, etc.)
