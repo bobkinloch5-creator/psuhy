@@ -311,12 +311,16 @@ You are the ULTIMATE Roblox assistant. Help ${userData.username} build amazing g
 
         // DEDUCT 1 CREDIT after successful generation
         const newCredits = currentCredits - 1
-        await supabase
+        const { error: creditError } = await supabase
             .from("users")
             .update({ generation_credits: newCredits })
-            .eq("id", userData.id)
+            .eq("discord_id", user.id) // Match by auth user ID which maps to discord_id
 
-        console.log(`[AI Chat] Deducted 1 credit from user ${userData.username}. Remaining: ${newCredits}`)
+        if (creditError) {
+            console.error(`[AI Chat] Failed to deduct credit:`, creditError)
+        } else {
+            console.log(`[AI Chat] Deducted 1 credit from user ${userData.username}. Remaining: ${newCredits}`)
+        }
 
         return NextResponse.json({
             success: true,
