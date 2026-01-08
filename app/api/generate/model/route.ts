@@ -116,11 +116,12 @@ export async function POST(request: Request) {
     console.log("[v0] [Model Gen] Sloyd success - full response:", JSON.stringify(modelData))
 
     // Extract GLB URL from various possible locations in the response
-    const glbUrl = modelData.glb_url || modelData.glbUrl ||
+    const glbUrl = modelData.downloadUrl || modelData.download_url ||
+      modelData.glb_url || modelData.glbUrl ||
       modelData.files?.glb || modelData.output?.glb ||
       modelData.result?.glb || modelData.data?.glb_url ||
-      modelData.download_url || modelData.url ||
-      modelData.result?.download_url || modelData.output?.download_url ||
+      modelData.result?.downloadUrl || modelData.output?.downloadUrl ||
+      modelData.url ||
       (modelData.files && Object.values(modelData.files).find((f: any) => typeof f === 'string' && f.includes('.glb'))) ||
       null
 
