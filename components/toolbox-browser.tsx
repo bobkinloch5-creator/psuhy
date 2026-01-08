@@ -56,11 +56,22 @@ export default function ToolboxBrowser() {
     const loadTrending = async () => {
         setLoading(true)
         try {
-            // Search for general "model" to get a variety of popular free models
-            const response = await fetch(`/api/toolbox/search?query=model&limit=24`)
+            // Search for specific high-quality categories instead of generic "model"
+            const categories = ["car", "house", "sword", "tree", "character", "gun", "building"]
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)]
+
+            // Fetch popular models from a specific category for better quality
+            const response = await fetch(`/api/toolbox/search?query=${randomCategory}&limit=24`)
             const data = await response.json()
-            if (data.success && data.assets) {
-                setTrendingAssets(data.assets)
+
+            if (data.success && data.assets && data.assets.length > 0) {
+                // Filter out models with generic names like "Model XXXXX"
+                const filtered = data.assets.filter((a: Asset) =>
+                    !a.name.match(/^Model\s+\d+/) &&
+                    a.name.length > 3 &&
+                    a.favoriteCount > 0
+                )
+                setTrendingAssets(filtered.length > 0 ? filtered : data.assets)
             }
         } catch (err) {
             console.error("Failed to load trending:", err)

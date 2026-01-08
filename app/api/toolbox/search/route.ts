@@ -99,16 +99,16 @@ async function searchRobloxCatalog(query: string, limit: number, offset: number 
     return results
 }
 
-// Try the marketplace/catalog JSON endpoint - FREE MODELS ONLY
+// Try the marketplace/catalog JSON endpoint - FREE MODELS ONLY, sorted by favorites
 async function tryMarketplaceSearch(query: string, limit: number, offset: number = 0): Promise<any[]> {
     try {
         const params = new URLSearchParams({
             Keyword: query,
             Category: "6", // Models
             Subcategory: "0",
-            SortType: query ? "Relevance" : "2", // 2 = Favorited (for trending)
+            SortType: "2", // 2 = Favorited (most favorited first for quality)
             SortAggregation: "5",
-            ResultsPerPage: Math.min(limit, 100).toString(),
+            ResultsPerPage: Math.min(limit * 2, 100).toString(), // Fetch more to filter
             PageNumber: Math.floor(offset / limit + 1).toString(),
             IncludeNotForSale: "false",
             MaxPrice: "0", // FREE MODELS ONLY
