@@ -127,6 +127,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 body: JSON.stringify({ prompt, style: selectedStyle }),
             })
             const data = await res.json()
+            console.log("[3D Generator] API Response:", data)
 
             if (data.success) {
                 const newCredits = typeof data.creditsRemaining === "number"
@@ -134,11 +135,26 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     : localCredits - 1
                 setLocalCredits(newCredits)
                 onCreditsUpdate?.(newCredits)
-                setGeneratedModel(data.creation || data.model)
+
+                // Extract model data from various possible response structures
+                const modelData = data.model || data.creation?.asset_data || data.creation || {}
+                const extractedModel = {
+                    name: modelData.name || modelData.prompt || prompt,
+                    model_url: modelData.model_url || modelData.glb_url || modelData.glbUrl ||
+                        modelData.files?.glb || modelData.formats?.glb ||
+                        modelData.asset_data?.model_url || null,
+                    preview_url: modelData.preview_url || modelData.previewUrl ||
+                        modelData.thumbnail || modelData.image ||
+                        modelData.asset_data?.preview_url || null,
+                    asset_data: modelData.asset_data || modelData,
+                }
+                console.log("[3D Generator] Extracted model:", extractedModel)
+                setGeneratedModel(extractedModel)
             } else {
                 setError(data.error || "Model generation failed")
             }
         } catch (err) {
+            console.error("[3D Generator] Error:", err)
             setError("Generation failed. Please try again.")
         } finally {
             setIsGenerating(false)
@@ -279,10 +295,10 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     </div>
 
                     {/* Interactive 3D Model Viewer */}
-                    {(generatedModel.asset_data?.model_url || generatedModel.model_url || generatedModel.asset_data?.formats?.glb) && (
+                    {generatedModel.model_url && (
                         <div className={`relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 ${isFullscreen ? 'h-[calc(100%-180px)]' : 'h-80'}`}>
                             <ModelViewerComponent
-                                src={generatedModel.asset_data?.model_url || generatedModel.model_url || generatedModel.asset_data?.formats?.glb}
+                                src={generatedModel.model_url}
                                 alt={`3D Model: ${prompt}`}
                             />
 
@@ -303,19 +319,27 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     )}
 
                     {/* Fallback to preview image if no GLB URL */}
-                    {!(generatedModel.asset_data?.model_url || generatedModel.model_url || generatedModel.asset_data?.formats?.glb) &&
-                        (generatedModel.preview_url || generatedModel.asset_data?.preview_url) && (
-                            <div className="relative bg-black/40">
-                                <img
-                                    src={generatedModel.preview_url || generatedModel.asset_data?.preview_url}
-                                    alt="3D Model Preview"
-                                    className={`w-full object-contain ${isFullscreen ? 'h-[calc(100%-180px)]' : 'h-64'}`}
-                                />
-                                <div className="absolute bottom-2 right-2 text-xs text-white/50 bg-black/60 px-2 py-1 rounded">
-                                    {selectedStyle} style
-                                </div>
+                    {!generatedModel.model_url && generatedModel.preview_url && (
+                        <div className="relative bg-black/40">
+                            <img
+                                src={generatedModel.preview_url}
+                                alt="3D Model Preview"
+                                className={`w-full object-contain ${isFullscreen ? 'h-[calc(100%-180px)]' : 'h-64'}`}
+                            />
+                            <div className="absolute bottom-2 right-2 text-xs text-white/50 bg-black/60 px-2 py-1 rounded">
+                                {selectedStyle} style
                             </div>
-                        )}
+                        </div>
+                    )}
+
+                    {/* No model URL fallback message */}
+                    {!generatedModel.model_url && !generatedModel.preview_url && (
+                        <div className="p-8 text-center bg-black/20">
+                            <Box className="w-12 h-12 text-white/30 mx-auto mb-3" />
+                            <p className="text-white/50 text-sm">Model generated but preview not available</p>
+                            <p className="text-white/30 text-xs mt-1">Check browser console for details</p>
+                        </div>
+                    )}
 
                     {/* Model Info */}
                     <div className="p-4 space-y-4">
@@ -325,10 +349,10 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
                         {/* Action Buttons */}
                         <div className="flex gap-3">
-                            {(generatedModel.asset_data?.model_url || generatedModel.model_url) && (
+                            {generatedModel.model_url && (
                                 <>
                                     <a
-                                        href={generatedModel.asset_data?.model_url || generatedModel.model_url}
+                                        href={generatedModel.model_url}
                                         download
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -338,7 +362,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                         Download GLB
                                     </a>
                                     <a
-                                        href={generatedModel.asset_data?.model_url || generatedModel.model_url}
+                                        href={generatedModel.model_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="px-4 py-3 bg-white/10 border border-white/20 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2 text-sm"
