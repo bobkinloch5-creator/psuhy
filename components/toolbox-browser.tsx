@@ -134,16 +134,16 @@ export default function ToolboxBrowser() {
     }
 
     return (
-        <div className="glassmorphism rounded-2xl overflow-hidden border-white/10">
-            {/* Header - Roblox Store Style */}
-            <div className="bg-[#1a1a2e] border-b border-white/5 p-3">
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/30">
+        <div className="glassmorphism rounded-xl overflow-hidden border-white/10">
+            {/* Header - Compact Store Style */}
+            <div className="bg-[#1a1a2e] border-b border-white/5 p-2">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/30">
                         <Grid3X3 className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-sm font-bold text-white">Store</h2>
-                        <p className="text-[10px] text-white/50">Browse models and assets</p>
+                        <h2 className="text-xs font-bold text-white">Store</h2>
+                        <p className="text-[9px] text-white/50">Browse models</p>
                     </div>
                 </div>
 
@@ -164,9 +164,9 @@ export default function ToolboxBrowser() {
                 </div>
             </div>
 
-            <div className="p-3 space-y-4">
-                {/* Search Bar - Roblox style */}
-                <div className="flex gap-2">
+            <div className="p-2 space-y-2">
+                {/* Search Bar - Compact */}
+                <div className="flex gap-1">
                     <div className="flex-1 relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
                         <input
@@ -198,7 +198,7 @@ export default function ToolboxBrowser() {
                                     <ChevronRight className="w-3 h-3 text-white/40" />
                                 </h3>
                             </div>
-                            <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
+                            <div className="grid grid-cols-9 gap-1">
                                 {CATEGORIES.map((cat) => (
                                     <button
                                         key={cat.id}
@@ -229,7 +229,7 @@ export default function ToolboxBrowser() {
                                     </h3>
                                     <span className="text-[10px] text-white/40">{trendingAssets.length} models</span>
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                                <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-1">
                                     {trendingAssets.map((asset) => (
                                         <AssetCard key={asset.id} asset={asset} />
                                     ))}
@@ -259,7 +259,7 @@ export default function ToolboxBrowser() {
                                 <p className="text-xs text-white/40">Page {currentPage} of {totalPages}</p>
                             )}
                         </div>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                        <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-1">
                             {assets.map((asset) => (
                                 <AssetCard key={asset.id} asset={asset} />
                             ))}

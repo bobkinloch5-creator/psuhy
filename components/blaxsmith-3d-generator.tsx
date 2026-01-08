@@ -207,12 +207,16 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
             // Handle auth errors specifically
             if (res.status === 401) {
-                setError("Please sign in to generate models. Your session may have expired.")
+                setError("Session expired. Please refresh the page or click your profile to sign in again.")
                 if (progressIntervalRef.current) {
                     clearInterval(progressIntervalRef.current)
                     progressIntervalRef.current = null
                 }
                 setIsGenerating(false)
+                // Try to refresh the page after a short delay
+                setTimeout(() => {
+                    window.location.reload()
+                }, 3000)
                 return
             }
 
