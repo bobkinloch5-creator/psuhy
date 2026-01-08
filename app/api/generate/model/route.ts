@@ -178,54 +178,93 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ FREE HIGH QUALITY - HUNYUAN3D-2 VIA HUGGING FACE ============
-async function generateWithHunyuan3DHF(prompt: string): Promise<ModelResult> {
-  console.log("[Hunyuan3D-HF] Using free Hugging Face Space:", prompt)
+// ============ MESHY - TEXT-TO-3D (FREE TIER) ============
+async function generateWithMeshy(prompt: string): Promise<ModelResult> {
+  console.log("[Meshy] Generating textured 3D model:", prompt)
 
   try {
     const { Client } = await import("@gradio/client")
 
-    // Try Hunyuan3D-2.0 Space first (Tencent's high-quality model)
-    let client
-    try {
-      client = await Client.connect("tencent/Hunyuan3D-2")
-    } catch {
-      // Fallback to alternate space
-      client = await Client.connect("tencent/Hunyuan3D-1")
-    }
+    // Connect to Meshy's text-to-3D space
+    const client = await Client.connect("Meshy/Meshy-4")
 
-    // Hunyuan3D takes: prompt, seed, steps, guidance
-    const result = await client.predict("/generate_3d", [
-      prompt,       // text prompt
-      42,          // seed
-      50,          // steps
-      7.5,         // guidance scale
-    ])
+    console.log("[Meshy] Connected, generating model...")
+
+    // Meshy API for text-to-3D
+    const result = await client.predict("/generate", {
+      prompt: prompt,
+      art_style: "realistic",
+      negative_prompt: "low quality, blurry",
+    })
 
     const resultData = result.data as any[]
 
     if (resultData && resultData.length > 0) {
-      // Get the model file from the result
       const modelFile = resultData[0]
       const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
-      const previewUrl = resultData[1] ? (typeof resultData[1] === 'string' ? resultData[1] : resultData[1]?.url) : null
 
       if (modelUrl) {
+        console.log("[Meshy] ✅ Got model URL:", modelUrl)
         return {
           model_url: modelUrl,
-          preview_url: previewUrl,
+          preview_url: resultData[1]?.url || null,
           formats: {
             glb: modelUrl.includes('.glb') ? modelUrl : modelUrl,
             obj: null,
             fbx: null,
           },
-          source: "Hunyuan3D-2"
+          source: "Meshy (Textured)"
         }
       }
     }
-    throw new Error("No model returned from Hunyuan3D")
+    throw new Error("No model returned from Meshy")
   } catch (error: any) {
-    console.error("[Hunyuan3D-HF] Error:", error.message)
+    console.error("[Meshy] Error:", error.message)
+    throw error
+  }
+}
+
+// ============ CUBE3D - ROBLOX'S FREE 3D MODEL (FALLBACK) ============
+async function generateWithCube3D(prompt: string): Promise<ModelResult> {
+  console.log("[Cube3D] Generating with Roblox Cube3D:", prompt)
+
+  try {
+    const { Client } = await import("@gradio/client")
+
+    // Connect to Roblox's Cube3D interactive space
+    const client = await Client.connect("Roblox/cube3d-interactive")
+
+    // Cube3D API: prompt and optional bounding box
+    const result = await client.predict("/predict", [
+      prompt,           // text prompt
+      1.0,              // bounding_box_x
+      1.0,              // bounding_box_y  
+      1.0,              // bounding_box_z
+    ])
+
+    const resultData = result.data as any[]
+
+    if (resultData && resultData.length > 0) {
+      const modelFile = resultData[0]
+      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
+
+      if (modelUrl) {
+        console.log("[Cube3D] ✅ Got model URL:", modelUrl)
+        return {
+          model_url: modelUrl,
+          preview_url: null,
+          formats: {
+            glb: modelUrl.includes('.glb') ? modelUrl : null,
+            obj: modelUrl.includes('.obj') ? modelUrl : modelUrl,
+            fbx: null,
+          },
+          source: "Cube3D (Roblox)"
+        }
+      }
+    }
+    throw new Error("No model returned from Cube3D")
+  } catch (error: any) {
+    console.error("[Cube3D] Error:", error.message)
     throw error
   }
 }
@@ -278,11 +317,21 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
     : `${prompt}, high quality 3D game asset, detailed textured mesh`
 
-  // Priority: CometAPI (textured, fast) → Shap-E (free fallback)
-  const services = [
-    { name: "CometAPI-Hunyuan3D", fn: () => generateWithCometAPI(enhancedPrompt) },
+  // Priority: Meshy (free textured) → Cube3D (Roblox free) → Shap-E (fallback)
+  // CometAPI kept as optional if key exists
+  const services: { name: string; fn: () => Promise<ModelResult> }[] = []
+
+  // Add CometAPI first if key exists (fastest, paid option)
+  if (COMETAPI_KEY) {
+    services.push({ name: "CometAPI-Hunyuan3D", fn: () => generateWithCometAPI(enhancedPrompt) })
+  }
+
+  // Free options in priority order - all text-to-3D capable
+  services.push(
+    { name: "Meshy", fn: () => generateWithMeshy(enhancedPrompt) },
+    { name: "Cube3D", fn: () => generateWithCube3D(prompt) },
     { name: "Shap-E", fn: () => generateWithShapE(prompt) },
-  ]
+  )
 
   for (const service of services) {
     try {
