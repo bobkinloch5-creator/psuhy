@@ -2,8 +2,37 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { Client } from "@gradio/client"
 
-// Hugging Face Cube3D Space
+// Hugging Face Cube3D Space  
 const CUBE3D_SPACE = "Roblox/cube3d-interactive"
+
+// Max duration for Vercel Pro
+export const maxDuration = 300
+
+// Helper function to connect with retries
+async function connectToCube3D(maxRetries: number = 3): Promise<any> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Cube3D] Connection attempt ${attempt}/${maxRetries}...`)
+      const client = await Client.connect(CUBE3D_SPACE)
+      console.log(`[Cube3D] Connected successfully on attempt ${attempt}`)
+      return client
+    } catch (error: any) {
+      console.error(`[Cube3D] Connection attempt ${attempt} failed:`, error.message)
+      lastError = error
+
+      if (attempt < maxRetries) {
+        // Wait before retry with exponential backoff
+        const waitTime = 2000 * attempt
+        console.log(`[Cube3D] Waiting ${waitTime}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      }
+    }
+  }
+
+  throw lastError || new Error("Failed to connect to Cube3D")
+}
 
 // Helper to upload model to Supabase Storage
 async function uploadModelToSupabase(
@@ -122,8 +151,8 @@ export async function POST(request: Request) {
     console.log("[Cube3D] Connecting to Hugging Face Space...")
 
     try {
-      // Connect to the Cube3D Hugging Face Space
-      const client = await Client.connect(CUBE3D_SPACE)
+      // Connect to the Cube3D Hugging Face Space with retries
+      const client = await connectToCube3D(3)
 
       console.log("[Cube3D] Connected! Generating model for:", prompt)
 
