@@ -34,7 +34,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "hunyuan3d-2",
+        model: "hunyuan3d-3",
         messages: [
           {
             role: "user",
