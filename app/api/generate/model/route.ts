@@ -113,20 +113,38 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("[v0] [Model Gen] Sloyd success:", JSON.stringify(modelData).substring(0, 300))
+    console.log("[v0] [Model Gen] Sloyd success - full response:", JSON.stringify(modelData))
+
+    // Extract GLB URL from various possible locations in the response
+    const glbUrl = modelData.glb_url || modelData.glbUrl ||
+      modelData.files?.glb || modelData.output?.glb ||
+      modelData.result?.glb || modelData.data?.glb_url ||
+      modelData.download_url || modelData.url ||
+      modelData.result?.download_url || modelData.output?.download_url ||
+      (modelData.files && Object.values(modelData.files).find((f: any) => typeof f === 'string' && f.includes('.glb'))) ||
+      null
+
+    // Extract preview/thumbnail URL
+    const previewUrl = modelData.preview_url || modelData.previewUrl ||
+      modelData.thumbnail || modelData.image ||
+      modelData.result?.preview_url || modelData.output?.preview_url ||
+      modelData.data?.preview_url ||
+      null
+
+    console.log("[v0] [Model Gen] Extracted URLs - GLB:", glbUrl, "Preview:", previewUrl)
 
     const enhancedModelData = {
       ...modelData,
       prompt: prompt,
       style: style || "realistic",
       formats: {
-        glb: modelData.glb_url || modelData.glbUrl || modelData.files?.glb || null,
-        obj: modelData.obj_url || modelData.objUrl || modelData.files?.obj || null,
-        fbx: modelData.fbx_url || modelData.fbxUrl || modelData.files?.fbx || null,
-        usdz: modelData.usdz_url || modelData.usdzUrl || modelData.files?.usdz || null,
+        glb: glbUrl,
+        obj: modelData.obj_url || modelData.objUrl || modelData.files?.obj || modelData.output?.obj || null,
+        fbx: modelData.fbx_url || modelData.fbxUrl || modelData.files?.fbx || modelData.output?.fbx || null,
+        usdz: modelData.usdz_url || modelData.usdzUrl || modelData.files?.usdz || modelData.output?.usdz || null,
       },
-      preview_url: modelData.preview_url || modelData.previewUrl || modelData.thumbnail || modelData.image || null,
-      model_url: modelData.glb_url || modelData.glbUrl || modelData.files?.glb || modelData.download_url || null,
+      preview_url: previewUrl,
+      model_url: glbUrl,
       job_id: modelData.id || modelData.job_id || null,
     }
 
