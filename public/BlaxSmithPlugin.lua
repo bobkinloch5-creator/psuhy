@@ -631,6 +631,77 @@ local function updateStatus(connected)
     end
 end
 
+-- ============================================
+-- CONNECTION MANAGER
+-- ============================================
+local isConnected = false
+
+local function connectToWebsite()
+    print("[BlaxSmith] 🔌 Attempting to connect to website...")
+    StatusLabel.Text = "⏳ Connecting..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    local success, result = pcall(function()
+        local connectUrl = CONFIG.APP_URL .. "/api/plugin/connect"
+        local payload = {
+            userId = USER_ID,
+            studioVersion = game:GetService("RunService"):IsStudio() and "Studio" or "Unknown",
+            pluginVersion = CONFIG.PLUGIN_VERSION,
+            gameId = game.GameId,
+            placeId = game.PlaceId
+        }
+        
+        local response = HttpService:PostAsync(
+            connectUrl, 
+            HttpService:JSONEncode(payload), 
+            Enum.HttpContentType.ApplicationJson
+        )
+        
+        return HttpService:JSONDecode(response)
+    end)
+    
+    if success and result then
+        print("[BlaxSmith] ✅ Connected to website!")
+        print("[BlaxSmith] User ID:", USER_ID)
+        isConnected = true
+        updateStatus(true)
+        
+        -- Start polling for commands
+        startPolling()
+        
+        return true
+    else
+        print("[BlaxSmith] ⚠️ Connection attempt... retrying in 5 seconds")
+        print("[BlaxSmith] Result:", tostring(result))
+        
+        -- Even if connect fails, still try polling (API might still work)
+        StatusLabel.Text = "🔄 Polling for commands..."
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        startPolling()
+        
+        return false
+    end
+end
+
+-- Auto-connect when plugin loads
+task.spawn(function()
+    wait(1) -- Brief delay for UI to load
+    
+    -- Show current User ID
+    print("[BlaxSmith] 🆔 Current User ID:", USER_ID)
+    
+    -- Try to connect
+    local connected = connectToWebsite()
+    
+    -- Retry connection every 30 seconds if not connected
+    while not isConnected do
+        wait(30)
+        if not isConnected then
+            connectToWebsite()
+        end
+    end
+end)
+
 -- StudioService for FBX import (available in Studio plugins)
 local StudioService = game:GetService("StudioService")
 -- Note: ImportService doesn't exist in Roblox, removed to prevent errors
