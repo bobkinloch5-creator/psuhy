@@ -248,6 +248,58 @@ async function tryAlternateEndpoint(prompt: string): Promise<ModelResult> {
   }
 }
 
+// ============ FREE HIGH QUALITY - HUNYUAN3D-2 VIA HUGGING FACE ============
+async function generateWithHunyuan3DHF(prompt: string): Promise<ModelResult> {
+  console.log("[Hunyuan3D-HF] Using free Hugging Face Space:", prompt)
+
+  try {
+    const { Client } = await import("@gradio/client")
+
+    // Try Hunyuan3D-2.0 Space first (Tencent's high-quality model)
+    let client
+    try {
+      client = await Client.connect("tencent/Hunyuan3D-2")
+    } catch {
+      // Fallback to alternate space
+      client = await Client.connect("tencent/Hunyuan3D-1")
+    }
+
+    // Hunyuan3D takes: prompt, seed, steps, guidance
+    const result = await client.predict("/generate_3d", [
+      prompt,       // text prompt
+      42,          // seed
+      50,          // steps
+      7.5,         // guidance scale
+    ])
+
+    const resultData = result.data as any[]
+
+    if (resultData && resultData.length > 0) {
+      // Get the model file from the result
+      const modelFile = resultData[0]
+      const modelUrl = typeof modelFile === 'string' ? modelFile : modelFile?.url || modelFile?.path
+      const previewUrl = resultData[1] ? (typeof resultData[1] === 'string' ? resultData[1] : resultData[1]?.url) : null
+
+      if (modelUrl) {
+        return {
+          model_url: modelUrl,
+          preview_url: previewUrl,
+          formats: {
+            glb: modelUrl.includes('.glb') ? modelUrl : modelUrl,
+            obj: null,
+            fbx: null,
+          },
+          source: "Hunyuan3D-2"
+        }
+      }
+    }
+    throw new Error("No model returned from Hunyuan3D")
+  } catch (error: any) {
+    console.error("[Hunyuan3D-HF] Error:", error.message)
+    throw error
+  }
+}
+
 // ============ FREE FALLBACK - SHAP-E ============
 async function generateWithShapE(prompt: string): Promise<ModelResult> {
   console.log("[Shap-E] Using free fallback:", prompt)
@@ -296,8 +348,9 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
     : `${prompt}, high quality 3D game asset, detailed textured mesh`
 
-  // Try Hyper3D Rodin (highest quality PBR), then CometAPI, then Shap-E
+  // Priority: Free Hunyuan3D with textures → Paid APIs → Shap-E fallback
   const services = [
+    { name: "Hunyuan3D-2 (Free)", fn: () => generateWithHunyuan3DHF(enhancedPrompt) },
     { name: "Hyper3D Rodin", fn: () => generateWithHyper3DRodin(enhancedPrompt) },
     { name: "CometAPI", fn: () => generateWithCometAPI(enhancedPrompt) },
     { name: "Shap-E", fn: () => generateWithShapE(prompt) },
