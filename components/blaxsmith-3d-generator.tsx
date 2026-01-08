@@ -27,10 +27,10 @@ interface BlaxSmith3DGeneratorProps {
 }
 
 const STYLE_OPTIONS = [
-    { id: "realistic", name: "Realistic", icon: "🎯" },
-    { id: "stylized", name: "Stylized", icon: "🎨" },
-    { id: "lowpoly", name: "Low Poly", icon: "💎" },
-    { id: "cartoon", name: "Cartoon", icon: "🎪" },
+    { id: "realistic", name: "Realistic", icon: "🎯", image: "https://tr.rbxcdn.com/180DAY-4c7d8e2f3a5b6c9d0e1f2a3b4c5d6e7f/150/150/Model/Webp/noFilter" },
+    { id: "stylized", name: "Stylized", icon: "🎨", image: "https://tr.rbxcdn.com/180DAY-8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d/150/150/Model/Webp/noFilter" },
+    { id: "lowpoly", name: "Low Poly", icon: "💎", image: "https://tr.rbxcdn.com/180DAY-1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d/150/150/Model/Webp/noFilter" },
+    { id: "cartoon", name: "Cartoon", icon: "🎪", image: "https://tr.rbxcdn.com/180DAY-5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b/150/150/Model/Webp/noFilter" },
 ]
 
 // Load model-viewer script dynamically
@@ -288,13 +288,23 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                         <button
                             key={style.id}
                             onClick={() => setSelectedStyle(style.id)}
-                            className={`p-3 rounded-xl border transition-all text-center ${selectedStyle === style.id
-                                ? "bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-purple-500/50 shadow-lg shadow-purple-500/20"
-                                : "bg-black/40 border-white/10 hover:border-white/20 hover:bg-white/5"
+                            className={`relative overflow-hidden rounded-xl border transition-all text-center aspect-[4/3] ${selectedStyle === style.id
+                                ? "border-purple-500/50 shadow-lg shadow-purple-500/20 ring-2 ring-purple-500/50"
+                                : "border-white/10 hover:border-white/20"
                                 }`}
                         >
-                            <span className="text-xl block mb-1">{style.icon}</span>
-                            <span className={`text-xs font-medium ${selectedStyle === style.id ? "text-white" : "text-white/60"}`}>
+                            {/* Background gradient */}
+                            <div className={`absolute inset-0 ${style.id === "realistic" ? "bg-gradient-to-br from-gray-700 to-gray-900" :
+                                    style.id === "stylized" ? "bg-gradient-to-br from-pink-600/80 to-purple-800/80" :
+                                        style.id === "lowpoly" ? "bg-gradient-to-br from-cyan-500/80 to-blue-700/80" :
+                                            "bg-gradient-to-br from-pink-400/80 to-red-600/80"
+                                }`} />
+                            {/* Icon */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-2xl mb-1">{style.icon}</span>
+                            </div>
+                            {/* Label */}
+                            <span className={`absolute bottom-2 left-0 right-0 text-xs font-medium ${selectedStyle === style.id ? "text-white" : "text-white/80"}`}>
                                 {style.name}
                             </span>
                         </button>
