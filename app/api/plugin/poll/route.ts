@@ -18,24 +18,46 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
+    const pluginUserId = searchParams.get("userId")
 
-    if (!userId) {
+    if (!pluginUserId) {
       return NextResponse.json({ error: "userId required" }, { status: 400, headers: corsHeaders })
     }
 
     // Use service client for plugin (no cookie auth)
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Find the user's Supabase auth ID from their discord_id
+    // The pluginUserId could be the discord_id OR the auth user id
+    const { data: userData } = await supabase
+      .from("users")
+      .select("id, discord_id")
+      .or(`discord_id.eq.${pluginUserId},id.eq.${pluginUserId}`)
+      .single()
+
+    // List of possible user IDs to check (plugin ID + any found user IDs)
+    const userIds = [pluginUserId]
+    if (userData) {
+      if (userData.discord_id && !userIds.includes(userData.discord_id)) {
+        userIds.push(userData.discord_id)
+      }
+      if (userData.id && !userIds.includes(userData.id)) {
+        userIds.push(userData.id)
+      }
+    }
+
+    console.log(`[Poll] Checking for user IDs: ${userIds.join(", ")}`)
+
     // Update last poll timestamp
-    await supabase.from("plugin_connections").update({ last_poll: new Date().toISOString() }).eq("user_id", userId)
+    await supabase.from("plugin_connections").update({ last_poll: new Date().toISOString() }).eq("user_id", pluginUserId)
 
     const commands: any[] = []
 
+    // Check asset_queue for ALL possible user IDs
     const { data: assets, error: assetsError } = await supabase
       .from("asset_queue")
       .select("*")
-      .eq("user_id", userId)
+      .in("user_id", userIds)
       .eq("status", "pending")
       .order("created_at", { ascending: true })
       .limit(10)
@@ -72,11 +94,11 @@ export async function GET(request: Request) {
       }
     }
 
-    // Get pending commands from command_queue
+    // Get pending commands from command_queue for ALL possible user IDs
     const { data: queueCommands, error: commandsError } = await supabase
       .from("command_queue")
       .select("*")
-      .eq("user_id", userId)
+      .in("user_id", userIds)
       .eq("status", "pending")
       .order("created_at", { ascending: true })
       .limit(5)
@@ -94,11 +116,13 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`[v0] Plugin poll: ${commands.length} commands for user ${userId}`)
+    if (commands.length > 0) {
+      console.log(`[Poll] Returning ${commands.length} commands for user ${pluginUserId}`)
+    }
 
     return NextResponse.json(commands, { headers: corsHeaders })
   } catch (error: any) {
-    console.error("[v0] Plugin poll error:", error)
+    console.error("[Poll] Plugin poll error:", error)
     return NextResponse.json({ error: "Poll failed" }, { status: 500, headers: corsHeaders })
   }
 }
@@ -125,15 +149,15 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      console.error("[v0] Queue error:", error)
+      console.error("[Poll] Queue error:", error)
       throw error
     }
 
-    console.log(`[v0] Command queued for user ${userId}:`, command.type)
+    console.log(`[Poll] Command queued for user ${userId}:`, command.type)
 
     return NextResponse.json({ success: true }, { headers: corsHeaders })
   } catch (error: any) {
-    console.error("[v0] Queue command error:", error)
+    console.error("[Poll] Queue command error:", error)
     return NextResponse.json({ error: "Failed to queue command" }, { status: 500, headers: corsHeaders })
   }
 }
