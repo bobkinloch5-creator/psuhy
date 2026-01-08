@@ -1,144 +1,108 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
-// CometAPI Configuration for Hunyuan3D-2
-const COMETAPI_URL = "https://api.cometapi.com/v1"
-const COMETAPI_KEY = process.env.COMETAPI_KEY || ""
+// Meshy.ai API for high-quality 3D models
+const MESHY_API_URL = "https://api.meshy.ai/openapi/v2"
+const MESHY_API_KEY = process.env.MESHY_API_KEY || ""
 
 // Max duration for Vercel Pro
 export const maxDuration = 300
 
-// Helper to call CometAPI for 3D model generation
-async function generateWithCometAPI(prompt: string, style?: string): Promise<{
-  model_url: string | null;
-  preview_url: string | null;
-  formats: { glb: string | null; obj: string | null; fbx: string | null };
-}> {
-  console.log("[CometAPI] Generating 3D model with Hunyuan3D-2:", prompt)
+// Poll for task completion
+async function pollMeshyTask(taskId: string, maxAttempts = 60): Promise<any> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${MESHY_API_URL}/text-to-3d/${taskId}`, {
+        headers: {
+          "Authorization": `Bearer ${MESHY_API_KEY}`,
+        },
+      })
 
-  // Enhance prompt for better 3D generation
-  const enhancedPrompt = style
-    ? `${prompt}, ${style} style, high quality 3D model, detailed textures`
-    : `${prompt}, high quality 3D model, detailed textures, game asset`
-
-  try {
-    // CometAPI uses OpenAI-compatible format for some models
-    // For Hunyuan3D-2, we need to use their specific endpoint
-    const response = await fetch(`${COMETAPI_URL}/images/generations`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${COMETAPI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "hunyuan3d-2",
-        prompt: enhancedPrompt,
-        n: 1,
-        response_format: "url",
-        // Hunyuan3D-2 specific parameters
-        output_format: "glb", // GLB format for Roblox compatibility
-        quality: "high",
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[CometAPI] Error response:", errorText)
-
-      // Try alternate endpoint format
-      console.log("[CometAPI] Trying alternate 3D generation endpoint...")
-      return await generateWith3DEndpoint(enhancedPrompt)
-    }
-
-    const data = await response.json()
-    console.log("[CometAPI] Response:", JSON.stringify(data))
-
-    if (data.data && data.data[0]) {
-      const result = data.data[0]
-      return {
-        model_url: result.url || result.model_url || null,
-        preview_url: result.preview_url || result.thumbnail || null,
-        formats: {
-          glb: result.url?.includes('.glb') ? result.url : null,
-          obj: result.url?.includes('.obj') ? result.url : null,
-          fbx: result.url?.includes('.fbx') ? result.url : null,
-        }
+      if (!response.ok) {
+        console.error("[Meshy] Poll error:", await response.text())
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        continue
       }
-    }
 
-    throw new Error("No model data in response")
-  } catch (error: any) {
-    console.error("[CometAPI] Error:", error.message)
-    // Fallback to alternate method
-    return await generateWith3DEndpoint(prompt)
+      const task = await response.json()
+      console.log(`[Meshy] Task ${taskId} status: ${task.status} (${task.progress}%)`)
+
+      if (task.status === "SUCCEEDED") {
+        return task
+      } else if (task.status === "FAILED" || task.status === "CANCELED") {
+        throw new Error(`Task ${task.status}`)
+      }
+
+      // Wait 5 seconds before next poll
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    } catch (error) {
+      console.error("[Meshy] Poll error:", error)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    }
   }
+  throw new Error("Task timed out")
 }
 
-// Alternate 3D generation endpoint
-async function generateWith3DEndpoint(prompt: string): Promise<{
+// Generate 3D model with Meshy.ai
+async function generateWithMeshy(prompt: string, style?: string): Promise<{
   model_url: string | null;
   preview_url: string | null;
   formats: { glb: string | null; obj: string | null; fbx: string | null };
 }> {
-  console.log("[CometAPI] Using alternate 3D endpoint...")
+  console.log("[Meshy] Generating 3D model:", prompt)
+
+  if (!MESHY_API_KEY) {
+    console.log("[Meshy] No API key, falling back to Shap-E")
+    return await fallbackGeneration(prompt)
+  }
 
   try {
-    // Try the chat completions endpoint with 3D model
-    const response = await fetch(`${COMETAPI_URL}/chat/completions`, {
+    // Create preview task
+    const createResponse = await fetch(`${MESHY_API_URL}/text-to-3d`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${COMETAPI_KEY}`,
+        "Authorization": `Bearer ${MESHY_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "hunyuan3d-2",
-        messages: [
-          {
-            role: "user",
-            content: `Generate a 3D model: ${prompt}`
-          }
-        ],
-        max_tokens: 1024,
+        mode: "preview",
+        prompt: prompt,
+        art_style: style === "sculpture" ? "sculpture" : "realistic",
+        should_remesh: true,
+        target_polycount: 30000, // Good for Roblox
       }),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[CometAPI] Alternate endpoint error:", errorText)
-
-      // Fall back to Meshy API if available, otherwise use placeholder
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text()
+      console.error("[Meshy] Create task error:", errorText)
       return await fallbackGeneration(prompt)
     }
 
-    const data = await response.json()
-    console.log("[CometAPI] Alternate response:", JSON.stringify(data))
+    const createData = await createResponse.json()
+    const taskId = createData.result
+    console.log("[Meshy] Created preview task:", taskId)
 
-    // Parse response for model URL
-    if (data.choices && data.choices[0]) {
-      const content = data.choices[0].message?.content || ""
-      // Extract URL from response if present
-      const urlMatch = content.match(/https?:\/\/[^\s"]+\.(glb|obj|fbx)/i)
-      if (urlMatch) {
-        return {
-          model_url: urlMatch[0],
-          preview_url: null,
-          formats: {
-            glb: urlMatch[0].toLowerCase().includes('.glb') ? urlMatch[0] : null,
-            obj: urlMatch[0].toLowerCase().includes('.obj') ? urlMatch[0] : null,
-            fbx: urlMatch[0].toLowerCase().includes('.fbx') ? urlMatch[0] : null,
-          }
-        }
+    // Poll for completion
+    const completedTask = await pollMeshyTask(taskId)
+
+    return {
+      model_url: completedTask.model_urls?.glb || completedTask.model_urls?.obj || null,
+      preview_url: completedTask.thumbnail_url || null,
+      formats: {
+        glb: completedTask.model_urls?.glb || null,
+        obj: completedTask.model_urls?.obj || null,
+        fbx: completedTask.model_urls?.fbx || null,
       }
     }
-
-    return await fallbackGeneration(prompt)
   } catch (error: any) {
-    console.error("[CometAPI] Alternate endpoint error:", error.message)
+    console.error("[Meshy] Error:", error.message)
     return await fallbackGeneration(prompt)
   }
 }
 
-// Fallback using Gradio Shap-E (original implementation)
+// Fallback using Gradio Shap-E
 async function fallbackGeneration(prompt: string): Promise<{
   model_url: string | null;
   preview_url: string | null;
@@ -190,7 +154,7 @@ async function fallbackGeneration(prompt: string): Promise<{
       formats: {
         glb: modelUrl?.includes('.glb') ? modelUrl : null,
         obj: modelUrl?.includes('.obj') ? modelUrl : null,
-        fbx: null, // Shap-E doesn't support FBX
+        fbx: null,
       }
     }
   } catch (error: any) {
@@ -254,7 +218,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
     }
 
-    const { prompt, style, boundingBox } = body
+    const { prompt, style } = body
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
@@ -262,20 +226,26 @@ export async function POST(request: Request) {
 
     console.log("[3D-Gen] User:", user.id, "Prompt:", prompt)
 
-    // Look up user by auth ID
-    let { data: userData, error: userError } = await supabase
+    // Use service client to bypass RLS
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    // Look up user by discord_id (which stores supabase auth id)
+    let { data: userData, error: userError } = await serviceClient
       .from("users")
       .select("id, discord_id, generation_credits, model_credits, subscription_tier")
-      .eq("id", user.id)
+      .eq("discord_id", user.id)
       .single()
 
-    // If not found by id, try discord_id for backwards compatibility
+    // If not found by discord_id, try by id
     if (userError || !userData) {
-      console.log("[3D-Gen] User not found by id, trying discord_id...")
-      const result = await supabase
+      const result = await serviceClient
         .from("users")
         .select("id, discord_id, generation_credits, model_credits, subscription_tier")
-        .eq("discord_id", user.id)
+        .eq("id", user.id)
         .single()
 
       userData = result.data
@@ -283,44 +253,31 @@ export async function POST(request: Request) {
     }
 
     if (userError || !userData) {
-      console.error("[3D-Gen] User lookup error:", userError)
-      // Create user if they don't exist
-      const { data: newUser, error: createError } = await supabase
-        .from("users")
-        .insert({
-          id: user.id,
-          discord_id: user.id,
-          email: user.email,
-          generation_credits: 10,
-          model_credits: 50,
-        })
-        .select("id, discord_id, generation_credits, model_credits, subscription_tier")
-        .single()
-
-      if (createError || !newUser) {
-        console.error("[3D-Gen] Failed to create user:", createError)
-        return NextResponse.json({ error: "User not found" }, { status: 404 })
-      }
-      userData = newUser
+      console.error("[3D-Gen] User not found:", userError)
+      return NextResponse.json({ error: "User not found. Please log out and log back in." }, { status: 404 })
     }
 
-    const isPremium =
-      userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
-    if (!isPremium && userData.model_credits <= 0) {
+    // Check credits
+    const isPremium = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
+    const modelCredits = userData.model_credits ?? 0
+
+    if (!isPremium && modelCredits <= 0) {
       return NextResponse.json(
         {
-          error: "No model generation credits remaining",
+          error: "No model generation credits remaining!",
+          message: "Upgrade to Pro for more model credits or wait for your monthly reset.",
+          creditsRemaining: 0,
           upgradeUrl: "/upgrade",
         },
         { status: 403 },
       )
     }
 
-    console.log("[3D-Gen] Generating with CometAPI Hunyuan3D-2...")
+    console.log("[3D-Gen] User has", modelCredits, "credits. Generating with Meshy.ai...")
 
     try {
-      // Generate 3D model using CometAPI
-      const generationResult = await generateWithCometAPI(prompt, style)
+      // Generate 3D model
+      const generationResult = await generateWithMeshy(prompt, style)
 
       if (!generationResult.model_url) {
         console.error("[3D-Gen] No model generated")
@@ -349,7 +306,7 @@ export async function POST(request: Request) {
               generationResult.formats.fbx ? 'model.fbx' : 'model.obj'
 
             storedModelUrl = await uploadModelToSupabase(
-              supabase,
+              serviceClient,
               modelBuffer,
               userData.id,
               filename
@@ -366,16 +323,7 @@ export async function POST(request: Request) {
 
       const finalModelUrl = storedModelUrl || generationResult.model_url
 
-      const enhancedModelData: {
-        prompt: string;
-        style: string;
-        model_url: any;
-        preview_url: any;
-        formats: { glb: any; obj: any; fbx: any };
-        source: string;
-        original_url?: string;
-        auto_queued?: boolean;
-      } = {
+      const enhancedModelData = {
         prompt: prompt,
         style: style || "realistic",
         model_url: finalModelUrl,
@@ -385,16 +333,16 @@ export async function POST(request: Request) {
           obj: generationResult.formats.obj || (finalModelUrl?.includes('.obj') ? finalModelUrl : null),
           fbx: generationResult.formats.fbx || (finalModelUrl?.includes('.fbx') ? finalModelUrl : null),
         },
-        source: "Hunyuan3D-2",
+        source: MESHY_API_KEY ? "Meshy.ai" : "Shap-E",
         original_url: generationResult.model_url,
+        auto_queued: false,
       }
 
       // Auto-queue to Studio if connected
-      let autoQueued = false
       const userDiscordId = userData.discord_id || user.id
 
       try {
-        const { data: connection } = await supabase
+        const { data: connection } = await serviceClient
           .from("plugin_connections")
           .select("*")
           .eq("user_id", userDiscordId)
@@ -402,7 +350,7 @@ export async function POST(request: Request) {
           .single()
 
         if (connection && enhancedModelData.model_url) {
-          const { error: queueError } = await supabase.from("asset_queue").insert({
+          const { error: queueError } = await serviceClient.from("asset_queue").insert({
             user_id: userDiscordId,
             asset_id: enhancedModelData.model_url,
             asset_type: "GeneratedModel",
@@ -417,18 +365,16 @@ export async function POST(request: Request) {
           })
 
           if (!queueError) {
-            autoQueued = true
-            console.log("[3D-Gen] Auto-queued model to Studio for user:", userDiscordId)
+            enhancedModelData.auto_queued = true
+            console.log("[3D-Gen] Auto-queued model to Studio")
           }
         }
       } catch (error) {
         console.error("[3D-Gen] Auto-queue error:", error)
       }
 
-      enhancedModelData.auto_queued = autoQueued
-
       // Save creation
-      const { data: creation, error: creationError } = await supabase
+      const { data: creation, error: creationError } = await serviceClient
         .from("creations")
         .insert({
           user_id: userData.id,
@@ -449,13 +395,13 @@ export async function POST(request: Request) {
 
       // Deduct credits for non-premium users
       if (!isPremium) {
-        const balanceBefore = userData.model_credits
+        const balanceBefore = modelCredits
         const balanceAfter = balanceBefore - 1
 
-        await supabase.from("users").update({ model_credits: balanceAfter }).eq("id", userData.id)
+        await serviceClient.from("users").update({ model_credits: balanceAfter }).eq("id", userData.id)
 
         try {
-          await supabase
+          await serviceClient
             .from("credit_transactions")
             .insert({
               user_id: userData.id,
@@ -464,7 +410,7 @@ export async function POST(request: Request) {
               amount: 1,
               balance_before: balanceBefore,
               balance_after: balanceAfter,
-              reason: "Hunyuan3D-2 model generation",
+              reason: "3D model generation",
               creation_id: creation?.id,
               ip_address: request.headers.get("x-forwarded-for") || "unknown",
             })
