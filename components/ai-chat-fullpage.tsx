@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { MessageSquare, Plus, Trash2, StopCircle, Undo2, Send, Sparkles, ArrowLeft, Zap } from "lucide-react"
+import { MessageSquare, Plus, Trash2, StopCircle, Undo2, Send, Sparkles, ArrowLeft, Zap, Clock } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import ReactMarkdown from "react-markdown"
 import Image from "next/image"
@@ -40,9 +40,35 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
     const [selectedModel, setSelectedModel] = useState("grok-3")
     const [showSidebar, setShowSidebar] = useState(true)
     const [isConnected, setIsConnected] = useState(false)
+    const [resetCountdown, setResetCountdown] = useState("")
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const abortControllerRef = useRef<AbortController | null>(null)
     const supabase = createClient()
+
+    // Calculate monthly reset countdown (resets on 1st of each month)
+    useEffect(() => {
+        const calculateResetTime = () => {
+            const now = new Date()
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+            const diff = nextMonth.getTime() - now.getTime()
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+            if (days > 0) {
+                setResetCountdown(`${days}d ${hours}h`)
+            } else if (hours > 0) {
+                setResetCountdown(`${hours}h ${minutes}m`)
+            } else {
+                setResetCountdown(`${minutes}m`)
+            }
+        }
+
+        calculateResetTime()
+        const interval = setInterval(calculateResetTime, 60000) // Update every minute
+        return () => clearInterval(interval)
+    }, [])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -351,6 +377,12 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                                 {user.generation_credits}
                             </span>
                             <span className="text-xs text-white/50">prompts</span>
+                        </div>
+                        {/* Monthly Reset Timer */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30">
+                            <Clock className="w-4 h-4 text-purple-400" />
+                            <span className="text-xs text-white/70">Resets in</span>
+                            <span className="font-bold text-purple-300">{resetCountdown}</span>
                         </div>
                     </div>
                 </div>
