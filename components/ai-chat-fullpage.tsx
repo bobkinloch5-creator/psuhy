@@ -155,13 +155,24 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
 
     // Delete conversation
     const deleteConversation = async (id: string) => {
-        await supabase.from("chat_messages").delete().eq("conversation_id", id)
-        await supabase.from("conversations").delete().eq("id", id)
+        // Immediately remove from UI for instant feedback
+        setConversations(prev => prev.filter(c => c.id !== id))
+
         if (activeConversation === id) {
             setActiveConversation(null)
             setMessages([])
         }
-        loadConversations()
+
+        // Delete from database
+        try {
+            const { error: msgError } = await supabase.from("chat_messages").delete().eq("conversation_id", id)
+            if (msgError) console.error("Error deleting messages:", msgError)
+
+            const { error: convError } = await supabase.from("conversations").delete().eq("id", id)
+            if (convError) console.error("Error deleting conversation:", convError)
+        } catch (err) {
+            console.error("Delete error:", err)
+        }
     }
 
     const isPro = user.subscription_tier && ["pro", "premium", "enterprise"].includes(user.subscription_tier)
