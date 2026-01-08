@@ -1,4 +1,9 @@
 {
+    "functions": {
+        "app/api/generate/model/route.ts": {
+            "maxDuration": 300
+        }
+    },
     "headers": [
         {
             "source": "/(.*)",
