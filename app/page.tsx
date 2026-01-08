@@ -204,8 +204,8 @@ export default async function HomePage() {
                       <span><strong>5</strong> 3D Model Generations</span>
                     </li>
                     <li className="flex items-center gap-3 text-zinc-300">
-                      <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 text-sm">✓</span>
-                      <span><strong>2</strong> World Generations</span>
+                      <span className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 text-sm">⏳</span>
+                      <span>World Generations <span className="text-yellow-400 text-xs">(Coming Soon)</span></span>
                     </li>
                     <li className="flex items-center gap-3 text-zinc-300">
                       <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 text-sm">✓</span>
@@ -236,8 +236,8 @@ export default async function HomePage() {
                       <span><strong>50</strong> 3D Model Generations</span>
                     </li>
                     <li className="flex items-center gap-3 text-zinc-300">
-                      <span className="w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-orange-400 text-sm">✓</span>
-                      <span><strong>25</strong> World Generations</span>
+                      <span className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 text-sm">⏳</span>
+                      <span>World Generations <span className="text-yellow-400 text-xs">(Coming Soon)</span></span>
                     </li>
                     <li className="flex items-center gap-3 text-zinc-300">
                       <span className="w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-orange-400 text-sm">✓</span>
@@ -248,9 +248,9 @@ export default async function HomePage() {
                       <span>Early Access Features</span>
                     </li>
                   </ul>
-                  <a href="https://ko-fi.com/blaxsmithai" target="_blank" rel="noopener noreferrer" className="block w-full py-3 px-6 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-center hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/30">
-                    Subscribe on Ko-fi ☕
-                  </a>
+                  <div className="block w-full py-3 px-6 rounded-xl bg-gradient-to-r from-zinc-600 to-zinc-700 text-white/70 font-semibold text-center cursor-not-allowed">
+                    Coming Soon 🚀
+                  </div>
                 </div>
               </div>
             </div>
