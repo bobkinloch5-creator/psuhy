@@ -136,7 +136,8 @@ async function tryMarketplaceSearch(query: string, limit: number, offset: number
         const assetIds = items.map((item: any) => item.AssetId || item.Id).filter(Boolean).join(",")
         const thumbnails = await getThumbnails(assetIds)
 
-        return items.slice(0, limit).map((item: any) => ({
+        // Map results
+        const mapped = items.map((item: any) => ({
             id: item.AssetId || item.Id,
             name: item.Name || "Unnamed",
             description: item.Description || "",
@@ -149,6 +150,18 @@ async function tryMarketplaceSearch(query: string, limit: number, offset: number
             thumbnailUrl: thumbnails[item.AssetId || item.Id] || `https://tr.rbxcdn.com/${item.AssetId || item.Id}/420/420/Image/Png`,
             productUrl: `https://www.roblox.com/library/${item.AssetId || item.Id}`,
         }))
+
+        // Prioritize results that match the keyword in name (case insensitive)
+        const lowerQuery = query.toLowerCase()
+        const sorted = mapped.sort((a: any, b: any) => {
+            const aMatch = a.name.toLowerCase().includes(lowerQuery) ? 1 : 0
+            const bMatch = b.name.toLowerCase().includes(lowerQuery) ? 1 : 0
+            if (aMatch !== bMatch) return bMatch - aMatch
+            // Secondary sort by favorites
+            return (b.favoriteCount || 0) - (a.favoriteCount || 0)
+        })
+
+        return sorted.slice(0, limit)
     } catch (err) {
         console.log("[Toolbox] Marketplace search error:", err)
         return []
