@@ -233,19 +233,31 @@ Remember: You're not just helpful - you're BRILLIANT. Show your expertise!`
             assetsToInsert.push(match[1].trim())
         }
 
-        // Queue asset insertions
+        // Queue asset insertions - search REAL Roblox toolbox
         if (assetsToInsert.length > 0) {
-            const { searchAssets } = await import('@/lib/roblox-assets')
             const { addCommand, createInsertModelCommand } = await import('@/lib/command-queue')
 
             for (const assetName of assetsToInsert) {
-                const results = searchAssets(assetName)
-                if (results.length > 0) {
-                    const asset = results[0]
-                    const command = createInsertModelCommand(asset.id, asset.name)
-                    // Use userData.id (the discord_id from users table) - this is what the plugin polls with
-                    await addCommand(userData.id, command)
-                    console.log(`[AI Chat] Queued asset insertion: ${asset.name} (${asset.id}) for user ${userData.id}`)
+                try {
+                    // Search real Roblox toolbox for free models
+                    const searchUrl = `https://www.roblox.com/catalog/json?Keyword=${encodeURIComponent(assetName)}&Category=6&MaxPrice=0&ResultsPerPage=1`
+                    const response = await fetch(searchUrl, {
+                        headers: { "Accept": "application/json" }
+                    })
+
+                    if (response.ok) {
+                        const items = await response.json()
+                        if (Array.isArray(items) && items.length > 0 && items[0].AssetId) {
+                            const asset = items[0]
+                            const command = createInsertModelCommand(asset.AssetId, asset.Name || assetName)
+                            await addCommand(userData.id, command)
+                            console.log(`[AI Chat] Queued REAL Roblox asset: ${asset.Name} (${asset.AssetId}) for user ${userData.id}`)
+                        } else {
+                            console.log(`[AI Chat] No Roblox results for: ${assetName}`)
+                        }
+                    }
+                } catch (searchErr) {
+                    console.error(`[AI Chat] Failed to search Roblox for: ${assetName}`, searchErr)
                 }
             }
         }
