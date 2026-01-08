@@ -348,12 +348,11 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
     : `${prompt}, high quality 3D game asset, detailed textured mesh`
 
-  // Priority: Free Hunyuan3D with textures → Paid APIs → Shap-E fallback
+  // Priority: Shap-E (reliable) → Hunyuan3D → CometAPI
   const services = [
-    { name: "Hunyuan3D-2 (Free)", fn: () => generateWithHunyuan3DHF(enhancedPrompt) },
-    { name: "Hyper3D Rodin", fn: () => generateWithHyper3DRodin(enhancedPrompt) },
-    { name: "CometAPI", fn: () => generateWithCometAPI(enhancedPrompt) },
     { name: "Shap-E", fn: () => generateWithShapE(prompt) },
+    { name: "Hunyuan3D-2", fn: () => generateWithHunyuan3DHF(enhancedPrompt) },
+    { name: "CometAPI", fn: () => generateWithCometAPI(enhancedPrompt) },
   ]
 
   for (const service of services) {

@@ -312,11 +312,6 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                         <p className="text-white/50 text-xs">Powered by Shap-E AI</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10">
-                    <Box className="w-4 h-4 text-cyan-400" />
-                    <span className="text-sm font-bold text-cyan-400">{localCredits}</span>
-                    <span className="text-xs text-white/50">credits</span>
-                </div>
             </div>
 
             {/* Style Selection - Sloyd style */}
