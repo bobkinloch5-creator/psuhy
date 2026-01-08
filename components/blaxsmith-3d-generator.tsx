@@ -46,10 +46,12 @@ const loadModelViewer = () => {
 // Model Viewer Component using ref-based approach
 function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
     const containerRef = useRef<HTMLDivElement>(null)
+    const viewerRef = useRef<HTMLElement | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
         loadModelViewer()
+        let timeoutId: NodeJS.Timeout | null = null
 
         // Wait for script to load then create the element
         const checkAndCreate = () => {
@@ -68,19 +70,38 @@ function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
 
                 viewer.addEventListener('load', () => setIsLoading(false))
 
-                containerRef.current.innerHTML = ''
-                containerRef.current.appendChild(viewer)
+                // Clear existing content safely
+                try {
+                    while (containerRef.current && containerRef.current.firstChild) {
+                        containerRef.current.removeChild(containerRef.current.firstChild)
+                    }
+                } catch {
+                    // Ignore removal errors
+                }
+
+                if (containerRef.current) {
+                    containerRef.current.appendChild(viewer)
+                    viewerRef.current = viewer
+                }
             } else {
                 // Retry after a short delay
-                setTimeout(checkAndCreate, 100)
+                timeoutId = setTimeout(checkAndCreate, 100)
             }
         }
 
         checkAndCreate()
 
         return () => {
-            if (containerRef.current) {
-                containerRef.current.innerHTML = ''
+            if (timeoutId) {
+                clearTimeout(timeoutId)
+            }
+            try {
+                if (viewerRef.current && containerRef.current && containerRef.current.contains(viewerRef.current)) {
+                    containerRef.current.removeChild(viewerRef.current)
+                }
+                viewerRef.current = null
+            } catch {
+                // Ignore removal errors
             }
         }
     }, [src, alt])
