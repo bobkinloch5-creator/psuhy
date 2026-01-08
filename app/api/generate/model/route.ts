@@ -107,110 +107,17 @@ async function generateWithHyper3DRodin(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ COMETAPI - HUNYUAN3D-2 (HIGH QUALITY) ============
+// ============ COMETAPI - HUNYUAN3D-2 (HIGH QUALITY WITH TEXTURES) ============
 async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   if (!COMETAPI_KEY) {
     console.log("[CometAPI] No API key configured")
     throw new Error("No CometAPI key")
   }
 
-  console.log("[CometAPI] Generating with Hunyuan3D-2:", prompt)
+  console.log("[CometAPI] Generating textured 3D with Hunyuan3D-2:", prompt)
 
   try {
-    // CometAPI uses OpenAI-compatible format
-    const response = await fetch(`${COMETAPI_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${COMETAPI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "hunyuan3d-3",
-        messages: [
-          {
-            role: "user",
-            content: `Generate a high-quality 3D model: ${prompt}. Output detailed textured mesh in GLB format.`
-          }
-        ],
-        max_tokens: 4096,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.log("[CometAPI] Response error:", response.status, errorText)
-
-      // Try alternate generation endpoint
-      return await tryAlternateEndpoint(prompt)
-    }
-
-    const data = await response.json()
-    console.log("[CometAPI] Response:", JSON.stringify(data).slice(0, 500))
-
-    // Extract model URL from response
-    if (data.choices && data.choices[0]?.message?.content) {
-      const content = data.choices[0].message.content
-
-      // Look for model URL in response
-      const urlMatch = content.match(/https?:\/\/[^\s"']+\.(glb|obj|fbx|gltf)/i)
-      if (urlMatch) {
-        return {
-          model_url: urlMatch[0],
-          preview_url: null,
-          formats: {
-            glb: urlMatch[0].toLowerCase().includes('.glb') ? urlMatch[0] : null,
-            obj: urlMatch[0].toLowerCase().includes('.obj') ? urlMatch[0] : null,
-            fbx: urlMatch[0].toLowerCase().includes('.fbx') ? urlMatch[0] : null,
-          },
-          source: "Hunyuan3D-2"
-        }
-      }
-
-      // Check for base64 or other format
-      if (content.includes('data:') || content.includes('model_url')) {
-        const jsonMatch = content.match(/\{[^}]+model_url[^}]+\}/i)
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0])
-            if (parsed.model_url) {
-              return {
-                model_url: parsed.model_url,
-                preview_url: parsed.preview_url || null,
-                formats: { glb: parsed.model_url, obj: null, fbx: null },
-                source: "Hunyuan3D-2"
-              }
-            }
-          } catch { }
-        }
-      }
-    }
-
-    // Try data field
-    if (data.data && data.data[0]) {
-      const result = data.data[0]
-      const modelUrl = result.url || result.model_url || result.output
-      if (modelUrl) {
-        return {
-          model_url: modelUrl,
-          preview_url: result.preview_url || result.thumbnail || null,
-          formats: { glb: modelUrl, obj: null, fbx: null },
-          source: "Hunyuan3D-2"
-        }
-      }
-    }
-
-    throw new Error("No model URL in response")
-  } catch (error: any) {
-    console.error("[CometAPI] Error:", error.message)
-    throw error
-  }
-}
-
-// Try alternate CometAPI endpoint for 3D generation
-async function tryAlternateEndpoint(prompt: string): Promise<ModelResult> {
-  console.log("[CometAPI] Trying alternate endpoint...")
-
-  try {
+    // CometAPI images/generations endpoint for 3D models
     const response = await fetch(`${COMETAPI_URL}/images/generations`, {
       method: "POST",
       headers: {
@@ -219,31 +126,54 @@ async function tryAlternateEndpoint(prompt: string): Promise<ModelResult> {
       },
       body: JSON.stringify({
         model: "hunyuan3d-2",
-        prompt: `3D model: ${prompt}, high quality textured mesh`,
+        prompt: `High quality 3D game asset: ${prompt}. Detailed textured mesh, game-ready, PBR materials.`,
         n: 1,
         response_format: "url",
       }),
     })
 
     if (!response.ok) {
-      throw new Error(`Alternate endpoint failed: ${response.status}`)
+      const errorText = await response.text()
+      console.log("[CometAPI] Response error:", response.status, errorText)
+      throw new Error(`CometAPI failed: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log("[CometAPI] Response:", JSON.stringify(data).slice(0, 500))
 
-    if (data.data && data.data[0]) {
+    // Handle successful response - look for model URL in data array
+    if (data.data && data.data.length > 0) {
       const result = data.data[0]
-      return {
-        model_url: result.url || result.model_url,
-        preview_url: result.preview_url || null,
-        formats: { glb: result.url, obj: null, fbx: null },
-        source: "Hunyuan3D-2"
+      const modelUrl = result.url || result.model_url || result.output || result.file_url
+
+      if (modelUrl) {
+        console.log("[CometAPI] ✅ Got model URL:", modelUrl)
+        return {
+          model_url: modelUrl,
+          preview_url: result.preview_url || result.thumbnail || null,
+          formats: {
+            glb: modelUrl.includes('.glb') ? modelUrl : modelUrl,
+            obj: null,
+            fbx: null
+          },
+          source: "Hunyuan3D-2 (Textured)"
+        }
       }
     }
 
-    throw new Error("No data in alternate response")
+    // Alternative: check if URL is directly in response
+    if (data.url) {
+      return {
+        model_url: data.url,
+        preview_url: null,
+        formats: { glb: data.url, obj: null, fbx: null },
+        source: "Hunyuan3D-2 (Textured)"
+      }
+    }
+
+    throw new Error("No model URL in CometAPI response")
   } catch (error: any) {
-    console.error("[CometAPI] Alternate error:", error.message)
+    console.error("[CometAPI] Error:", error.message)
     throw error
   }
 }
@@ -348,11 +278,10 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
     : `${prompt}, high quality 3D game asset, detailed textured mesh`
 
-  // Priority: Shap-E (reliable) → Hunyuan3D → CometAPI
+  // Priority: CometAPI (textured, fast) → Shap-E (free fallback)
   const services = [
+    { name: "CometAPI-Hunyuan3D", fn: () => generateWithCometAPI(enhancedPrompt) },
     { name: "Shap-E", fn: () => generateWithShapE(prompt) },
-    { name: "Hunyuan3D-2", fn: () => generateWithHunyuan3DHF(enhancedPrompt) },
-    { name: "CometAPI", fn: () => generateWithCometAPI(enhancedPrompt) },
   ]
 
   for (const service of services) {
