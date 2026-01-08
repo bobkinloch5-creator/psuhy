@@ -16,53 +16,71 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const query = searchParams.get("query") || ""
-        const limit = Math.min(parseInt(searchParams.get("limit") || "48"), 100)
+        const limit = Math.min(parseInt(searchParams.get("limit") || "24"), 100)
+        const page = Math.max(parseInt(searchParams.get("page") || "1"), 1)
+        const offset = (page - 1) * limit
 
         if (!query.trim()) {
             return NextResponse.json({
                 success: true,
                 assets: [],
                 query: "",
+                total: 0,
             })
         }
+        // If no query provided, show trending free models
+        const searchQuery = query.trim() || "popular"
 
-        console.log("[Toolbox] Searching full catalog:", query, "limit:", limit)
+        console.log("[Toolbox] Searching full catalog:", searchQuery, "limit:", limit, "page:", page, "offset:", offset)
 
-        // Try Roblox search API first
-        let assets = await searchRobloxCatalog(query, limit)
+        // Try Roblox search API first - pass offset for pagination
+        let assets = await searchRobloxCatalog(searchQuery, limit, offset)
+        let totalEstimate = 200 // Estimate total for Roblox (they don't give exact totals)
 
         // If no results from live API, try Supabase cache
         if (assets.length === 0 && supabase) {
-            assets = await searchSupabaseCache(query, limit)
+            const cacheResult = await searchSupabaseCache(searchQuery, limit, offset)
+            assets = cacheResult.assets
+            totalEstimate = cacheResult.total
         }
 
-        // Final fallback to curated models
-        if (assets.length === 0) {
-            assets = await getExpandedFallback(query)
+        // Don't use fallback - only show real Roblox search results
+        // if (assets.length === 0) {
+        //     assets = await getExpandedFallback(query, limit, offset)
+        //     totalEstimate = 48
+        // }
+
+        // If we got fewer results than the limit, we're on the last page
+        if (assets.length < limit) {
+            totalEstimate = offset + assets.length
         }
 
         // Cache results in Supabase in background
-        if (assets.length > 0 && supabase) {
+        if (assets.length > 0 && supabase && page === 1) {
             cacheResultsInSupabase(assets).catch((err: Error) =>
                 console.log("[Toolbox] Cache error:", err.message)
             )
         }
 
-        console.log("[Toolbox] Returning:", assets.length, "results")
+        console.log("[Toolbox] Returning:", assets.length, "results, estimated total:", totalEstimate)
 
         return NextResponse.json({
             success: true,
             assets,
             query,
-            totalResults: assets.length,
+            total: totalEstimate,
+            page,
+            limit,
+            hasMore: assets.length === limit,
         })
     } catch (error: unknown) {
         const err = error as Error
         console.error("[Toolbox] Error:", err.message)
         return NextResponse.json({
             success: true,
-            assets: await getExpandedFallback(""),
+            assets: await getExpandedFallback("", 24, 0),
             query: "",
+            total: 48,
             fallback: true,
             error: err.message,
         })
@@ -70,28 +88,30 @@ export async function GET(request: Request) {
 }
 
 // Search Roblox catalog API - tries multiple endpoints for best results
-async function searchRobloxCatalog(query: string, limit: number): Promise<any[]> {
+async function searchRobloxCatalog(query: string, limit: number, offset: number = 0): Promise<any[]> {
     // Try multiple search approaches
-    let results = await tryMarketplaceSearch(query, limit)
+    let results = await tryMarketplaceSearch(query, limit, offset)
 
     if (results.length === 0) {
-        results = await tryCatalogSearch(query, limit)
+        results = await tryCatalogSearch(query, limit, offset)
     }
 
     return results
 }
 
-// Try the marketplace/catalog JSON endpoint
-async function tryMarketplaceSearch(query: string, limit: number): Promise<any[]> {
+// Try the marketplace/catalog JSON endpoint - FREE MODELS ONLY
+async function tryMarketplaceSearch(query: string, limit: number, offset: number = 0): Promise<any[]> {
     try {
         const params = new URLSearchParams({
             Keyword: query,
             Category: "6", // Models
             Subcategory: "0",
-            SortType: "Relevance",
+            SortType: query ? "Relevance" : "2", // 2 = Favorited (for trending)
             SortAggregation: "5",
             ResultsPerPage: Math.min(limit, 100).toString(),
+            PageNumber: Math.floor(offset / limit + 1).toString(),
             IncludeNotForSale: "false",
+            MaxPrice: "0", // FREE MODELS ONLY
         })
 
         const response = await fetch(`${ROBLOX_MARKETPLACE_API}?${params}`, {
@@ -136,8 +156,9 @@ async function tryMarketplaceSearch(query: string, limit: number): Promise<any[]
 }
 
 // Try the catalog v1 API
-async function tryCatalogSearch(query: string, limit: number): Promise<any[]> {
+async function tryCatalogSearch(query: string, limit: number, offset: number = 0): Promise<any[]> {
     try {
+        const cursor = offset > 0 ? `cursor_${offset}` : undefined
         const params = new URLSearchParams({
             keyword: query,
             category: "Models",
@@ -184,20 +205,26 @@ async function tryCatalogSearch(query: string, limit: number): Promise<any[]> {
 }
 
 // Search cached results in Supabase
-async function searchSupabaseCache(query: string, limit: number): Promise<any[]> {
-    if (!supabase) return []
+async function searchSupabaseCache(query: string, limit: number, offset: number = 0): Promise<{ assets: any[], total: number }> {
+    if (!supabase) return { assets: [], total: 0 }
 
     try {
+        // Get total count first
+        const { count } = await supabase
+            .from("toolbox_cache")
+            .select("*", { count: 'exact', head: true })
+            .ilike("name", `%${query}%`)
+
         const { data, error } = await supabase
             .from("toolbox_cache")
             .select("*")
             .ilike("name", `%${query}%`)
-            .limit(limit)
+            .range(offset, offset + limit - 1)
             .order("favorite_count", { ascending: false })
 
-        if (error || !data) return []
+        if (error || !data) return { assets: [], total: 0 }
 
-        return data.map(item => ({
+        const assets = data.map(item => ({
             id: item.id,
             name: item.name,
             description: item.description || "",
@@ -210,8 +237,10 @@ async function searchSupabaseCache(query: string, limit: number): Promise<any[]>
             thumbnailUrl: item.thumbnail_url,
             productUrl: item.product_url,
         }))
+
+        return { assets, total: count || assets.length }
     } catch {
-        return []
+        return { assets: [], total: 0 }
     }
 }
 
@@ -263,109 +292,99 @@ async function getThumbnails(assetIds: string): Promise<Record<number, string>> 
     }
 }
 
-// Expanded curated fallback models (50+ popular models)
-async function getExpandedFallback(query: string): Promise<any[]> {
-    const curatedModels = [
-        // Weapons
-        { id: 920587473, name: "Basic Sword", favoriteCount: 15000, tags: ["sword", "weapon", "melee"] },
-        { id: 10561326, name: "Linked Sword", favoriteCount: 80000, tags: ["sword", "weapon", "classic"] },
-        { id: 21294053, name: "Rocket Launcher", favoriteCount: 45000, tags: ["weapon", "gun", "explosive"] },
-        { id: 95354311, name: "Crossbow", favoriteCount: 25000, tags: ["weapon", "bow", "ranged"] },
-        { id: 130113146, name: "Battle Axe", favoriteCount: 18000, tags: ["axe", "weapon", "melee"] },
-        { id: 12221695, name: "Classic Sword", favoriteCount: 60000, tags: ["sword", "weapon", "classic"] },
-
-        // NPCs & Characters
-        { id: 27699497, name: "Drooling Zombie", favoriteCount: 50000, tags: ["zombie", "npc", "enemy", "monster"] },
-        { id: 7074827, name: "NPC Zombie", favoriteCount: 22000, tags: ["zombie", "npc", "enemy"] },
-        { id: 505942927, name: "Custom NPC", favoriteCount: 35000, tags: ["npc", "character", "human"] },
-        { id: 194966866, name: "Skeleton", favoriteCount: 28000, tags: ["skeleton", "npc", "enemy", "monster"] },
-        { id: 430749282, name: "Robot Enemy", favoriteCount: 20000, tags: ["robot", "npc", "enemy", "sci-fi"] },
-
-        // Buildings & Structures
-        { id: 155401426, name: "Medieval Castle", favoriteCount: 45000, tags: ["castle", "building", "medieval"] },
-        { id: 17385737, name: "Basic House", favoriteCount: 30000, tags: ["house", "building", "home"] },
-        { id: 94920100, name: "Modern House", favoriteCount: 40000, tags: ["house", "building", "modern"] },
-        { id: 4819780, name: "Wooden Cabin", favoriteCount: 25000, tags: ["cabin", "house", "wood"] },
-        { id: 358546284, name: "Sci-Fi Building", favoriteCount: 18000, tags: ["building", "sci-fi", "futuristic"] },
-        { id: 1818436, name: "Tower", favoriteCount: 22000, tags: ["tower", "building", "medieval"] },
-
-        // Nature
-        { id: 9738946, name: "Oak Tree", favoriteCount: 35000, tags: ["tree", "nature", "oak"] },
-        { id: 505202876, name: "Pine Tree", favoriteCount: 28000, tags: ["tree", "nature", "pine", "forest"] },
-        { id: 1033714, name: "Bush", favoriteCount: 20000, tags: ["bush", "nature", "plant"] },
-        { id: 176269859, name: "Rock Formation", favoriteCount: 25000, tags: ["rock", "nature", "stone"] },
-        { id: 20985806, name: "Flowers", favoriteCount: 18000, tags: ["flower", "nature", "plant"] },
-        { id: 417605, name: "Grass Patch", favoriteCount: 15000, tags: ["grass", "nature", "terrain"] },
-
-        // Vehicles
-        { id: 29665753, name: "Car Model", favoriteCount: 40000, tags: ["car", "vehicle", "automobile"] },
-        { id: 95858377, name: "Sports Car", favoriteCount: 55000, tags: ["car", "vehicle", "sports", "racing"] },
-        { id: 131396952, name: "Truck", favoriteCount: 30000, tags: ["truck", "vehicle", "pickup"] },
-        { id: 502330679, name: "Helicopter", favoriteCount: 45000, tags: ["helicopter", "vehicle", "aircraft"] },
-        { id: 1560120, name: "Boat", favoriteCount: 25000, tags: ["boat", "vehicle", "water"] },
-        { id: 102611803, name: "Motorcycle", favoriteCount: 35000, tags: ["motorcycle", "vehicle", "bike"] },
-
-        // Furniture & Objects
-        { id: 358799, name: "Chair", favoriteCount: 25000, tags: ["chair", "furniture", "seat"] },
-        { id: 7670069, name: "Table", favoriteCount: 28000, tags: ["table", "furniture", "desk"] },
-        { id: 32812040, name: "Lamp", favoriteCount: 18000, tags: ["lamp", "furniture", "light"] },
-        { id: 255893032, name: "Treasure Chest", favoriteCount: 40000, tags: ["chest", "treasure", "loot", "gold"] },
-        { id: 1014539, name: "Door", favoriteCount: 35000, tags: ["door", "building", "entrance"] },
-        { id: 28737, name: "Window", favoriteCount: 22000, tags: ["window", "building", "glass"] },
-
-        // Effects & Special
-        { id: 9856898, name: "Fire Effect", favoriteCount: 30000, tags: ["fire", "effect", "particle"] },
-        { id: 3432369, name: "Explosion", favoriteCount: 45000, tags: ["explosion", "effect", "particle"] },
-        { id: 83353855, name: "Portal", favoriteCount: 50000, tags: ["portal", "magic", "teleport"] },
-        { id: 17127372, name: "Spawn Point", favoriteCount: 35000, tags: ["spawn", "checkpoint", "respawn"] },
-
-        // Classic & Popular
-        { id: 43808, name: "Linked Hat", favoriteCount: 100000, tags: ["hat", "accessory", "classic"] },
-        { id: 1055299, name: "Gravity Coil", favoriteCount: 150000, tags: ["coil", "gear", "gravity"] },
-        { id: 16469427, name: "Speed Coil", favoriteCount: 120000, tags: ["coil", "gear", "speed"] },
-
-        // Animals & Pets
-        { id: 266936477, name: "Dog", favoriteCount: 28000, tags: ["dog", "pet", "animal"] },
-        { id: 262531173, name: "Cat", favoriteCount: 25000, tags: ["cat", "pet", "animal"] },
-        { id: 257489726, name: "Dragon", favoriteCount: 60000, tags: ["dragon", "monster", "fantasy"] },
-        { id: 179502767, name: "Bird", favoriteCount: 18000, tags: ["bird", "animal", "flying"] },
-
-        // Tools & Items
-        { id: 73089166, name: "Flashlight", favoriteCount: 30000, tags: ["flashlight", "tool", "light"] },
-        { id: 32557814, name: "Key", favoriteCount: 22000, tags: ["key", "item", "unlock"] },
-        { id: 107779339, name: "Potion", favoriteCount: 35000, tags: ["potion", "item", "health", "magic"] },
-        { id: 1091570, name: "Money", favoriteCount: 40000, tags: ["money", "coin", "currency", "gold"] },
+// Fallback - fetch real asset info from Roblox for trending/popular assets
+async function getExpandedFallback(query: string, limit: number = 24, offset: number = 0): Promise<any[]> {
+    // Popular free model asset IDs from Roblox (verified working)
+    const popularAssetIds = [
+        95858377,   // Sports car
+        155401426,  // Castle
+        27699497,   // Zombie
+        10561326,   // Linked Sword
+        1055299,    // Gravity Coil
+        16469427,   // Speed Coil
+        9738946,    // Tree
+        502330679,  // Helicopter
+        255893032,  // Treasure chest
+        94920100,   // House
+        83353855,   // Portal
+        17127372,   // Spawn
+        29665753,   // Car
+        358799,     // Chair
+        7670069,    // Table
+        1014539,    // Door
+        73089166,   // Flashlight
+        32557814,   // Key
+        107779339,  // Potion
+        1091570,    // Coins
+        131396952,  // Truck
+        102611803,  // Motorcycle
+        1560120,    // Boat
+        4819780,    // Cabin
     ]
 
-    const q = query.toLowerCase().trim()
+    // Apply pagination
+    const paginatedIds = popularAssetIds.slice(offset, offset + limit)
 
-    // Filter by query tags or name
-    let filtered = curatedModels
-    if (q) {
-        filtered = curatedModels.filter(m =>
-            m.name.toLowerCase().includes(q) ||
-            m.tags.some(tag => tag.includes(q) || q.includes(tag))
+    if (paginatedIds.length === 0) return []
+
+    try {
+        // Fetch real asset details from Roblox
+        const assetIdsParam = paginatedIds.join(",")
+
+        // Try to get asset details from Roblox API
+        const detailsResponse = await fetch(
+            `https://economy.roblox.com/v2/assets/${paginatedIds[0]}/details`,
+            { cache: "no-store" }
         )
+
+        // Get thumbnails
+        const thumbnails = await getThumbnails(assetIdsParam)
+
+        // Try to fetch names from the catalog endpoint
+        const catalogResponse = await fetch(
+            `https://catalog.roblox.com/v1/catalog/items/details`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    items: paginatedIds.map(id => ({ itemType: "Asset", id }))
+                }),
+                cache: "no-store",
+            }
+        )
+
+        let assetDetails: Record<number, { name: string, creatorName: string, price: number }> = {}
+
+        if (catalogResponse.ok) {
+            const catalogData = await catalogResponse.json()
+            if (catalogData.data) {
+                for (const item of catalogData.data) {
+                    assetDetails[item.id] = {
+                        name: item.name || `Asset ${item.id}`,
+                        creatorName: item.creatorName || "Roblox",
+                        price: item.price || 0
+                    }
+                }
+            }
+        }
+
+        // Return assets with real names where available
+        return paginatedIds.map(id => ({
+            id,
+            name: assetDetails[id]?.name || `Model ${id}`,
+            description: "",
+            price: assetDetails[id]?.price || 0,
+            priceLabel: "Free",
+            assetType: "Model",
+            creatorName: assetDetails[id]?.creatorName || "Roblox",
+            creatorVerified: true,
+            favoriteCount: 0,
+            thumbnailUrl: thumbnails[id] || `https://tr.rbxcdn.com/${id}/420/420/Image/Png`,
+            productUrl: `https://www.roblox.com/library/${id}`,
+        }))
+    } catch (err) {
+        console.log("[Toolbox] Fallback fetch error:", err)
+        return []
     }
-
-    // If no matches, return popular items
-    const results = filtered.length > 0 ? filtered : curatedModels.slice(0, 24)
-
-    // Fetch real thumbnails for these assets
-    const assetIds = results.map(m => m.id).join(",")
-    const thumbnails = await getThumbnails(assetIds)
-
-    return results.slice(0, 48).map(m => ({
-        id: m.id,
-        name: m.name,
-        description: "",
-        price: 0,
-        priceLabel: "Free",
-        assetType: "Model",
-        creatorName: "Roblox",
-        creatorVerified: true,
-        favoriteCount: m.favoriteCount,
-        thumbnailUrl: thumbnails[m.id] || `https://tr.rbxcdn.com/${m.id}/420/420/Image/Png`,
-        productUrl: `https://www.roblox.com/library/${m.id}`,
-    }))
 }
+

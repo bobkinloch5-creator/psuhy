@@ -63,8 +63,8 @@ local CONFIG = {
 local SUPABASE_URL = "https://nwucmybenbnvrtlpdtpz.supabase.co"
 local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53dWNteWJlbmJudnJ0bHBkdHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzY1NjksImV4cCI6MjA4MzM1MjU2OX0.UI9AIFpJYncge-FFK2_aeF_ZRis7wVc_lzoIX18S5HU"
 
--- User ID (stored in plugin settings)
-local USER_ID = plugin:GetSetting("BlaxSmithDiscordID") or ""
+-- User ID - check saved setting first, otherwise generate unique ID
+local USER_ID = plugin:GetSetting("BlaxSmithDiscordID") or ("studio_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999)))
 
 -- =========================
 -- 🌐 CRITICAL HELPER FUNCTIONS (Must be at top level)
@@ -153,7 +153,7 @@ local function startPolling()
         
         while pollingActive do
             pcall(function()
-                local response = HttpService:GetAsync(CONFIG.APP_URL .. "/plugin/poll")
+                local response = HttpService:GetAsync(CONFIG.APP_URL .. "/api/plugin/poll?userId=" .. USER_ID)
                 if response and response ~= "" and response ~= "[]" then
                     local commands = HttpService:JSONDecode(response)
                     -- Process each command
@@ -414,7 +414,7 @@ titleText.Name = "Title"
 titleText.Size = UDim2.new(1, 0, 0, 30)
 titleText.Position = UDim2.new(0, 0, 0, 100)
 titleText.BackgroundTransparency = 1
-titleText.Text = "BloxSmith AI"
+titleText.Text = "BlaxSmith AI"
 titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleText.TextSize = 24
 titleText.Font = Enum.Font.GothamBold
@@ -520,6 +520,62 @@ StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.Parent = centerContainer
 
+-- User ID Input Container
+local userIdContainer = Instance.new("Frame")
+userIdContainer.Name = "UserIdContainer"
+userIdContainer.Size = UDim2.new(0.9, 0, 0, 60)
+userIdContainer.Position = UDim2.new(0.05, 0, 0, 285)
+userIdContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+userIdContainer.BorderSizePixel = 0
+userIdContainer.Parent = centerContainer
+
+local userIdCorner = Instance.new("UICorner")
+userIdCorner.CornerRadius = UDim.new(0, 8)
+userIdCorner.Parent = userIdContainer
+
+-- User ID Label
+local userIdLabel = Instance.new("TextLabel")
+userIdLabel.Size = UDim2.new(1, 0, 0, 20)
+userIdLabel.Position = UDim2.new(0, 0, 0, 5)
+userIdLabel.BackgroundTransparency = 1
+userIdLabel.Text = "Discord User ID:"
+userIdLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+userIdLabel.TextSize = 11
+userIdLabel.Font = Enum.Font.Gotham
+userIdLabel.Parent = userIdContainer
+
+-- User ID TextBox
+local userIdTextBox = Instance.new("TextBox")
+userIdTextBox.Name = "UserIdInput"
+userIdTextBox.Size = UDim2.new(1, -20, 0, 28)
+userIdTextBox.Position = UDim2.new(0, 10, 0, 26)
+userIdTextBox.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+userIdTextBox.BorderSizePixel = 0
+userIdTextBox.Text = plugin:GetSetting("BlaxSmithDiscordID") or ""
+userIdTextBox.PlaceholderText = "Enter your Discord ID from website..."
+userIdTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+userIdTextBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 120)
+userIdTextBox.TextSize = 12
+userIdTextBox.Font = Enum.Font.Gotham
+userIdTextBox.ClearTextOnFocus = false
+userIdTextBox.Parent = userIdContainer
+
+local textBoxCorner = Instance.new("UICorner")
+textBoxCorner.CornerRadius = UDim.new(0, 6)
+textBoxCorner.Parent = userIdTextBox
+
+-- Save User ID when changed
+userIdTextBox.FocusLost:Connect(function(enterPressed)
+    local newId = userIdTextBox.Text:gsub("%s+", "")
+    if newId ~= "" then
+        plugin:SetSetting("BlaxSmithDiscordID", newId)
+        USER_ID = newId
+        StatusLabel.Text = "✅ User ID saved! Connecting..."
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+        print("[BloxSmith] User ID saved:", newId)
+    end
+end)
+
 -- Footer text
 local footerText = Instance.new("TextLabel")
 footerText.Name = "Footer"
@@ -564,7 +620,7 @@ end)
 end -- END SPLASH SCREEN SCOPE
 local function updateStatus(connected)
     if connected then 
-        StatusLabel.Text = "✅ Connected to Desktop App"
+        StatusLabel.Text = "✅ Connected to BlaxSmith"
         StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
         animationActive = false
         -- Keep splash visible, just show connected status

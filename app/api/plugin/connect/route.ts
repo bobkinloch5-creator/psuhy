@@ -1,5 +1,8 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // CORS headers for plugin
 const corsHeaders = {
@@ -20,9 +23,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "userId and studioId required" }, { status: 400, headers: corsHeaders })
     }
 
-    const supabase = await createClient()
+    // Use service client for plugin connections (no cookie auth for Roblox plugin)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log("[v0] Plugin connecting:", { userId, studioId, game })
+    console.log("[Plugin] Connecting:", { userId, studioId, game })
 
     // Create or update plugin connection
     const { data: connection, error } = await supabase
@@ -43,11 +47,11 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error("[v0] Connection error:", error)
+      console.error("[Plugin] Connection error:", error)
       throw error
     }
 
-    console.log("[v0] Plugin connected successfully:", connection.id)
+    console.log("[Plugin] Connected successfully:", connection.id)
 
     return NextResponse.json(
       {
@@ -58,7 +62,7 @@ export async function POST(request: Request) {
       { headers: corsHeaders },
     )
   } catch (error: any) {
-    console.error("[v0] Plugin connect error:", error)
+    console.error("[Plugin] Connect error:", error)
     return NextResponse.json(
       { error: "Connection failed", details: error.message },
       { status: 500, headers: corsHeaders },

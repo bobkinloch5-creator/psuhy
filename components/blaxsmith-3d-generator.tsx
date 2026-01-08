@@ -267,7 +267,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     </div>
                     <div>
                         <h4 className="text-white font-semibold text-sm">Text-to-3D</h4>
-                        <p className="text-white/50 text-xs">Powered by LGM AI</p>
+                        <p className="text-white/50 text-xs">Powered by Shap-E AI</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10">
@@ -295,9 +295,9 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                         >
                             {/* Background gradient */}
                             <div className={`absolute inset-0 ${style.id === "realistic" ? "bg-gradient-to-br from-gray-700 to-gray-900" :
-                                    style.id === "stylized" ? "bg-gradient-to-br from-pink-600/80 to-purple-800/80" :
-                                        style.id === "lowpoly" ? "bg-gradient-to-br from-cyan-500/80 to-blue-700/80" :
-                                            "bg-gradient-to-br from-pink-400/80 to-red-600/80"
+                                style.id === "stylized" ? "bg-gradient-to-br from-pink-600/80 to-purple-800/80" :
+                                    style.id === "lowpoly" ? "bg-gradient-to-br from-cyan-500/80 to-blue-700/80" :
+                                        "bg-gradient-to-br from-pink-400/80 to-red-600/80"
                                 }`} />
                             {/* Icon */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -388,7 +388,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
                     {/* Progress Percentage */}
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/50">Powered by LGM</span>
+                        <span className="text-xs text-white/50">Powered by Shap-E</span>
                         <span className="text-sm font-bold text-white/80">{Math.round(progress)}%</span>
                     </div>
                 </div>

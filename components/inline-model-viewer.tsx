@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
@@ -18,6 +18,8 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
     const controlsRef = useRef<OrbitControls | null>(null)
     const animationIdRef = useRef<number | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!containerRef.current || !modelUrl) return
@@ -97,6 +99,8 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
         controlsRef.current = controls
 
         // Load Model
+        setIsLoading(true)
+        setError(null)
         const loader = new GLTFLoader()
         loader.load(
             modelUrl,
@@ -111,7 +115,6 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
 
                         const mesh = child as THREE.Mesh
                         if (mesh.material) {
-                            // Ensure materials are properly set up for PBR rendering
                             if (Array.isArray(mesh.material)) {
                                 mesh.material.forEach((mat) => {
                                     if (mat instanceof THREE.MeshStandardMaterial) {
@@ -138,6 +141,7 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
                 model.position.y -= (size.y * scale) / 2 - 2
 
                 scene.add(model)
+                setIsLoading(false)
 
                 // Auto-rotate
                 const animate = () => {
@@ -149,8 +153,10 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
                 animate()
             },
             undefined,
-            (error) => {
-                console.error("Error loading model:", error)
+            (err) => {
+                console.error("Error loading model:", err)
+                setError("Failed to load 3D model")
+                setIsLoading(false)
             }
         )
 
@@ -170,21 +176,47 @@ export function InlineModelViewer({ modelUrl, modelName }: InlineModelViewerProp
             window.removeEventListener("resize", handleResize)
             if (animationIdRef.current) {
                 cancelAnimationFrame(animationIdRef.current)
+                animationIdRef.current = null
+            }
+            if (controlsRef.current) {
+                controlsRef.current.dispose()
+                controlsRef.current = null
             }
             if (rendererRef.current) {
-                container.removeChild(rendererRef.current.domElement)
+                try {
+                    if (container && rendererRef.current.domElement && container.contains(rendererRef.current.domElement)) {
+                        container.removeChild(rendererRef.current.domElement)
+                    }
+                } catch (e) {
+                    // Ignore removal errors
+                }
                 rendererRef.current.dispose()
+                rendererRef.current = null
             }
+            if (sceneRef.current) {
+                sceneRef.current.clear()
+                sceneRef.current = null
+            }
+            cameraRef.current = null
         }
     }, [modelUrl])
 
     return (
         <div className="relative">
             <div ref={containerRef} className="w-full h-[300px] rounded-lg overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black border border-white/10" />
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
+                </div>
+            )}
+            {error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <p className="text-red-400 text-sm">{error}</p>
+                </div>
+            )}
             <div className="absolute top-2 left-2 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-sm border border-white/20">
                 <p className="text-xs text-white/80 font-mono">🎨 3D Preview{modelName ? ` - ${modelName}` : ""}</p>
             </div>
         </div>
     )
 }
-

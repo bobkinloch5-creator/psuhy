@@ -1,35 +1,23 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function GET(request: Request) {
     try {
-        // Get user from cookies
-        const { cookies } = await import("next/headers")
-        const cookieStore = await cookies()
-
-        const supabaseClient = createClient(
-            supabaseUrl,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                global: {
-                    headers: {
-                        cookie: cookieStore.toString(),
-                    },
-                },
-            }
-        )
-
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+        // Use server-side Supabase client for auth (same as model generation API)
+        const supabaseAuth = await createClient()
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
 
         if (authError || !user) {
+            console.log("[Gallery] Auth error:", authError?.message || "No user")
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
         }
 
-        // Get user's saved models
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        // Use service client for database operations
+        const supabase = createServiceClient(supabaseUrl, supabaseServiceKey)
 
         const { data: models, error } = await supabase
             .from("creations")

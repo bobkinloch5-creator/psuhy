@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // CORS headers for plugin
 const corsHeaders = {
@@ -21,7 +24,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "userId required" }, { status: 400, headers: corsHeaders })
     }
 
-    const supabase = await createClient()
+    // Use service client for plugin (no cookie auth)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Update last poll timestamp
     await supabase.from("plugin_connections").update({ last_poll: new Date().toISOString() }).eq("user_id", userId)
@@ -108,7 +112,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "userId and command required" }, { status: 400, headers: corsHeaders })
     }
 
-    const supabase = await createClient()
+    // Use service client for plugin (no cookie auth)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Add command to queue
     const { error } = await supabase.from("command_queue").insert({

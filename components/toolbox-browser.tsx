@@ -54,14 +54,18 @@ export default function ToolboxBrowser() {
     }, [])
 
     const loadTrending = async () => {
+        setLoading(true)
         try {
-            const response = await fetch(`/api/toolbox/search?query=popular&limit=8`)
+            // Search for general "model" to get a variety of popular free models
+            const response = await fetch(`/api/toolbox/search?query=model&limit=24`)
             const data = await response.json()
             if (data.success && data.assets) {
                 setTrendingAssets(data.assets)
             }
         } catch (err) {
             console.error("Failed to load trending:", err)
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -212,18 +216,19 @@ export default function ToolboxBrowser() {
                             </div>
                         </div>
 
-                        {/* Trending Section */}
+                        {/* Trending Section - Show all loaded models */}
                         {trendingAssets.length > 0 && (
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="text-white font-semibold text-xs flex items-center gap-1">
-                                        Trending
+                                        Free Models
                                         <ChevronRight className="w-3 h-3 text-white/40" />
                                     </h3>
+                                    <span className="text-[10px] text-white/40">{trendingAssets.length} models</span>
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
                                     {trendingAssets.map((asset) => (
-                                        <AssetCard key={asset.id} asset={asset} compact />
+                                        <AssetCard key={asset.id} asset={asset} />
                                     ))}
                                 </div>
                             </div>
@@ -421,7 +426,7 @@ function AssetCard({ asset, compact = false }: { asset: Asset; compact?: boolean
                 </div>
             </div>
 
-            {/* Info - Roblox style */}
+            {/* Info - Full view: Roblox style */}
             {!compact && (
                 <div className="p-2 bg-[#2a2a3e]">
                     <h3 className="text-xs font-medium text-white truncate">{asset.name}</h3>
@@ -432,6 +437,13 @@ function AssetCard({ asset, compact = false }: { asset: Asset; compact?: boolean
                             {asset.favoriteCount >= 1000 ? `${(asset.favoriteCount / 1000).toFixed(0)}k` : asset.favoriteCount}
                         </span>
                     </div>
+                </div>
+            )}
+
+            {/* Compact mode: Just show name */}
+            {compact && (
+                <div className="p-1.5 bg-[#2a2a3e]">
+                    <h3 className="text-[10px] font-medium text-white truncate text-center">{asset.name}</h3>
                 </div>
             )}
         </div>

@@ -157,13 +157,13 @@ export async function POST(request: Request) {
       console.log("[Shap-E] Connected! Generating model for:", prompt)
 
       // Shap-E uses text-to-3D generation
-      // API endpoint: /text-to-3d with prompt, seed, guidance_scale, num_steps
-      const result = await client.predict("/text-to-3d", {
-        prompt: prompt,
-        seed: 0,
-        guidance_scale: 15,
-        num_steps: 64,
-      })
+      // API endpoint: text-to-3d with positional args: prompt, seed, guidance_scale, num_steps
+      const result = await client.predict("text-to-3d", [
+        prompt,      // The text prompt
+        0,           // seed for reproducibility
+        15.0,        // guidance_scale (how closely to follow prompt)
+        64,          // num_steps (quality, more = better but slower)
+      ])
 
       console.log("[Shap-E] Generation result:", JSON.stringify(result))
 
@@ -315,20 +315,23 @@ export async function POST(request: Request) {
 
         await supabase.from("users").update({ model_credits: balanceAfter }).eq("id", userData.id)
 
-        await supabase
-          .from("credit_transactions")
-          .insert({
-            user_id: userData.id,
-            transaction_type: "deduction",
-            credit_type: "model",
-            amount: 1,
-            balance_before: balanceBefore,
-            balance_after: balanceAfter,
-            reason: "LGM model generation",
-            creation_id: creation?.id,
-            ip_address: request.headers.get("x-forwarded-for") || "unknown",
-          })
-          .catch((err) => console.error("[Shap-E] Transaction log error:", err))
+        try {
+          await supabase
+            .from("credit_transactions")
+            .insert({
+              user_id: userData.id,
+              transaction_type: "deduction",
+              credit_type: "model",
+              amount: 1,
+              balance_before: balanceBefore,
+              balance_after: balanceAfter,
+              reason: "Shap-E model generation",
+              creation_id: creation?.id,
+              ip_address: request.headers.get("x-forwarded-for") || "unknown",
+            })
+        } catch (transactionErr) {
+          console.error("[Shap-E] Transaction log error:", transactionErr)
+        }
 
         return NextResponse.json({
           success: true,
