@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-// Sloyd API endpoints
-const SLOYD_JOBS_API = "https://horizon-be-server-blue-124265032526.us-central1.run.app/api/jobs"
+// Sloyd API endpoints - using the correct text-to-3d endpoint
+const SLOYD_JOBS_API = "https://horizon-be-server-blue-124265032526.us-central1.run.app/api/jobs/text-to-3d"
 const SLOYD_STATUS_API = "https://horizon-be-server-blue-124265032526.us-central1.run.app/api/jobs"
 
 export async function POST(request: Request) {
