@@ -4,10 +4,10 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Sparkles, Box, Map, Download, Loader2, Eye, Check, Send, AlertCircle } from "lucide-react"
+import Link from "next/link"
+import { Sparkles, Box, Map, Download, Loader2, Eye, Check, Send, AlertCircle, MessageSquare } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { AIChatSidebar } from "@/components/ai-chat-sidebar"
 import { ProfileDropdown } from "@/components/profile-dropdown"
 import { ModelViewer3D } from "@/components/model-viewer-3d"
 import { InlineModelViewer } from "@/components/inline-model-viewer"
@@ -199,6 +199,14 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
                 <span className="text-sm text-white/70">{studioConnected ? "Studio Connected" : "Studio Offline"}</span>
               </div>
 
+              <Link
+                href="/chat"
+                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-orange-500/50 transition-all text-sm flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                AI Chat
+              </Link>
+
               <button
                 onClick={() => setShowUpgradeModal(true)}
                 className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all text-sm flex items-center gap-2"
@@ -375,8 +383,6 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
         onClose={() => setShowUpgradeModal(false)}
         currentTier={user.subscription_tier || "free"}
       />
-
-      <AIChatSidebar userTier={(user.subscription_tier as any) || "free"} />
     </div>
   )
 }
