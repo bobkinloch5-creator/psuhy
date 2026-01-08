@@ -44,11 +44,8 @@ export async function GET(request: Request) {
             totalEstimate = cacheResult.total
         }
 
-        // Use fallback if no live API results - ensures store always has content
-        if (assets.length === 0) {
-            assets = await getExpandedFallback(query, limit, offset)
-            totalEstimate = 1000
-        }
+        // No fallback - only show real Roblox API results
+        // Users want real assets only, not fake placeholder content
 
         // If we got fewer results than the limit, we're on the last page
         if (assets.length < limit) {
