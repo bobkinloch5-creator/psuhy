@@ -12,7 +12,6 @@ import { ProfileDropdown } from "@/components/profile-dropdown"
 import { ModelViewer3D } from "@/components/model-viewer-3d"
 import { InlineModelViewer } from "@/components/inline-model-viewer"
 import { UpgradeModal } from "@/components/upgrade-modal"
-import ToolboxBrowser from "@/components/toolbox-browser"
 import { PluginStatus } from "@/components/plugin-status"
 import { BlaxSmith3DGenerator } from "@/components/blaxsmith-3d-generator"
 import { MyGallery } from "@/components/my-gallery"
@@ -324,18 +323,18 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
         </div>
 
         {/* BlaxSmith AI 3D Model Generator - Uses Credits */}
-        <div className="mb-8 glassmorphism rounded-2xl p-6 border-cyan-500/30">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30">
-                <Box className="w-5 h-5 text-white" />
+        <div className="mb-6 glassmorphism rounded-2xl p-4 border-cyan-500/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30">
+                <Box className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
                   AI 3D Model Generator
-                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded-full">POWERED BY BLAXSMITH</span>
+                  <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-[9px] font-bold rounded-full">CUBE3D</span>
                 </h3>
-                <p className="text-xs text-white/60">Create 3D models with AI using your model credits</p>
+                <p className="text-[10px] text-white/60">Create 3D models with AI using your model credits</p>
               </div>
             </div>
           </div>
@@ -345,17 +344,13 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
           />
         </div>
 
-        {/* My Gallery - Saved 3D Models */}
+        {/* My Gallery - Large Section for Saved 3D Models */}
         <div className="mb-8">
           <MyGallery />
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 mt-8 mb-12">
-        <ToolboxBrowser />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8 border-t border-white/10">
+      <div className="max-w-7xl mx-auto px-6 py-6 border-t border-white/10">
         <div className="text-center">
           <p className="text-xs text-white/40">Crafted with 🔥 by the BlaxSmith Team • © 2026 blaxsmith.dev</p>
         </div>
