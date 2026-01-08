@@ -110,6 +110,8 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
     const [progress, setProgress] = useState(0)
     const [progressText, setProgressText] = useState("")
     const [showExportDropdown, setShowExportDropdown] = useState(false)
+    const [elapsedTime, setElapsedTime] = useState(0)
+    const [remainingTime, setRemainingTime] = useState(25)
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     // Load model-viewer on mount
@@ -125,6 +127,8 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         setError(null)
         setProgress(0)
         setProgressText("Initializing...")
+        setElapsedTime(0)
+        setRemainingTime(25)
 
         // Start progress simulation (typically takes 15-30 seconds)
         const startTime = Date.now()
@@ -132,19 +136,24 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
         progressIntervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTime
+            const elapsedSeconds = Math.floor(elapsed / 1000)
+            const remainingSeconds = Math.max(0, 25 - elapsedSeconds)
             const progressPercent = Math.min(95, (elapsed / estimatedDuration) * 100)
+
             setProgress(progressPercent)
+            setElapsedTime(elapsedSeconds)
+            setRemainingTime(remainingSeconds)
 
             if (progressPercent < 20) {
-                setProgressText("Analyzing prompt...")
+                setProgressText("🔍 Analyzing prompt...")
             } else if (progressPercent < 40) {
-                setProgressText("Generating mesh...")
+                setProgressText("🎨 Generating mesh...")
             } else if (progressPercent < 60) {
-                setProgressText("Adding textures...")
+                setProgressText("🖼️ Adding textures...")
             } else if (progressPercent < 80) {
-                setProgressText("Optimizing model...")
+                setProgressText("⚡ Optimizing model...")
             } else {
-                setProgressText("Finalizing...")
+                setProgressText("✨ Finalizing...")
             }
         }, 200)
 
@@ -331,24 +340,46 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 )}
             </button>
 
-            {/* Progress Bar */}
+            {/* Progress Bar with Countdown Timer */}
             {isGenerating && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 border border-purple-500/30">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-white/80 text-sm font-medium">{progressText}</span>
-                        <span className="text-white/60 text-xs">{Math.round(progress)}%</span>
+                <div className="p-4 rounded-xl bg-gradient-to-r from-purple-900/30 via-pink-900/20 to-orange-900/30 border border-purple-500/40">
+                    {/* Countdown Timer - Large Display */}
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                        <div className="text-center">
+                            <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
+                                {remainingTime > 0 ? remainingTime : "..."}<span className="text-2xl">s</span>
+                            </div>
+                            <div className="text-xs text-white/50 mt-1">Remaining</div>
+                        </div>
+                        <div className="w-px h-12 bg-white/20"></div>
+                        <div className="text-center">
+                            <div className="text-2xl font-semibold text-white/80">
+                                {elapsedTime}<span className="text-lg">s</span>
+                            </div>
+                            <div className="text-xs text-white/50 mt-1">Elapsed</div>
+                        </div>
                     </div>
-                    <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+
+                    {/* Status Text */}
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                        <span className="text-white/90 text-sm font-medium">{progressText}</span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="h-3 bg-black/40 rounded-full overflow-hidden mb-2">
                         <div
-                            className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full transition-all duration-300"
+                            className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full transition-all duration-300 relative overflow-hidden"
                             style={{ width: `${progress}%` }}
-                        />
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
-                        <span className="text-white/40 text-xs">Estimated time: ~25 seconds</span>
-                        <span className="text-white/40 text-xs">
-                            {progress < 95 ? `${Math.round((100 - progress) / 4)}s remaining` : "Almost done..."}
-                        </span>
+
+                    {/* Progress Percentage */}
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs text-white/50">Powered by Cube3D</span>
+                        <span className="text-sm font-bold text-white/80">{Math.round(progress)}%</span>
                     </div>
                 </div>
             )}
