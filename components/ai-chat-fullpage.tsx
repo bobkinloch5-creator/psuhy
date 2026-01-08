@@ -156,11 +156,20 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                 if (typeof data.creditsRemaining === "number") {
                     setUser(prev => ({ ...prev, generation_credits: data.creditsRemaining }))
                 }
+
+                // Build AI response with insertion notification
+                let aiResponse = data.response
+                if (data.itemsQueued && data.itemsQueued.length > 0) {
+                    // Add a visual notification about queued items
+                    const insertionNotice = `\n\n---\n\n✅ **Sent to Roblox Studio:**\n${data.itemsQueued.map((item: string) => `- 🚀 ${item}`).join('\n')}\n\n*Check your Roblox Studio - the BlaxSmith plugin will insert these automatically!*`
+                    aiResponse += insertionNotice
+                }
+
                 // Add AI response
                 setMessages(prev => [
                     ...prev.filter(m => m.id !== tempUserMessage.id),
                     { id: `user-${Date.now()}`, role: "user", content: userMessage },
-                    { id: `ai-${Date.now()}`, role: "assistant", content: data.response }
+                    { id: `ai-${Date.now()}`, role: "assistant", content: aiResponse }
                 ])
                 loadConversations()
             } else {
