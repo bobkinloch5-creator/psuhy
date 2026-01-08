@@ -156,22 +156,65 @@ The user you're talking to is "${userData.username}". Greet them by name and be 
 - Responsive design with Scale vs Offset
 - Mobile-friendly touch controls
 
-## 🚀 ASSET INSERTION CAPABILITY
+## 🚀 INSERTION CAPABILITIES
 
-When users ask for assets (cars, weapons, trees, etc.), YOU CAN INSERT THEM INTO THEIR GAME!
+YOU CAN INSERT DIRECTLY INTO THEIR ROBLOX GAME! Use these formats on their own line:
 
-Use this format on its own line when inserting:
-[INSERT_ASSET: Asset Name]
-
-Search terms work - we'll find the best match from Roblox Toolbox!
+### MODELS & ASSETS (from Roblox Toolbox):
+[INSERT_ASSET: Search Term]
 Examples:
 [INSERT_ASSET: Sports Car]
-[INSERT_ASSET: Sword]
 [INSERT_ASSET: Medieval Castle]
-[INSERT_ASSET: Tree]
-[INSERT_ASSET: NPC]
+[INSERT_ASSET: Loading Screen GUI]
+[INSERT_ASSET: Sword]
+[INSERT_ASSET: NPC Character]
+[INSERT_ASSET: Admin Commands]
 
-IMPORTANT: Tell users "Make sure BlaxSmith plugin is connected in Roblox Studio!"
+### SCRIPTS (creates script in ServerScriptService):
+[INSERT_SCRIPT: Script Name]
+\`\`\`lua
+-- Your Lua code here
+local Players = game:GetService("Players")
+-- etc...
+\`\`\`
+[/INSERT_SCRIPT]
+
+### LOCAL SCRIPTS (creates in StarterPlayerScripts):
+[INSERT_LOCALSCRIPT: Script Name]
+\`\`\`lua
+-- Your LocalScript code here
+local player = game.Players.LocalPlayer
+-- etc...
+\`\`\`
+[/INSERT_LOCALSCRIPT]
+
+### GUI (creates in StarterGui):
+[INSERT_GUI: GUI Name]
+\`\`\`lua
+-- GUI creation code
+local gui = Instance.new("ScreenGui")
+-- etc...
+\`\`\`
+[/INSERT_GUI]
+
+### MODULE SCRIPTS (creates in ReplicatedStorage):
+[INSERT_MODULE: Module Name]
+\`\`\`lua
+local Module = {}
+-- Your module code
+return Module
+\`\`\`
+[/INSERT_MODULE]
+
+## 📦 WHAT YOU CAN INSERT:
+- **Models**: Cars, buildings, weapons, NPCs, furniture, nature
+- **Scripts**: Server scripts, game logic, data stores
+- **LocalScripts**: Client-side effects, UI logic, camera controls
+- **GUIs**: Loading screens, HUDs, menus, shops, inventory UIs
+- **ModuleScripts**: Reusable code libraries
+- **Plugins from Toolbox**: Admin commands, building tools
+
+IMPORTANT: Always remind users "Make sure BlaxSmith plugin is connected in Roblox Studio!"
 
 ## 💬 RESPONSE STYLE
 
@@ -258,42 +301,90 @@ You are the ULTIMATE Roblox assistant. Help ${userData.username} build amazing g
 
         const aiResponse = await generateWithCometAPI(selectedModelName, fullPrompt, systemPrompt)
 
-        // Parse AI response for asset insertion commands
-        const assetInsertPattern = /\[INSERT_ASSET:\s*([^\]]+)\]/gi
-        const matches = aiResponse.matchAll(assetInsertPattern)
-        const assetsToInsert: string[] = []
+        // Parse AI response for various insertion commands
+        const { addCommand, createInsertModelCommand } = await import('@/lib/command-queue')
+        const insertedItems: string[] = []
 
-        for (const match of matches) {
-            assetsToInsert.push(match[1].trim())
+        // 1. Parse INSERT_ASSET commands (from Roblox Toolbox)
+        const assetPattern = /\[INSERT_ASSET:\s*([^\]]+)\]/gi
+        for (const match of aiResponse.matchAll(assetPattern)) {
+            const assetName = match[1].trim()
+            try {
+                const searchUrl = `https://www.roblox.com/catalog/json?Keyword=${encodeURIComponent(assetName)}&Category=6&MaxPrice=0&ResultsPerPage=1`
+                const response = await fetch(searchUrl, { headers: { "Accept": "application/json" } })
+                if (response.ok) {
+                    const items = await response.json()
+                    if (Array.isArray(items) && items.length > 0 && items[0].AssetId) {
+                        const asset = items[0]
+                        const command = createInsertModelCommand(asset.AssetId, asset.Name || assetName)
+                        await addCommand(userData.id, command)
+                        insertedItems.push(`Model: ${asset.Name}`)
+                        console.log(`[AI Chat] Queued asset: ${asset.Name} (${asset.AssetId})`)
+                    }
+                }
+            } catch (err) {
+                console.error(`[AI Chat] Asset search failed: ${assetName}`, err)
+            }
         }
 
-        // Queue asset insertions - search REAL Roblox toolbox
-        if (assetsToInsert.length > 0) {
-            const { addCommand, createInsertModelCommand } = await import('@/lib/command-queue')
-
-            for (const assetName of assetsToInsert) {
-                try {
-                    // Search real Roblox toolbox for free models
-                    const searchUrl = `https://www.roblox.com/catalog/json?Keyword=${encodeURIComponent(assetName)}&Category=6&MaxPrice=0&ResultsPerPage=1`
-                    const response = await fetch(searchUrl, {
-                        headers: { "Accept": "application/json" }
-                    })
-
-                    if (response.ok) {
-                        const items = await response.json()
-                        if (Array.isArray(items) && items.length > 0 && items[0].AssetId) {
-                            const asset = items[0]
-                            const command = createInsertModelCommand(asset.AssetId, asset.Name || assetName)
-                            await addCommand(userData.id, command)
-                            console.log(`[AI Chat] Queued REAL Roblox asset: ${asset.Name} (${asset.AssetId}) for user ${userData.id}`)
-                        } else {
-                            console.log(`[AI Chat] No Roblox results for: ${assetName}`)
-                        }
-                    }
-                } catch (searchErr) {
-                    console.error(`[AI Chat] Failed to search Roblox for: ${assetName}`, searchErr)
-                }
+        // 2. Parse INSERT_SCRIPT commands
+        const scriptPattern = /\[INSERT_SCRIPT:\s*([^\]]+)\][\s\S]*?```lua([\s\S]*?)```[\s\S]*?\[\/INSERT_SCRIPT\]/gi
+        for (const match of aiResponse.matchAll(scriptPattern)) {
+            const [, scriptName, code] = match
+            const command = {
+                type: "INSERT_SCRIPT",
+                name: scriptName.trim(),
+                code: code.trim(),
+                location: "ServerScriptService"
             }
+            await addCommand(userData.id, command)
+            insertedItems.push(`Script: ${scriptName.trim()}`)
+            console.log(`[AI Chat] Queued script: ${scriptName.trim()}`)
+        }
+
+        // 3. Parse INSERT_LOCALSCRIPT commands
+        const localScriptPattern = /\[INSERT_LOCALSCRIPT:\s*([^\]]+)\][\s\S]*?```lua([\s\S]*?)```[\s\S]*?\[\/INSERT_LOCALSCRIPT\]/gi
+        for (const match of aiResponse.matchAll(localScriptPattern)) {
+            const [, scriptName, code] = match
+            const command = {
+                type: "INSERT_LOCALSCRIPT",
+                name: scriptName.trim(),
+                code: code.trim(),
+                location: "StarterPlayerScripts"
+            }
+            await addCommand(userData.id, command)
+            insertedItems.push(`LocalScript: ${scriptName.trim()}`)
+            console.log(`[AI Chat] Queued local script: ${scriptName.trim()}`)
+        }
+
+        // 4. Parse INSERT_GUI commands
+        const guiPattern = /\[INSERT_GUI:\s*([^\]]+)\][\s\S]*?```lua([\s\S]*?)```[\s\S]*?\[\/INSERT_GUI\]/gi
+        for (const match of aiResponse.matchAll(guiPattern)) {
+            const [, guiName, code] = match
+            const command = {
+                type: "INSERT_GUI",
+                name: guiName.trim(),
+                code: code.trim(),
+                location: "StarterGui"
+            }
+            await addCommand(userData.id, command)
+            insertedItems.push(`GUI: ${guiName.trim()}`)
+            console.log(`[AI Chat] Queued GUI: ${guiName.trim()}`)
+        }
+
+        // 5. Parse INSERT_MODULE commands
+        const modulePattern = /\[INSERT_MODULE:\s*([^\]]+)\][\s\S]*?```lua([\s\S]*?)```[\s\S]*?\[\/INSERT_MODULE\]/gi
+        for (const match of aiResponse.matchAll(modulePattern)) {
+            const [, moduleName, code] = match
+            const command = {
+                type: "INSERT_MODULE",
+                name: moduleName.trim(),
+                code: code.trim(),
+                location: "ReplicatedStorage"
+            }
+            await addCommand(userData.id, command)
+            insertedItems.push(`Module: ${moduleName.trim()}`)
+            console.log(`[AI Chat] Queued module: ${moduleName.trim()}`)
         }
 
         // Save AI response
@@ -326,7 +417,7 @@ You are the ULTIMATE Roblox assistant. Help ${userData.username} build amazing g
             success: true,
             conversationId: activeConversationId,
             response: aiResponse,
-            assetsQueued: assetsToInsert.length > 0 ? assetsToInsert : undefined,
+            itemsQueued: insertedItems.length > 0 ? insertedItems : undefined,
             model: selectedModelName,
             creditsRemaining: newCredits,
         })
