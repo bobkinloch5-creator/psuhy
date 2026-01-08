@@ -10,12 +10,12 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "BlaxSmith AI - AI-Powered Roblox Development Studio",
-  description: "Generate 3D models, worlds, and scripts for Roblox using advanced AI. Connect directly to Roblox Studio.",
+  title: "BlaxSmith AI - The Best Roblox Game Builder Today",
+  description: "The #1 AI-powered Roblox game builder. Generate 3D models, scripts, GUIs, and complete game systems instantly. The best Roblox development studio today.",
   verification: {
     google: ["ODb4v87NvzJECfOXs7_ZBk0Mi3LeImPNFEwkCYtgB00", "nERPff3pMMA8aCS4r39VUoBUN6yOLbGTttYKZ60bm0U"],
   },
-  keywords: ["Roblox", "AI", "3D Model Generator", "Roblox Studio", "Game Development", "BlaxSmith"],
+  keywords: ["Roblox", "AI", "3D Model Generator", "Roblox Studio", "Game Development", "BlaxSmith", "Best Roblox Builder", "Roblox Game Maker", "AI Game Builder", "Roblox Script Generator"],
   generator: "v0.app",
   icons: {
     icon: [
