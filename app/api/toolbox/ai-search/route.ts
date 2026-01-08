@@ -6,16 +6,10 @@ import { generateWithCometAPI } from "@/lib/cometapi"
 const TOOLBOX_V2_SEARCH = "https://apis.roblox.com/toolbox-service/v2/assets:search"
 const TOOLBOX_V1_SEARCH = "https://apis.roblox.com/toolbox-service/v1/items/search"
 
-// Asset type IDs for Roblox
+// Asset type IDs for Roblox - ONLY models allowed
 const ASSET_TYPE_MAP: Record<string, number> = {
-    "all": 10,
-    "model": 10,
-    "audio": 3,
-    "decal": 13,
-    "mesh": 4,
-    "animation": 24,
-    "plugin": 38,
-    "image": 1,
+    "all": 10,    // Models only
+    "model": 10,  // Models
 }
 
 // AI-powered asset search with natural language understanding
@@ -232,24 +226,9 @@ Respond ONLY in JSON: {"keywords": "simple search terms", "category": "model", "
     }
 }
 
-// Detect category from query
+// Detect category from query - always return model since we only support models
 function detectCategory(query: string): string {
-    const lowerQuery = query.toLowerCase()
-
-    const categoryKeywords: Record<string, string[]> = {
-        audio: ["sound", "music", "audio", "sfx", "song"],
-        animation: ["animation", "anim", "dance", "emote", "walk", "run"],
-        decal: ["decal", "image", "picture", "texture", "logo"],
-        mesh: ["mesh", "3d", "geometry"],
-        plugin: ["plugin", "tool", "script"],
-    }
-
-    for (const [category, keywords] of Object.entries(categoryKeywords)) {
-        if (keywords.some(kw => lowerQuery.includes(kw))) {
-            return category
-        }
-    }
-
+    // Only models are supported - ignore other asset types
     return "model"
 }
 

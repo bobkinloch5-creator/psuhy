@@ -152,10 +152,22 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
             const res = await fetch("/api/generate/model", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include", // Important: include cookies for auth
                 body: JSON.stringify({ prompt, style: selectedStyle }),
             })
             const data = await res.json()
             console.log("[3D Generator] API Response:", data)
+
+            // Handle auth errors specifically
+            if (res.status === 401) {
+                setError("Please sign in to generate models. Your session may have expired.")
+                if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current)
+                    progressIntervalRef.current = null
+                }
+                setIsGenerating(false)
+                return
+            }
 
             // Clear progress interval
             if (progressIntervalRef.current) {
@@ -176,16 +188,39 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 const modelData = data.model || data.creation?.asset_data || data.creation || {}
                 const formats = modelData.formats || modelData.asset_data?.formats || {}
 
+                // Deep search for GLB URL in nested response
+                const findGlbUrl = (obj: any, depth = 0): string | null => {
+                    if (depth > 6) return null;
+                    if (typeof obj === 'string' && (obj.includes('.glb') || obj.includes('storage.googleapis.com'))) return obj;
+                    if (typeof obj === 'object' && obj !== null) {
+                        for (const key of Object.keys(obj)) {
+                            const found = findGlbUrl(obj[key], depth + 1);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+
+                // Try all possible paths for the model URL
+                const modelUrl = modelData.model_url || modelData.glb_url || modelData.glbUrl ||
+                    modelData.downloadUrl || modelData.download_url ||
+                    modelData.files?.glb || formats.glb ||
+                    modelData.asset_data?.model_url || modelData.url ||
+                    findGlbUrl(data);
+
+                const previewUrl = modelData.preview_url || modelData.previewUrl ||
+                    modelData.thumbnail || modelData.image ||
+                    modelData.asset_data?.preview_url || null;
+
+                console.log("[3D Generator] Found model URL:", modelUrl);
+                console.log("[3D Generator] Full API response structure:", JSON.stringify(data, null, 2));
+
                 const extractedModel = {
                     name: modelData.name || modelData.prompt || prompt,
-                    model_url: modelData.model_url || modelData.glb_url || modelData.glbUrl ||
-                        modelData.files?.glb || formats.glb ||
-                        modelData.asset_data?.model_url || null,
-                    preview_url: modelData.preview_url || modelData.previewUrl ||
-                        modelData.thumbnail || modelData.image ||
-                        modelData.asset_data?.preview_url || null,
+                    model_url: modelUrl,
+                    preview_url: previewUrl,
                     formats: {
-                        glb: formats.glb || modelData.model_url || modelData.glb_url || null,
+                        glb: formats.glb || modelUrl || null,
                         fbx: formats.fbx || modelData.fbx_url || null,
                         obj: formats.obj || modelData.obj_url || null,
                         usdz: formats.usdz || modelData.usdz_url || null,
@@ -223,7 +258,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     </div>
                     <div>
                         <h4 className="text-white font-semibold text-sm">Text-to-3D</h4>
-                        <p className="text-white/50 text-xs">Powered by Sloyd AI</p>
+                        <p className="text-white/50 text-xs">Powered by Roblox Cube3D</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10">
