@@ -251,7 +251,7 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <a
-                  href="/BlaxSmithPlugin.lua"
+                  href="/api/plugin/download"
                   download="BlaxSmithPlugin.lua"
                   className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-orange-500/50 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                 >
@@ -351,11 +351,6 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
             modelCredits={user.model_credits}
             onCreditsUpdate={(newCredits) => setUser({ ...user, model_credits: newCredits })}
           />
-        </div>
-
-        {/* My Gallery - Large Prominent Section */}
-        <div className="mb-6">
-          <MyGallery />
         </div>
 
         {/* Toolbox Store - Compact */}

@@ -4,13 +4,14 @@ import path from "path"
 
 export async function GET() {
     try {
-        const filePath = path.join(process.cwd(), "roblox-plugin", "BlaxSmithPlugin.lua")
+        // Read from public folder where the plugin is stored
+        const filePath = path.join(process.cwd(), "public", "BlaxSmithPlugin.lua")
         const fileContent = fs.readFileSync(filePath, "utf-8")
 
         return new NextResponse(fileContent, {
             headers: {
-                "Content-Type": "text/plain",
-                "Content-Disposition": "attachment; filename=BlaxSmithPlugin.lua"
+                "Content-Type": "application/x-lua",
+                "Content-Disposition": "attachment; filename=\"BlaxSmithPlugin.lua\""
             }
         })
     } catch (error) {
