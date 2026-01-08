@@ -458,7 +458,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
             {/* Generated Model Display with 3D Viewer */}
             {generatedModel && (
-                <div className={`mt-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-orange-500/10 border border-purple-500/30 overflow-hidden animate-[slide-up_0.3s_ease-out] ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
+                <div className={`mt-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-orange-500/10 border border-purple-500/30 animate-[slide-up_0.3s_ease-out] ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
                     {/* Preview Header */}
                     <div className="flex items-center justify-between p-4 border-b border-white/10">
                         <div className="flex items-center gap-2">
@@ -551,9 +551,9 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                             <ChevronDown className={`w-4 h-4 transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
                                         </button>
 
-                                        {/* Dropdown Menu */}
+                                        {/* Dropdown Menu - positioned above with high z-index */}
                                         {showExportDropdown && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden shadow-xl z-10">
+                                            <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden shadow-xl z-[100]">
                                                 <a
                                                     href={generatedModel.model_url}
                                                     download

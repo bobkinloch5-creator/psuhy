@@ -2,7 +2,11 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
-// CometAPI for high-quality 3D models (Hunyuan3D-2)
+// Hyper3D Rodin API - High quality 3D models with PBR textures
+const HYPER3D_API_KEY = process.env.HYPER3D_API_KEY || ""
+const HYPER3D_API_URL = "https://api.hyper3d.ai"
+
+// CometAPI for high-quality 3D models (Hunyuan3D-2) - fallback
 const COMETAPI_KEY = process.env.COMETAPI_KEY || ""
 const COMETAPI_URL = "https://api.cometapi.com/v1"
 
@@ -14,6 +18,93 @@ interface ModelResult {
   preview_url: string | null
   formats: { glb: string | null; obj: string | null; fbx: string | null }
   source: string
+}
+
+// ============ HYPER3D RODIN - HIGH QUALITY WITH TEXTURES ============
+async function generateWithHyper3DRodin(prompt: string): Promise<ModelResult> {
+  if (!HYPER3D_API_KEY) {
+    console.log("[Hyper3D] No API key configured")
+    throw new Error("No Hyper3D API key")
+  }
+
+  console.log("[Hyper3D] Generating with Rodin:", prompt)
+
+  try {
+    // Step 1: Create generation task
+    const createResponse = await fetch(`${HYPER3D_API_URL}/v2/rodin`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${HYPER3D_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        material: "PBR", // PBR for realistic textures
+        quality: "high",
+        geometry_file_format: "glb", // Best for Roblox
+        tier: "Regular",
+      }),
+    })
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text()
+      console.log("[Hyper3D] Create task failed:", createResponse.status, errorText)
+      throw new Error(`Hyper3D create failed: ${createResponse.status}`)
+    }
+
+    const taskData = await createResponse.json()
+    const taskId = taskData.uuid || taskData.task_id || taskData.job_id
+    console.log("[Hyper3D] Task created:", taskId)
+
+    if (!taskId) {
+      throw new Error("No task ID returned from Hyper3D")
+    }
+
+    // Step 2: Poll for completion (max 120 seconds)
+    for (let i = 0; i < 60; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      const statusResponse = await fetch(`${HYPER3D_API_URL}/v2/rodin/${taskId}`, {
+        headers: {
+          "Authorization": `Bearer ${HYPER3D_API_KEY}`,
+        },
+      })
+
+      if (!statusResponse.ok) continue
+
+      const statusData = await statusResponse.json()
+      console.log("[Hyper3D] Status:", statusData.status || statusData.state)
+
+      if (statusData.status === "completed" || statusData.status === "Completed" ||
+        statusData.state === "completed" || statusData.state === "COMPLETED") {
+        // Get the model URL
+        const modelUrl = statusData.output?.model_url || statusData.model_url ||
+          statusData.result?.model_url || statusData.outputs?.[0]?.url
+
+        if (modelUrl) {
+          return {
+            model_url: modelUrl,
+            preview_url: statusData.output?.preview_url || statusData.thumbnail || null,
+            formats: {
+              glb: modelUrl,
+              obj: statusData.output?.obj_url || null,
+              fbx: statusData.output?.fbx_url || null,
+            },
+            source: "Hyper3D Rodin"
+          }
+        }
+      }
+
+      if (statusData.status === "failed" || statusData.state === "FAILED") {
+        throw new Error("Hyper3D generation failed: " + (statusData.error || "Unknown error"))
+      }
+    }
+
+    throw new Error("Hyper3D generation timed out")
+  } catch (error: any) {
+    console.error("[Hyper3D] Error:", error.message)
+    throw error
+  }
 }
 
 // ============ COMETAPI - HUNYUAN3D-2 (HIGH QUALITY) ============
@@ -205,8 +296,9 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     ? `${prompt}, ${style} style, high quality 3D model with detailed textures`
     : `${prompt}, high quality 3D game asset, detailed textured mesh`
 
-  // Try CometAPI first (high quality), then free fallback
+  // Try Hyper3D Rodin (highest quality PBR), then CometAPI, then Shap-E
   const services = [
+    { name: "Hyper3D Rodin", fn: () => generateWithHyper3DRodin(enhancedPrompt) },
     { name: "CometAPI", fn: () => generateWithCometAPI(enhancedPrompt) },
     { name: "Shap-E", fn: () => generateWithShapE(prompt) },
   ]
