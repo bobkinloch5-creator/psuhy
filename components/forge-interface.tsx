@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { AIChatFullPage } from "@/components/ai-chat-fullpage"
 import { BlaxSmith3DGenerator } from "@/components/blaxsmith-3d-generator"
+import { RealTimeClock } from "@/components/real-time-clock"
 
 interface User {
   id: string
@@ -221,6 +222,9 @@ export function ForgeInterface({ user }: ForgeInterfaceProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Real-time Clock */}
+            <RealTimeClock />
+
             {/* Credits Display */}
             <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
               <Zap className="w-5 h-5 text-orange-500" />
