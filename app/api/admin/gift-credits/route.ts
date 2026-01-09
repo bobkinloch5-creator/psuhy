@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
@@ -10,10 +11,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
+        // Use service client for admin operations
+        const serviceClient = createServiceClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+
         // Check if current user is admin
-        const { data: adminUser } = await supabase
+        const { data: adminUser } = await serviceClient
             .from("users")
-            .select("is_admin")
+            .select("is_admin, id")
             .eq("discord_id", user.id)
             .single()
 
@@ -27,10 +35,28 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "userId required" }, { status: 400 })
         }
 
-        // Get current credits if not resetting
+        if (amount === undefined || (typeof amount !== 'number' && !reset)) {
+            return NextResponse.json({ error: "Valid amount required" }, { status: 400 })
+        }
+
+        // Get target user info
+        const { data: targetUser } = await serviceClient
+            .from("users")
+            .select("username, generation_credits")
+            .eq("id", userId)
+            .single()
+
+        if (!targetUser) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 })
+        }
+
+        const oldCredits = targetUser.generation_credits || 0
+        let newCredits: number
+
         if (reset) {
             // Reset to provided amount
-            const { error } = await supabase
+            newCredits = amount
+            const { error } = await serviceClient
                 .from("users")
                 .update({ generation_credits: amount })
                 .eq("id", userId)
@@ -38,15 +64,9 @@ export async function POST(request: Request) {
             if (error) throw error
         } else {
             // Add to existing credits
-            const { data: targetUser } = await supabase
-                .from("users")
-                .select("generation_credits")
-                .eq("id", userId)
-                .single()
+            newCredits = oldCredits + amount
 
-            const newCredits = (targetUser?.generation_credits || 0) + amount
-
-            const { error } = await supabase
+            const { error } = await serviceClient
                 .from("users")
                 .update({ generation_credits: newCredits })
                 .eq("id", userId)
@@ -54,7 +74,60 @@ export async function POST(request: Request) {
             if (error) throw error
         }
 
-        return NextResponse.json({ success: true })
+        // Log the credit action
+        try {
+            await serviceClient
+                .from("credit_transactions")
+                .insert({
+                    user_id: userId,
+                    amount: reset ? amount : amount,
+                    type: reset ? "admin_reset" : "admin_gift",
+                    reason: reset
+                        ? `Admin reset credits to ${amount}`
+                        : `Admin gifted ${amount} credits`,
+                    metadata: {
+                        admin_id: adminUser.id,
+                        old_balance: oldCredits,
+                        new_balance: newCredits
+                    }
+                })
+        } catch (logError) {
+            // Don't fail if logging fails (table might not exist)
+            console.warn("[Admin] Credit transaction logging failed:", logError)
+        }
+
+        // Log to security logs as well
+        try {
+            await serviceClient
+                .from("security_logs")
+                .insert({
+                    event_type: "credit_gift",
+                    user_id: userId,
+                    details: {
+                        admin_id: adminUser.id,
+                        amount,
+                        reset,
+                        old_balance: oldCredits,
+                        new_balance: newCredits,
+                        username: targetUser.username
+                    }
+                })
+        } catch (logError) {
+            console.warn("[Admin] Security log failed:", logError)
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: reset
+                ? `Reset ${targetUser.username}'s credits to ${newCredits}`
+                : `Gifted ${amount} credits to ${targetUser.username}`,
+            data: {
+                username: targetUser.username,
+                oldCredits,
+                newCredits,
+                amountGifted: reset ? (newCredits - oldCredits) : amount
+            }
+        })
     } catch (error) {
         console.error("[Admin] Gift credits error:", error)
         return NextResponse.json({ error: "Failed to gift credits" }, { status: 500 })

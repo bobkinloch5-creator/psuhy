@@ -79,7 +79,7 @@ export async function POST(request: Request) {
                 code: promoCode,
                 credits: credits || 50,
                 max_uses: maxUses || 100,
-                uses: 0,
+                current_uses: 0,
                 expires_at: expiresAt || null,
                 is_active: true,
                 created_by: user.id

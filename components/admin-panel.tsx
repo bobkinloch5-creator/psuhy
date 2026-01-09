@@ -48,22 +48,23 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
     }
 
     const handleBanUser = async (userId: string, username: string) => {
-        if (!confirm(`Are you sure you want to ban ${username}?`)) return
+        if (!confirm(`Are you sure you want to ban ${username}? This will also ban their IP addresses.`)) return
         setIsLoading(true)
         try {
             const res = await fetch("/api/admin/ban-user", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId, action: "ban" })
+                body: JSON.stringify({ userId, banned: true, reason: "Banned by admin" })
             })
+            const data = await res.json()
             if (res.ok) {
-                setActionResult({ type: "success", message: `${username} has been banned` })
+                setActionResult({ type: "success", message: data.message || `${username} has been banned (IP ban included)` })
                 router.refresh()
             } else {
-                throw new Error("Failed to ban user")
+                throw new Error(data.error || "Failed to ban user")
             }
-        } catch (error) {
-            setActionResult({ type: "error", message: "Failed to ban user" })
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message || "Failed to ban user" })
         }
         setIsLoading(false)
     }
@@ -74,16 +75,17 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
             const res = await fetch("/api/admin/ban-user", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId, action: "unban" })
+                body: JSON.stringify({ userId, banned: false })
             })
+            const data = await res.json()
             if (res.ok) {
-                setActionResult({ type: "success", message: `${username} has been unbanned` })
+                setActionResult({ type: "success", message: data.message || `${username} has been unbanned` })
                 router.refresh()
             } else {
-                throw new Error("Failed to unban user")
+                throw new Error(data.error || "Failed to unban user")
             }
-        } catch (error) {
-            setActionResult({ type: "error", message: "Failed to unban user" })
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message || "Failed to unban user" })
         }
         setIsLoading(false)
     }
@@ -101,16 +103,21 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId, amount })
             })
+            const data = await res.json()
             if (res.ok) {
-                setActionResult({ type: "success", message: `Gifted ${amount} credits to ${username}` })
+                // Show old balance → new balance for visual feedback
+                const msg = data.data
+                    ? `✨ Gifted ${amount} credits to ${username} (${data.data.oldCredits} → ${data.data.newCredits})`
+                    : `Gifted ${amount} credits to ${username}`
+                setActionResult({ type: "success", message: msg })
                 setGiftAmount("")
                 setSelectedUser(null)
                 router.refresh()
             } else {
-                throw new Error("Failed to gift credits")
+                throw new Error(data.error || "Failed to gift credits")
             }
-        } catch (error) {
-            setActionResult({ type: "error", message: "Failed to gift credits" })
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message || "Failed to gift credits" })
         }
         setIsLoading(false)
     }
