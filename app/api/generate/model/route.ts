@@ -597,65 +597,80 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   // ONLY TEXTURED GENERATORS - so models come with colors/textures built-in
   console.log("[3D-Gen] Generating TEXTURED model (with colors)...")
 
-  // Primary textured generators - race them for speed
+  // Helper to safely wrap generator calls and prevent unhandled rejections
+  const safeGenerate = async (name: string, fn: (p: string) => Promise<ModelResult>, timeout: number): Promise<ModelResult> => {
+    return new Promise(async (resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`${name} timeout`))
+      }, timeout)
+
+      try {
+        const result = await fn(prompt)
+        clearTimeout(timeoutId)
+        if (result?.model_url) {
+          console.log(`[3D-Gen] ✅ ${name} succeeded with TEXTURED model!`)
+          resolve(result)
+        } else {
+          reject(new Error("No model URL"))
+        }
+      } catch (error: any) {
+        clearTimeout(timeoutId)
+        console.log(`[3D-Gen] ${name} failed:`, error.message)
+        reject(error)
+      }
+    })
+  }
+
+  // Primary textured generators - race them for speed (removed TripoSR - broken endpoint)
   const texturedGenerators = [
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },   // Tencent - TEXTURED
-    { name: "TRELLIS", fn: generateWithTrellis },         // Microsoft - TEXTURED
-    { name: "TripoSR", fn: generateWithTripoSR },         // Stability AI - TEXTURED
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 120000 },   // Tencent - TEXTURED
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 120000 },         // Microsoft - TEXTURED
   ]
 
-  // Create racing promises with 90-second individual timeouts (textured takes longer)
-  const racePromises = texturedGenerators.map(async (gen): Promise<ModelResult> => {
+  // Create racing promises with safe wrappers
+  const racePromises = texturedGenerators.map(gen => {
     console.log(`[3D-Gen] Starting ${gen.name}...`)
-    try {
-      const result = await Promise.race([
-        gen.fn(prompt),
-        new Promise<ModelResult>((_, reject) =>
-          setTimeout(() => reject(new Error(`${gen.name} timeout`)), 90000)
-        )
-      ])
-      if (result.model_url) {
-        console.log(`[3D-Gen] ✅ ${gen.name} succeeded with TEXTURED model!`)
-        return result
-      }
-      throw new Error("No model URL")
-    } catch (error: any) {
-      console.log(`[3D-Gen] ${gen.name} failed:`, error.message)
-      throw error
-    }
+    return safeGenerate(gen.name, gen.fn, gen.timeout)
   })
 
   // Return the first successful textured result
   try {
     const firstSuccess = await Promise.any(racePromises)
     if (firstSuccess?.model_url) return firstSuccess
-  } catch {
-    console.log("[3D-Gen] Primary textured generators failed, trying backups...")
+  } catch (aggregateError) {
+    console.log("[3D-Gen] Primary textured generators all failed:", aggregateError)
   }
 
-  // Backup textured generators
+  console.log("[3D-Gen] Trying backup generators...")
+
+  // Backup textured generators (sequential for reliability)
   const backupGenerators = [
-    { name: "LGM", fn: generateWithLGM },
-    { name: "InstantMesh", fn: generateWithInstantMesh },
-    { name: "Cube3D+Texture", fn: generateWithCube3DTextured }, // Geometry + AI texture
+    { name: "LGM", fn: generateWithLGM, timeout: 120000 },
+    { name: "Cube3D+Texture", fn: generateWithCube3DTextured, timeout: 180000 },
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 180000 },
   ]
 
   for (const gen of backupGenerators) {
     console.log(`[3D-Gen] Trying backup: ${gen.name}...`)
     try {
-      const result = await Promise.race([
-        gen.fn(prompt),
-        new Promise<ModelResult>((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), 120000)
-        )
-      ])
+      const result = await safeGenerate(gen.name, gen.fn, gen.timeout)
       if (result.model_url) {
-        console.log(`[3D-Gen] ✅ Success with ${gen.name}`)
         return result
       }
     } catch (error: any) {
-      console.log(`[3D-Gen] ${gen.name} failed:`, error.message)
+      console.log(`[3D-Gen] Backup ${gen.name} failed:`, error.message)
     }
+  }
+
+  // Final fallback - try geometry-only as last resort
+  console.log("[3D-Gen] All textured generators failed, trying geometry fallback...")
+  try {
+    const cubeResult = await safeGenerate("Cube3D", generateWithCube3D, 90000)
+    if (cubeResult.model_url) {
+      return cubeResult
+    }
+  } catch {
+    console.log("[3D-Gen] Geometry fallback also failed")
   }
 
   return {
