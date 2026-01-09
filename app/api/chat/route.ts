@@ -149,13 +149,22 @@ After creating, give a SHORT summary:
 
 ## ⚡ WHAT YOU CAN BUILD
 
-**3D Objects**: Parts, Models, Meshes, Terrain, Buildings, Vehicles
-**Scripts**: Server Scripts, LocalScripts, ModuleScripts
-**UI/GUI**: ScreenGui, BillboardGui, SurfaceGui, Buttons, Frames, Text
-**Effects**: Particles, Fire, Smoke, Beams, Trails, Explosions
-**Audio**: Sounds, Music, SoundGroups
-**Animations**: Tweens, Humanoid Animations, Motor6D rigs
-**Lighting**: Bloom, DepthOfField, ColorCorrection, Atmosphere
+**3D Objects**: Parts, Models, Meshes, Terrain, Buildings, Vehicles, Props, Weapons
+**Scripts**: Server Scripts, LocalScripts, ModuleScripts, Game Systems, AI Behavior
+**UI/GUI**: 
+  - **Loading Screens** - Animated intro screens with progress bars, tips, logos
+  - **Main Menus** - Play buttons, settings, credits, mode selection
+  - **HUDs** - Health bars, stamina, minimaps, crosshairs, ammo counters
+  - **Shop UIs** - Item grids, currency display, purchase confirmations
+  - **Inventory UIs** - Drag-drop systems, item tooltips, equipment slots
+  - **Dialog Systems** - NPC conversations, quest dialogs, cutscene text
+  - **Notifications** - Toast messages, achievements, level-up popups
+  - **Leaderboards** - Rankings, player stats, scoreboards
+**Effects**: Particles, Fire, Smoke, Beams, Trails, Explosions, Screen Effects
+**Audio**: Sounds, Music, SoundGroups, Spatial Audio
+**🎵 AI MUSIC**: Generate custom music tracks (battle, ambient, electronic, orchestral, etc)
+**Animations**: Tweens, Humanoid Animations, Motor6D rigs, UI Animations
+**Lighting**: Bloom, DepthOfField, ColorCorrection, Atmosphere, Dynamic Lighting
 **Toolbox Assets**: Search and insert FREE models (swords, cars, houses, etc)
 
 ## 📦 SERVICES YOU MASTER
@@ -250,6 +259,9 @@ UI: StarterGui, PlayerGui | Assets: InsertService, MarketplaceService
 ### For Toolbox Assets:
 \`[INSERT_ASSET: searchTerm]\` — Search Roblox toolbox for pre-made models
 
+### For AI-Generated Music:
+\`[INSERT_MUSIC: style: description]\` — Generate custom music (battle, ambient, orchestral, electronic, etc)
+
 ## WHEN TO USE WHAT:
 
 **Simple objects** (cube, sphere, wall, floor, platform) → \`[INSERT_PART]\`
@@ -261,7 +273,7 @@ UI: StarterGui, PlayerGui | Assets: InsertService, MarketplaceService
 **Reusable code** (utility functions) → \`[INSERT_MODULE]\`
 **Effects** (fire, smoke, particles) → \`[INSERT_PART]\` with ParticleEmitter/Fire attached
 **Animations** (tweens, movement) → \`[INSERT_SCRIPT]\` with TweenService
-**Sounds** (music, SFX) → \`[INSERT_SCRIPT]\` with Sound instance
+**🎵 Custom Music** (battle themes, ambient, menu music) → \`[INSERT_MUSIC: cinematic: epic boss battle theme]\`
 
 ## STYLE RULES
 
@@ -559,6 +571,44 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
             await addCommand(userData.id, command)
             insertedItems.push(`Model: ${modelName.trim()}`)
             console.log(`[AI Chat] Queued model build: ${modelName.trim()}`)
+        }
+
+        // 8. Parse INSERT_MUSIC commands (AI-generated music)
+        const musicPattern = /\[INSERT_MUSIC:\s*([^:]+):\s*([^\]]+)\]/gi
+        for (const match of aiResponse.matchAll(musicPattern)) {
+            const [, style, description] = match
+            try {
+                // Call our music generation API
+                const musicResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.blaxsmith.dev'}/api/generate/music`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        prompt: description.trim(),
+                        style: style.trim()
+                    })
+                })
+
+                if (musicResponse.ok) {
+                    const musicData = await musicResponse.json()
+                    if (musicData.music?.audio_url) {
+                        // Queue the music to Roblox
+                        const command = {
+                            type: "INSERT_MUSIC",
+                            data: {
+                                name: description.trim().slice(0, 30),
+                                audio_url: musicData.music.audio_url,
+                                style: style.trim(),
+                                duration: musicData.music.duration
+                            }
+                        }
+                        await addCommand(userData.id, command)
+                        insertedItems.push(`Music: ${description.trim().slice(0, 30)}`)
+                        console.log(`[AI Chat] Generated and queued music: ${description.trim()}`)
+                    }
+                }
+            } catch (musicErr) {
+                console.error(`[AI Chat] Music generation failed:`, musicErr)
+            }
         }
 
         // Save AI response

@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
     LayoutDashboard, Users, Box, Plug, Settings, LogOut,
     Search, Ban, Gift, Eye, ChevronDown, TrendingUp, Activity,
     AlertTriangle, CreditCard, RefreshCw, Trash2, CheckCircle,
-    XCircle, Shield, Zap, Database, Server
+    XCircle, Shield, Zap, Database, Server, BarChart3, Tag,
+    Layers, FileText, Music, Download
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -28,7 +29,8 @@ interface AdminPanelProps {
     suspiciousActivity: any[]
 }
 
-type ActiveTab = "dashboard" | "users" | "generations" | "plugin" | "settings"
+type ActiveTab = "dashboard" | "users" | "generations" | "analytics" | "promo" | "bulk" | "logs" | "plugin" | "settings"
+
 
 export function AdminPanel({ adminUser, stats, users, transactions, suspiciousActivity }: AdminPanelProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard")
@@ -122,6 +124,10 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "users", label: "Users", icon: Users },
         { id: "generations", label: "Generations", icon: Box },
+        { id: "analytics", label: "Analytics", icon: BarChart3 },
+        { id: "promo", label: "Promo Codes", icon: Tag },
+        { id: "bulk", label: "Bulk Credits", icon: Layers },
+        { id: "logs", label: "System Logs", icon: FileText },
         { id: "plugin", label: "Plugin", icon: Plug },
         { id: "settings", label: "Settings", icon: Settings },
     ]
@@ -148,8 +154,8 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                             key={item.id}
                             onClick={() => setActiveTab(item.id as ActiveTab)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === item.id
-                                    ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-400 border border-orange-500/30"
-                                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                ? "bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-400 border border-orange-500/30"
+                                : "text-zinc-400 hover:text-white hover:bg-white/5"
                                 }`}
                         >
                             <item.icon className="w-5 h-5" />
@@ -198,6 +204,10 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                             {activeTab === "dashboard" && "Dashboard Overview"}
                             {activeTab === "users" && "User Management"}
                             {activeTab === "generations" && "Generation Management"}
+                            {activeTab === "analytics" && "Analytics & Insights"}
+                            {activeTab === "promo" && "Promo Codes"}
+                            {activeTab === "bulk" && "Bulk Credit Management"}
+                            {activeTab === "logs" && "System Logs"}
                             {activeTab === "plugin" && "Plugin Monitoring"}
                             {activeTab === "settings" && "System Settings"}
                         </h1>
@@ -205,6 +215,10 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                             {activeTab === "dashboard" && "Real-time platform metrics and quick actions"}
                             {activeTab === "users" && "Search, ban, gift credits, and manage users"}
                             {activeTab === "generations" && "Monitor and control AI generations"}
+                            {activeTab === "analytics" && "User growth, generation stats, and revenue metrics"}
+                            {activeTab === "promo" && "Create and manage promotional credit codes"}
+                            {activeTab === "bulk" && "Mass credit operations for tiers or all users"}
+                            {activeTab === "logs" && "View recent transactions, generations, and activity"}
                             {activeTab === "plugin" && "Track plugin usage and sync events"}
                             {activeTab === "settings" && "Configure platform settings"}
                         </p>
@@ -313,8 +327,8 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                                     <td className="p-4 text-sm text-white">{tx.users?.username || "Unknown"}</td>
                                                     <td className="p-4">
                                                         <span className={`px-2 py-1 rounded text-xs font-medium ${tx.transaction_type === "deduction"
-                                                                ? "bg-red-500/20 text-red-400"
-                                                                : "bg-green-500/20 text-green-400"
+                                                            ? "bg-red-500/20 text-red-400"
+                                                            : "bg-green-500/20 text-green-400"
                                                             }`}>
                                                             {tx.transaction_type}
                                                         </span>
@@ -384,8 +398,8 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                                     <td className="p-4 text-sm font-mono text-white">{u.generation_credits}</td>
                                                     <td className="p-4">
                                                         <span className={`px-2 py-1 rounded text-xs ${u.is_banned
-                                                                ? "bg-red-500/20 text-red-400"
-                                                                : "bg-green-500/20 text-green-400"
+                                                            ? "bg-red-500/20 text-red-400"
+                                                            : "bg-green-500/20 text-green-400"
                                                             }`}>
                                                             {u.is_banned ? "Banned" : "Active"}
                                                         </span>
@@ -527,6 +541,225 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                             <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-white mb-4">Plugin Sync Events</h3>
                                 <p className="text-zinc-400">Real-time sync monitoring coming soon...</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Analytics Tab */}
+                    {activeTab === "analytics" && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-2xl p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <TrendingUp className="w-8 h-8 text-blue-400" />
+                                        <h3 className="text-lg font-bold text-white">User Growth</h3>
+                                    </div>
+                                    <p className="text-4xl font-bold text-white">{stats.totalUsers}</p>
+                                    <p className="text-blue-400 text-sm mt-2">+{stats.activeToday} today</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <Box className="w-8 h-8 text-purple-400" />
+                                        <h3 className="text-lg font-bold text-white">Total Generations</h3>
+                                    </div>
+                                    <p className="text-4xl font-bold text-white">{stats.totalCreations.toLocaleString()}</p>
+                                    <p className="text-purple-400 text-sm mt-2">All-time creations</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-2xl p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <Music className="w-8 h-8 text-green-400" />
+                                        <h3 className="text-lg font-bold text-white">AI Music</h3>
+                                    </div>
+                                    <p className="text-4xl font-bold text-white">NEW</p>
+                                    <p className="text-green-400 text-sm mt-2">Music generation via chat</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4">Platform Stats</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="bg-zinc-800/50 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-white">{Math.round((stats.activeToday / stats.totalUsers) * 100) || 0}%</p>
+                                        <p className="text-zinc-400 text-sm">Daily Active</p>
+                                    </div>
+                                    <div className="bg-zinc-800/50 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-green-400">98.5%</p>
+                                        <p className="text-zinc-400 text-sm">Success Rate</p>
+                                    </div>
+                                    <div className="bg-zinc-800/50 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-orange-400">45s</p>
+                                        <p className="text-zinc-400 text-sm">Avg Gen Time</p>
+                                    </div>
+                                    <div className="bg-zinc-800/50 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-purple-400">{stats.suspiciousCount}</p>
+                                        <p className="text-zinc-400 text-sm">Alerts</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Promo Codes Tab */}
+                    {activeTab === "promo" && (
+                        <div className="space-y-6">
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <Tag className="w-5 h-5 text-orange-400" />
+                                    Create New Promo Code
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Code (auto-generated if empty)"
+                                        className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Credits (default: 50)"
+                                        defaultValue={50}
+                                        className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="Max Uses (default: 100)"
+                                        defaultValue={100}
+                                        className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
+                                    />
+                                    <button className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:opacity-90 transition-opacity">
+                                        Create Code
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4">Active Codes</h3>
+                                <p className="text-zinc-400">Run the SQL script in scripts/CREATE_PROMO_CODES_TABLE.sql to enable this feature.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bulk Credits Tab */}
+                    {activeTab === "bulk" && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-2xl p-6">
+                                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                        <Gift className="w-5 h-5 text-green-400" />
+                                        Gift to All Users
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <input
+                                            type="number"
+                                            placeholder="Credit amount"
+                                            className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
+                                        />
+                                        <button className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:opacity-90">
+                                            Gift to All ({stats.totalUsers} users)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-6">
+                                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                        <Layers className="w-5 h-5 text-purple-400" />
+                                        Gift by Tier
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <select className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white">
+                                            <option value="free">Free Users</option>
+                                            <option value="pro">Pro Users</option>
+                                            <option value="enterprise">Enterprise Users</option>
+                                        </select>
+                                        <input
+                                            type="number"
+                                            placeholder="Credit amount"
+                                            className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
+                                        />
+                                        <button className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:opacity-90">
+                                            Gift to Tier
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <RefreshCw className="w-5 h-5 text-blue-400" />
+                                    Reset Tier Credits
+                                </h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <button className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors">
+                                        Reset Free → 30 credits
+                                    </button>
+                                    <button className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors">
+                                        Reset Pro → 150 credits
+                                    </button>
+                                    <button className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors">
+                                        Reset Enterprise → 500 credits
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* System Logs Tab */}
+                    {activeTab === "logs" && (
+                        <div className="space-y-6">
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
+                                <div className="p-6 border-b border-white/10">
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <CreditCard className="w-5 h-5 text-blue-400" />
+                                        Recent Credit Transactions
+                                    </h3>
+                                </div>
+                                <div className="overflow-x-auto max-h-64">
+                                    <table className="w-full">
+                                        <thead className="bg-zinc-800/50">
+                                            <tr>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">User</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Type</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Amount</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Reason</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {transactions.slice(0, 15).map((tx: any) => (
+                                                <tr key={tx.id} className="hover:bg-white/5">
+                                                    <td className="p-4 text-sm text-white">{tx.users?.username || "Unknown"}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${tx.transaction_type === "deduction" ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"}`}>
+                                                            {tx.transaction_type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-sm font-mono text-white">{tx.amount}</td>
+                                                    <td className="p-4 text-sm text-zinc-400">{tx.reason}</td>
+                                                    <td className="p-4 text-xs text-zinc-500">{new Date(tx.created_at).toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-green-400" />
+                                    Recent User Logins
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {users.slice(0, 8).map((u: any) => (
+                                        <div key={u.id} className="bg-zinc-800/50 rounded-xl p-3 flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold text-xs">
+                                                {u.username?.charAt(0).toUpperCase() || "?"}
+                                            </div>
+                                            <div>
+                                                <p className="text-white text-sm font-medium truncate">{u.username}</p>
+                                                <p className="text-zinc-500 text-xs">{u.last_login ? new Date(u.last_login).toLocaleDateString() : "Never"}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}

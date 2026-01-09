@@ -755,9 +755,11 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   }
 
   // Fallback to free HuggingFace generators (race them)
+  // Increased timeouts for better success rate with textured models
   const texturedGenerators = [
-    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 75000 },   // Tencent - TEXTURED (75s for quality)
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 60000 },         // Microsoft - TEXTURED (60s)
+    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 120000 },   // Tencent - TEXTURED (2min for quality)
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 90000 },              // Microsoft - TEXTURED (90s)
+    { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },              // StabilityAI - TEXTURED (90s)
   ]
 
   // Create racing promises with safe wrappers

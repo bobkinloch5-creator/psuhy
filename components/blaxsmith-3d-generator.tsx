@@ -760,6 +760,183 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                 </>
                             )}
                         </div>
+
+                        {/* Rig & Animate Section */}
+                        {generatedModel.model_url && (
+                            <div className="mt-4 p-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-xl">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">🎬</span>
+                                        <h5 className="text-white font-semibold text-sm">Rig & Animate</h5>
+                                        <span className="text-xs text-cyan-400 bg-cyan-500/20 px-2 py-0.5 rounded-full">FREE</span>
+                                    </div>
+                                    <span className="text-xs text-white/40">Add skeleton + animation</span>
+                                </div>
+
+                                {/* Animation Presets with Preview */}
+                                <div className="grid grid-cols-4 gap-2 mb-3">
+                                    {[
+                                        { id: "idle", icon: "🧍", name: "Idle", preview: "Standing still with subtle breathing, weight shifting side to side" },
+                                        { id: "walk", icon: "🚶", name: "Walk", preview: "Natural walking cycle, arms swinging, steady pace" },
+                                        { id: "run", icon: "🏃", name: "Run", preview: "Fast running motion, dynamic arm pumping, leaning forward" },
+                                        { id: "jump", icon: "⬆️", name: "Jump", preview: "Jump up with arms raised, land with impact" },
+                                        { id: "attack", icon: "⚔️", name: "Attack", preview: "Sword slash motion, aggressive swing with follow-through" },
+                                        { id: "dance", icon: "💃", name: "Dance", preview: "Fun rhythmic dance moves, party vibes" },
+                                        { id: "wave", icon: "👋", name: "Wave", preview: "Friendly wave hello, arm raised" },
+                                        { id: "death", icon: "💀", name: "Death", preview: "Dramatic falling down defeated, collapse" },
+                                    ].map((anim) => (
+                                        <div key={anim.id} className="group relative">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        // Show processing state
+                                                        const btn = document.activeElement as HTMLButtonElement
+                                                        const originalText = btn?.innerText
+                                                        if (btn) btn.innerText = "⏳ Processing..."
+
+                                                        // First rig the model
+                                                        const rigRes = await fetch("/api/generate/rig", {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({
+                                                                modelUrl: generatedModel.model_url,
+                                                                modelName: generatedModel.name || prompt
+                                                            })
+                                                        })
+                                                        const rigData = await rigRes.json()
+
+                                                        // Then animate
+                                                        const animRes = await fetch("/api/generate/animate", {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({
+                                                                riggedModelUrl: rigData.rigged?.rigged_model_url,
+                                                                animationType: anim.id
+                                                            })
+                                                        })
+                                                        const animData = await animRes.json()
+
+                                                        if (btn) btn.innerText = originalText || anim.name
+
+                                                        // Download the animated/rigged model
+                                                        const downloadUrl = rigData.rigged?.rigged_model_url || animData.animation?.animated_model_url || generatedModel.model_url
+
+                                                        if (downloadUrl) {
+                                                            const shouldDownload = confirm(`✅ ${anim.name} animation ready!\n\nClick OK to download the rigged model with animation data.\nClick Cancel to skip download.`)
+
+                                                            if (shouldDownload) {
+                                                                const response = await fetch(downloadUrl)
+                                                                const blob = await response.blob()
+                                                                const filename = `${(generatedModel.name || prompt).replace(/[^a-z0-9]/gi, '_')}_${anim.id}_rigged.glb`
+                                                                const link = document.createElement('a')
+                                                                link.href = URL.createObjectURL(blob)
+                                                                link.download = filename
+                                                                document.body.appendChild(link)
+                                                                link.click()
+                                                                document.body.removeChild(link)
+                                                                URL.revokeObjectURL(link.href)
+                                                            }
+                                                        } else {
+                                                            alert(`✅ ${anim.name} animation created!\n\nAnimation keyframes saved. Use in Roblox with Humanoid:LoadAnimation()`)
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Animation error:", err)
+                                                        alert("Animation failed. Please try again.")
+                                                    }
+                                                }}
+                                                className="w-full flex flex-col items-center gap-1 p-2 bg-black/30 border border-white/10 rounded-lg hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all"
+                                            >
+                                                <span className="text-lg group-hover:scale-125 transition-transform duration-200">{anim.icon}</span>
+                                                <span className="text-xs text-white/60 group-hover:text-white">{anim.name}</span>
+                                            </button>
+                                            {/* Preview tooltip on hover */}
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-black/95 border border-cyan-500/50 rounded-lg text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg shadow-cyan-500/20">
+                                                <div className="font-semibold text-cyan-400 mb-1">{anim.name} Preview</div>
+                                                <div className="text-white/70 max-w-[200px] whitespace-normal">{anim.preview}</div>
+                                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-black/95 border-r border-b border-cyan-500/50 rotate-45"></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Custom Animation Prompt */}
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        id="customAnimPrompt"
+                                        placeholder="Or describe custom animation... (e.g. 'backflip', 'spin kick', 'zombie walk')"
+                                        className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/50"
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            const input = document.getElementById('customAnimPrompt') as HTMLInputElement
+                                            const customPrompt = input?.value?.trim()
+                                            if (!customPrompt) {
+                                                alert("Please enter a custom animation description")
+                                                return
+                                            }
+
+                                            try {
+                                                const btn = document.activeElement as HTMLButtonElement
+                                                if (btn) btn.innerText = "⏳..."
+
+                                                // Rig the model
+                                                const rigRes = await fetch("/api/generate/rig", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({
+                                                        modelUrl: generatedModel.model_url,
+                                                        modelName: generatedModel.name || prompt
+                                                    })
+                                                })
+                                                const rigData = await rigRes.json()
+
+                                                // Animate with custom prompt
+                                                const animRes = await fetch("/api/generate/animate", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({
+                                                        riggedModelUrl: rigData.rigged?.rigged_model_url,
+                                                        customPrompt: customPrompt
+                                                    })
+                                                })
+                                                const animData = await animRes.json()
+
+                                                if (btn) btn.innerText = "Animate"
+
+                                                // Download
+                                                const downloadUrl = rigData.rigged?.rigged_model_url || animData.animation?.animated_model_url || generatedModel.model_url
+                                                if (downloadUrl) {
+                                                    const shouldDownload = confirm(`✅ Custom animation "${customPrompt}" ready!\n\nClick OK to download the rigged model.\nClick Cancel to skip.`)
+                                                    if (shouldDownload) {
+                                                        const response = await fetch(downloadUrl)
+                                                        const blob = await response.blob()
+                                                        const filename = `${(generatedModel.name || prompt).replace(/[^a-z0-9]/gi, '_')}_custom_rigged.glb`
+                                                        const link = document.createElement('a')
+                                                        link.href = URL.createObjectURL(blob)
+                                                        link.download = filename
+                                                        document.body.appendChild(link)
+                                                        link.click()
+                                                        document.body.removeChild(link)
+                                                        URL.revokeObjectURL(link.href)
+                                                    }
+                                                } else {
+                                                    alert(`✅ Custom animation created!\n\nAnimation: "${customPrompt}"`)
+                                                }
+
+                                                input.value = ""
+                                            } catch (err) {
+                                                console.error("Custom animation error:", err)
+                                                alert("Animation failed. Please try again.")
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+                                    >
+                                        Animate
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

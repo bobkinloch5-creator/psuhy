@@ -629,6 +629,56 @@ local function executeCommand(cmd)
 		else
 			warn("[BlaxSmith] ❌ Part code error:", loadErr)
 		end
+	
+	-- INSERT_MUSIC (AI-Generated music)
+	elseif cmd.type == "INSERT_MUSIC" and cmd.data and cmd.data.audio_url then
+		print("[BlaxSmith] 🎵 Creating AI Music:", cmd.data.name or "AIMusic")
+		
+		local SoundService = game:GetService("SoundService")
+		local folder = ensureFolder(ReplicatedStorage, "BlaxSmith_Music")
+		
+		-- Create Sound instance
+		local sound = Instance.new("Sound")
+		sound.Name = cmd.data.name or "AI_Music"
+		sound.SoundId = "" -- URL sounds need to be uploaded to Roblox
+		sound.Volume = 0.5
+		sound.Looped = true
+		
+		-- Add attribute with the original URL for reference
+		sound:SetAttribute("SourceURL", cmd.data.audio_url)
+		sound:SetAttribute("Style", cmd.data.style or "unknown")
+		sound:SetAttribute("Duration", cmd.data.duration or 30)
+		
+		-- Also create a script that shows the download URL
+		local infoScript = Instance.new("Script")
+		infoScript.Name = sound.Name .. "_Info"
+		infoScript.Disabled = true
+		infoScript.Source = [[
+-- AI Generated Music by BlaxSmith
+-- Download the audio file from: ]] .. cmd.data.audio_url .. [[
+
+-- To use this in Roblox:
+-- 1. Download the file from the URL above
+-- 2. Upload it to Roblox as an audio asset
+-- 3. Copy the asset ID and set it as this sound's SoundId
+
+-- Style: ]] .. (cmd.data.style or "AI Generated") .. [[
+
+-- Duration: ]] .. (cmd.data.duration or 30) .. [[s
+
+-- Example:
+-- sound.SoundId = "rbxassetid://YOUR_UPLOADED_ID"
+-- sound:Play()
+]]
+		infoScript.Parent = folder
+		
+		sound.Parent = folder
+		
+		selectAndFocus(folder)
+		addToHistory({ name = sound.Name, instance = sound, type = "music" })
+		updateStats()
+		print("[BlaxSmith] ✅ Music created:", sound.Name, "- Download URL:", cmd.data.audio_url)
+		ChangeHistoryService:SetWaypoint("BlaxSmith: " .. sound.Name)
 	end
 end
 
