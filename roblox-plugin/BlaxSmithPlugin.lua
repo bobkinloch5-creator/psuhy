@@ -166,7 +166,7 @@ local function createStatusUI()
 	
 	-- Title
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -20, 1, 0)
+	title.Size = UDim2.new(1, -60, 1, 0)
 	title.Position = UDim2.new(0, 10, 0, 0)
 	title.BackgroundTransparency = 1
 	title.Text = "🔥 BlaxSmith AI"
@@ -175,6 +175,67 @@ local function createStatusUI()
 	title.TextSize = 18
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Parent = header
+	
+	-- Minimize Button
+	local minimizeBtn = Instance.new("TextButton")
+	minimizeBtn.Name = "MinimizeBtn"
+	minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+	minimizeBtn.Position = UDim2.new(1, -35, 0, 5)
+	minimizeBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	minimizeBtn.BackgroundTransparency = 0.5
+	minimizeBtn.BorderSizePixel = 0
+	minimizeBtn.Text = "−"
+	minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	minimizeBtn.Font = Enum.Font.GothamBold
+	minimizeBtn.TextSize = 20
+	minimizeBtn.Parent = header
+	
+	local minimizeBtnCorner = Instance.new("UICorner")
+	minimizeBtnCorner.CornerRadius = UDim.new(0, 6)
+	minimizeBtnCorner.Parent = minimizeBtn
+	
+	-- Minimized Bar (hidden initially)
+	local minimizedBar = Instance.new("Frame")
+	minimizedBar.Name = "MinimizedBar"
+	minimizedBar.Size = UDim2.new(0, 150, 0, 35)
+	minimizedBar.Position = UDim2.new(1, -160, 0, 10)
+	minimizedBar.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+	minimizedBar.BorderSizePixel = 0
+	minimizedBar.Visible = false
+	minimizedBar.Parent = screenGui
+	
+	local minimizedCorner = Instance.new("UICorner")
+	minimizedCorner.CornerRadius = UDim.new(0, 8)
+	minimizedCorner.Parent = minimizedBar
+	
+	local minimizedGradient = Instance.new("UIGradient")
+	minimizedGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 50)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 60, 30)),
+	})
+	minimizedGradient.Parent = minimizedBar
+	
+	local expandBtn = Instance.new("TextButton")
+	expandBtn.Size = UDim2.new(1, 0, 1, 0)
+	expandBtn.BackgroundTransparency = 1
+	expandBtn.Text = "🔥 BlaxSmith AI ▼"
+	expandBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	expandBtn.Font = Enum.Font.GothamBold
+	expandBtn.TextSize = 12
+	expandBtn.Parent = minimizedBar
+	
+	-- Minimize/Expand handlers
+	minimizeBtn.MouseButton1Click:Connect(function()
+		frame.Visible = false
+		minimizedBar.Visible = true
+		print("[BlaxSmith] 📦 UI minimized")
+	end)
+	
+	expandBtn.MouseButton1Click:Connect(function()
+		frame.Visible = true
+		minimizedBar.Visible = false
+		print("[BlaxSmith] 📦 UI expanded")
+	end)
 	
 	-- Status with icon
 	local status = Instance.new("TextLabel")
