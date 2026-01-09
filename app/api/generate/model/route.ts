@@ -104,7 +104,108 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ CUBE3D (FREE - ROBLOX OPTIMIZED) ============
+// ============ CUBE3D WITH TEXTURE (FREE - ROBLOX OPTIMIZED + AI TEXTURES) ============
+async function generateWithCube3DTextured(prompt: string): Promise<ModelResult> {
+  console.log("[Cube3D+Tex] Generating textured Roblox model:", prompt)
+
+  try {
+    const { Client } = await import("@gradio/client")
+
+    // Step 1: Generate geometry with Cube3D
+    const cube3dClient = await Promise.race([
+      Client.connect("Roblox/cube3d-interactive"),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
+    ]) as any
+
+    console.log("[Cube3D+Tex] Step 1: Generating geometry...")
+
+    const geometryResult = await Promise.race([
+      cube3dClient.predict("/handle_text_prompt", [
+        prompt,
+        false,
+        1.0,
+        1.0,
+        1.0,
+        true,
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Geometry generation timeout")), 180000))
+    ]) as any
+
+    const geometryData = geometryResult.data as any[]
+    if (!geometryData?.[0]) {
+      throw new Error("No geometry from Cube3D")
+    }
+
+    const meshUrl = typeof geometryData[0] === 'string' ? geometryData[0] : geometryData[0]?.url || geometryData[0]?.path
+    console.log("[Cube3D+Tex] Got mesh:", meshUrl)
+
+    // Step 2: Apply textures using Hunyuan3D-Paint (texture generation for meshes)
+    console.log("[Cube3D+Tex] Step 2: Applying AI textures...")
+
+    try {
+      const textureClient = await Promise.race([
+        Client.connect("tencent/Hunyuan3D-2"),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Texture client timeout")), 30000))
+      ]) as any
+
+      // Use the /texgen endpoint to apply textures to existing mesh
+      // Download the mesh first
+      const meshResponse = await fetch(meshUrl)
+      const meshBlob = await meshResponse.blob()
+
+      const textureResult = await Promise.race([
+        textureClient.predict("/texgen", [
+          meshBlob,     // mesh file
+          prompt,       // text prompt for texture style
+          42,           // seed
+          1024,         // texture_size
+        ]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Texture generation timeout")), 120000))
+      ]) as any
+
+      console.log("[Cube3D+Tex] Texture result:", JSON.stringify(textureResult.data).slice(0, 300))
+
+      if (textureResult.data?.[0]) {
+        const texturedUrl = typeof textureResult.data[0] === 'string' ?
+          textureResult.data[0] : textureResult.data[0]?.url || textureResult.data[0]?.path
+
+        if (texturedUrl) {
+          console.log("[Cube3D+Tex] ✅ Got textured model:", texturedUrl)
+          return {
+            model_url: texturedUrl,
+            preview_url: null,
+            formats: {
+              glb: texturedUrl.includes('.glb') ? texturedUrl : null,
+              obj: texturedUrl,
+              fbx: null,
+            },
+            source: "Cube3D + AI Texture (Roblox)"
+          }
+        }
+      }
+    } catch (texError: any) {
+      console.log("[Cube3D+Tex] Texture step failed, returning geometry only:", texError.message)
+    }
+
+    // If texturing fails, return the untextured mesh
+    console.log("[Cube3D+Tex] Returning geometry-only model")
+    return {
+      model_url: meshUrl,
+      preview_url: null,
+      formats: {
+        glb: meshUrl.includes('.glb') ? meshUrl : null,
+        obj: meshUrl.includes('.obj') ? meshUrl : meshUrl,
+        fbx: null,
+      },
+      source: "Cube3D (Geometry Only)"
+    }
+  } catch (error: any) {
+    console.error("[Cube3D+Tex] Error:", error.message)
+    throw error
+  }
+}
+
+// ============ CUBE3D (FREE - ROBLOX OPTIMIZED - GEOMETRY ONLY FALLBACK) ============
 async function generateWithCube3D(prompt: string): Promise<ModelResult> {
   console.log("[Cube3D] Generating with Roblox Cube3D:", prompt)
 
@@ -150,7 +251,7 @@ async function generateWithCube3D(prompt: string): Promise<ModelResult> {
             obj: modelUrl.includes('.obj') ? modelUrl : modelUrl,
             fbx: null,
           },
-          source: "Cube3D (Roblox Optimized)"
+          source: "Cube3D (Geometry Only)"
         }
       }
     }
@@ -363,6 +464,81 @@ async function generateWithTripoSR(prompt: string): Promise<ModelResult> {
   }
 }
 
+// ============ TRELLIS (FREE - HIGH QUALITY TEXTURED) ============
+async function generateWithTrellis(prompt: string): Promise<ModelResult> {
+  console.log("[TRELLIS] Generating textured model with Microsoft TRELLIS:", prompt)
+
+  try {
+    const { Client } = await import("@gradio/client")
+
+    const client = await Promise.race([
+      Client.connect("JeffreyXiang/TRELLIS"),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
+    ]) as any
+
+    console.log("[TRELLIS] Connected")
+
+    // TRELLIS takes a text prompt and generates textured 3D
+    const result = await Promise.race([
+      client.predict("/text_to_3d", [
+        prompt,
+        12345,      // seed
+        12,         // ss_guidance_strength
+        7.5,        // ss_sampling_steps
+        3,          // slat_guidance_strength
+        12,         // slat_sampling_steps
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
+    ]) as any
+
+    console.log("[TRELLIS] Raw result:", JSON.stringify(result.data).slice(0, 500))
+
+    if (result.data) {
+      // Find GLB in results
+      for (const item of result.data) {
+        if (item) {
+          const url = typeof item === 'string' ? item : item?.url || item?.path
+          if (url && (url.includes('.glb') || url.includes('.gltf') || url.includes('.obj'))) {
+            console.log("[TRELLIS] ✅ Got textured model:", url)
+            return {
+              model_url: url,
+              preview_url: null,
+              formats: {
+                glb: url.includes('.glb') ? url : null,
+                obj: url,
+                fbx: null,
+              },
+              source: "TRELLIS (Textured)"
+            }
+          }
+        }
+      }
+      // If no model file found directly, check first result
+      if (result.data[0]) {
+        const first = result.data[0]
+        const url = typeof first === 'string' ? first : first?.url || first?.path
+        if (url) {
+          console.log("[TRELLIS] ✅ Got model from first result:", url)
+          return {
+            model_url: url,
+            preview_url: null,
+            formats: {
+              glb: url.includes('.glb') ? url : null,
+              obj: url,
+              fbx: null,
+            },
+            source: "TRELLIS (Textured)"
+          }
+        }
+      }
+    }
+    throw new Error("No model returned from TRELLIS")
+  } catch (error: any) {
+    console.error("[TRELLIS] Error:", error.message)
+    throw error
+  }
+}
+
 // ============ LGM (FREE - TEXTURED) ============
 async function generateWithLGM(prompt: string): Promise<ModelResult> {
   console.log("[LGM] Generating textured model with Large Gaussian Model:", prompt)
@@ -419,14 +595,16 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 // ============ MAIN GENERATION (PRIORITIZE TEXTURED) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
   // PRIORITY ORDER: Textured models first (full 3D assets with materials/colors)
-  // Cube3D is last because it only generates geometry (no textures yet - upcoming feature)
+  // Cube3D+Textured uses Roblox's Cube3D for geometry + AI texture application
   const generators = [
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },  // Tencent - high quality with TEXTURES
-    { name: "TripoSR", fn: generateWithTripoSR },        // Stability AI - TEXTURED
-    { name: "InstantMesh", fn: generateWithInstantMesh }, // TencentARC - TEXTURED
-    { name: "LGM", fn: generateWithLGM },                 // Large Gaussian Model - TEXTURED
-    { name: "Cube3D", fn: generateWithCube3D },           // Roblox - geometry only (no textures)
-    { name: "Shap-E", fn: generateWithShapE },            // OpenAI - geometry only fallback
+    { name: "Cube3D+Texture", fn: generateWithCube3DTextured }, // Roblox geometry + AI textures ⭐
+    { name: "TRELLIS", fn: generateWithTrellis },               // Microsoft - HIGH QUALITY TEXTURED
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },         // Tencent - high quality with TEXTURES
+    { name: "TripoSR", fn: generateWithTripoSR },               // Stability AI - TEXTURED
+    { name: "InstantMesh", fn: generateWithInstantMesh },       // TencentARC - TEXTURED
+    { name: "LGM", fn: generateWithLGM },                       // Large Gaussian Model - TEXTURED
+    { name: "Cube3D", fn: generateWithCube3D },                 // Roblox - geometry only fallback
+    { name: "Shap-E", fn: generateWithShapE },                  // OpenAI - geometry only fallback
   ]
 
   for (const gen of generators) {
