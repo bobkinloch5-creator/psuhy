@@ -182,7 +182,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
     const [progressText, setProgressText] = useState("")
     const [showExportDropdown, setShowExportDropdown] = useState(false)
     const [elapsedTime, setElapsedTime] = useState(0)
-    const [remainingTime, setRemainingTime] = useState(25)
+    const [remainingTime, setRemainingTime] = useState(210)
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     // Load model-viewer on mount
@@ -233,16 +233,16 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         setProgress(0)
         setProgressText("Initializing...")
         setElapsedTime(0)
-        setRemainingTime(90)
+        setRemainingTime(210)  // 3.5 minutes for HD textured models
 
         // Start progress simulation (LGM typically takes 60-120 seconds)
         const startTime = Date.now()
-        const estimatedDuration = 15000 // 15 seconds estimate for LGM
+        const estimatedDuration = 180000 // 3 minutes estimate for CometAPI HD textures
 
         progressIntervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTime
             const elapsedSeconds = Math.floor(elapsed / 1000)
-            const remainingSeconds = Math.max(0, 90 - elapsedSeconds)
+            const remainingSeconds = Math.max(0, 210 - elapsedSeconds)  // 3.5 min max
             const progressPercent = Math.min(95, (elapsed / estimatedDuration) * 100)
 
             setProgress(progressPercent)
