@@ -138,25 +138,31 @@ local function startPolling()
         end
         print("[BlaxSmith]  executeCommand ready! Starting command polling...")
         
-        -- Get Studio user ID for authentication with website
-        local studioUserId = nil
-        pcall(function()
-            local StudioService = game:GetService("StudioService")
-            studioUserId = tostring(StudioService:GetUserId())
-        end)
-        
-        -- Fallback: Use a unique machine identifier if no Studio user
-        if not studioUserId or studioUserId == "0" then
-            studioUserId = "plugin_" .. HttpService:GenerateGUID(false):sub(1, 8)
-            print("[BlaxSmith]  Using generated ID:", studioUserId)
-        else
-            print("[BlaxSmith]  Connected as Roblox User ID:", studioUserId)
+        -- Wait for pairing code to be generated
+        local pairingCode = nil
+        while not pairingCode do
+            pairingCode = _G.BlaxSmithPairingCode
+            if not pairingCode then
+                wait(0.5)
+            end
         end
+        print("[BlaxSmith]  Using pairing code for connection:", pairingCode)
+        
+        -- Register the pairing code with the server
+        pcall(function()
+            local registerUrl = CONFIG.APP_URL .. "/api/plugin/register"
+            local registerData = HttpService:JSONEncode({
+                code = pairingCode,
+                version = CONFIG.PLUGIN_VERSION
+            })
+            HttpService:PostAsync(registerUrl, registerData, Enum.HttpContentType.ApplicationJson)
+            print("[BlaxSmith]  Registered pairing code with server")
+        end)
         
         while pollingActive do
             pcall(function()
-                -- Poll with user ID so website knows who we are
-                local pollUrl = CONFIG.APP_URL .. "/api/plugin/poll?userId=" .. studioUserId
+                -- Poll with pairing code so website knows who we are
+                local pollUrl = CONFIG.APP_URL .. "/api/plugin/poll?code=" .. pairingCode
                 local response = HttpService:GetAsync(pollUrl)
                 if response and response ~= "" and response ~= "[]" then
                     local commands = HttpService:JSONDecode(response)
@@ -523,6 +529,58 @@ StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
 StatusLabel.TextSize = 14
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.Parent = centerContainer
+
+-- PAIRING CODE SECTION
+local pairingContainer = Instance.new("Frame")
+pairingContainer.Name = "PairingContainer"
+pairingContainer.Size = UDim2.new(0.9, 0, 0, 80)
+pairingContainer.Position = UDim2.new(0.05, 0, 0, 280)
+pairingContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+pairingContainer.BackgroundTransparency = 0.3
+pairingContainer.BorderSizePixel = 0
+pairingContainer.Parent = centerContainer
+
+local pairingCorner = Instance.new("UICorner")
+pairingCorner.CornerRadius = UDim.new(0, 12)
+pairingCorner.Parent = pairingContainer
+
+local pairingTitle = Instance.new("TextLabel")
+pairingTitle.Size = UDim2.new(1, 0, 0, 20)
+pairingTitle.Position = UDim2.new(0, 0, 0, 8)
+pairingTitle.BackgroundTransparency = 1
+pairingTitle.Text = "🔗 Enter this code on blaxsmith.dev:"
+pairingTitle.TextColor3 = Color3.fromRGB(180, 180, 200)
+pairingTitle.TextSize = 11
+pairingTitle.Font = Enum.Font.Gotham
+pairingTitle.Parent = pairingContainer
+
+-- Generate 6-digit pairing code
+local pairingCode = string.format("%06d", math.random(100000, 999999))
+
+local pairingCodeLabel = Instance.new("TextLabel")
+pairingCodeLabel.Name = "PairingCode"
+pairingCodeLabel.Size = UDim2.new(1, 0, 0, 35)
+pairingCodeLabel.Position = UDim2.new(0, 0, 0, 28)
+pairingCodeLabel.BackgroundTransparency = 1
+pairingCodeLabel.Text = pairingCode
+pairingCodeLabel.TextColor3 = Color3.fromRGB(255, 180, 80)
+pairingCodeLabel.TextSize = 28
+pairingCodeLabel.Font = Enum.Font.GothamBold
+pairingCodeLabel.Parent = pairingContainer
+
+local pairingHint = Instance.new("TextLabel")
+pairingHint.Size = UDim2.new(1, 0, 0, 15)
+pairingHint.Position = UDim2.new(0, 0, 1, -18)
+pairingHint.BackgroundTransparency = 1
+pairingHint.Text = "Go to Settings > Plugin to connect"
+pairingHint.TextColor3 = Color3.fromRGB(120, 120, 140)
+pairingHint.TextSize = 10
+pairingHint.Font = Enum.Font.Gotham
+pairingHint.Parent = pairingContainer
+
+-- Store pairing code globally for polling
+_G.BlaxSmithPairingCode = pairingCode
+print("[BlaxSmith] 🔗 Pairing Code:", pairingCode)
 
 -- Footer text
 local footerText = Instance.new("TextLabel")

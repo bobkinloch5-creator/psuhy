@@ -18,10 +18,30 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const pluginUserId = searchParams.get("userId")
+    let pluginUserId = searchParams.get("userId")
+    const pairingCode = searchParams.get("code")
+
+    // If using pairing code, look up the paired user ID
+    if (pairingCode && !pluginUserId) {
+      try {
+        // Import the pairing codes map from register endpoint
+        const { pairingCodes } = await import("../register/route")
+        const codeData = pairingCodes.get(pairingCode)
+        if (codeData?.user_id) {
+          pluginUserId = codeData.user_id
+          console.log(`[Poll] Code ${pairingCode} mapped to user ${pluginUserId}`)
+        } else {
+          // Code exists but not yet paired - return empty but register it
+          console.log(`[Poll] Code ${pairingCode} not yet paired`)
+          return NextResponse.json([], { headers: corsHeaders })
+        }
+      } catch (importErr) {
+        console.log("[Poll] Could not import pairing codes:", importErr)
+      }
+    }
 
     if (!pluginUserId) {
-      return NextResponse.json({ error: "userId required" }, { status: 400, headers: corsHeaders })
+      return NextResponse.json({ error: "userId or code required" }, { status: 400, headers: corsHeaders })
     }
 
     // Use service client for plugin (no cookie auth)
