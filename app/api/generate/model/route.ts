@@ -19,114 +19,99 @@ interface ModelResult {
   source: string
 }
 
-// ============ COMETAPI FAST 3D (FLUX IMAGE → TRIPOSR) ============
-// Step 1: Generate image with Flux Schnell (~2s)
-// Step 2: Convert to 3D with TripoSR (~30s)
-// Total: ~40 seconds instead of 250+ with Hunyuan3D-2
+// ============ COMETAPI 3D GENERATION WITH RETRY ============
+// Direct text-to-3D with Hunyuan3D-2 (includes automatic retry on busy server)
 async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
-  console.log("[CometAPI-3D] Generating with FAST Flux + TripoSR pipeline:", prompt)
+  console.log("[CometAPI-3D] Starting 3D generation for:", prompt)
 
   const apiKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
   if (!apiKey) {
     throw new Error("No CometAPI key configured")
   }
 
-  try {
-    // STEP 1: Generate reference image with Flux Schnell (VERY FAST ~2s)
-    console.log("[CometAPI-3D] Step 1: Generating reference image with Flux Schnell...")
-    const imagePrompt = `${prompt}, 3D render, single centered object, front view, white background, clean edges, high detail, no shadows`
+  const maxRetries = 3
+  let lastError: Error | null = null
 
-    const imageResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "flux-schnell",  // Ultra fast image gen (~2 seconds)
-        prompt: imagePrompt,
-        size: "1024x1024",
-        n: 1,
-      }),
-    })
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[CometAPI-3D] Attempt ${attempt}/${maxRetries}...`)
 
-    if (!imageResponse.ok) {
-      const errorText = await imageResponse.text()
-      console.error("[CometAPI-3D] Image generation failed:", errorText)
-      throw new Error(`Image generation failed: ${imageResponse.status}`)
-    }
+      // Direct text-to-3D generation
+      const response = await fetch("https://api.cometapi.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "Hunyuan3D-2",
+          prompt: `${prompt}, high quality 3D model, vibrant colors, detailed textures, game-ready asset`,
+        }),
+      })
 
-    const imageData = await imageResponse.json()
-    let referenceImageUrl: string | null = null
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`[CometAPI-3D] Attempt ${attempt} failed:`, errorText)
 
-    if (imageData.data && imageData.data.length > 0) {
-      const imgData = imageData.data[0]
-      if (imgData.url) {
-        referenceImageUrl = imgData.url
-      } else if (imgData.b64_json) {
-        referenceImageUrl = `data:image/png;base64,${imgData.b64_json}`
+        // Check if server is busy - retry after delay
+        if (errorText.includes("busy") || errorText.includes("rate") || response.status === 429 || response.status === 503) {
+          console.log(`[CometAPI-3D] Server busy, waiting ${attempt * 5}s before retry...`)
+          await new Promise(resolve => setTimeout(resolve, attempt * 5000))
+          lastError = new Error(`Server is busy (attempt ${attempt})`)
+          continue
+        }
+
+        throw new Error(`API error: ${response.status} - ${errorText}`)
       }
-    }
 
-    if (!referenceImageUrl) {
-      throw new Error("Failed to generate reference image")
-    }
-    console.log("[CometAPI-3D] ✅ Got reference image in ~2s")
+      const data = await response.json()
+      console.log("[CometAPI-3D] Response received:", JSON.stringify(data).slice(0, 300))
 
-    // STEP 2: Convert to 3D with Hunyuan3D-2 using the image
-    console.log("[CometAPI-3D] Step 2: Converting to 3D with Hunyuan3D-2...")
+      // Handle response
+      if (data.data && data.data.length > 0) {
+        const result = data.data[0]
 
-    const modelResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "Hunyuan3D-2",
-        prompt: `${prompt}, detailed 3D model, vibrant colors, textured`,
-        image: referenceImageUrl,  // Use the generated image as reference
-      }),
-    })
+        if (result.url) {
+          console.log("[CometAPI-3D] ✅ SUCCESS! Got 3D model URL:", result.url)
+          return {
+            model_url: result.url,
+            preview_url: result.url.replace(".glb", ".png") || null,
+            formats: { glb: result.url, obj: null, fbx: null },
+            source: "CometAPI Hunyuan3D-2"
+          }
+        }
 
-    if (!modelResponse.ok) {
-      const errorText = await modelResponse.text()
-      console.error("[CometAPI-3D] 3D generation failed:", errorText)
-      throw new Error(`3D generation failed: ${modelResponse.status}`)
-    }
-
-    const modelData = await modelResponse.json()
-    console.log("[CometAPI-3D] Response:", JSON.stringify(modelData).slice(0, 500))
-
-    if (modelData.data && modelData.data.length > 0) {
-      const result = modelData.data[0]
-
-      if (result.url) {
-        console.log("[CometAPI-3D] ✅ Got 3D model URL:", result.url)
-        return {
-          model_url: result.url,
-          preview_url: referenceImageUrl,
-          formats: { glb: result.url, obj: null, fbx: null },
-          source: "CometAPI Hunyuan3D-2 (Colored)"
+        if (result.b64_json) {
+          console.log("[CometAPI-3D] ✅ SUCCESS! Got base64 GLB data")
+          const dataUrl = `data:model/gltf-binary;base64,${result.b64_json}`
+          return {
+            model_url: dataUrl,
+            preview_url: null,
+            formats: { glb: dataUrl, obj: null, fbx: null },
+            source: "CometAPI Hunyuan3D-2"
+          }
         }
       }
 
-      if (result.b64_json) {
-        const dataUrl = `data:model/gltf-binary;base64,${result.b64_json}`
-        return {
-          model_url: dataUrl,
-          preview_url: referenceImageUrl,
-          formats: { glb: dataUrl, obj: null, fbx: null },
-          source: "CometAPI Hunyuan3D-2 (Colored)"
-        }
+      // No data returned - retry
+      console.log(`[CometAPI-3D] No model data in response, retrying...`)
+      lastError = new Error("No model data in response")
+      await new Promise(resolve => setTimeout(resolve, 3000))
+
+    } catch (error: any) {
+      console.error(`[CometAPI-3D] Attempt ${attempt} error:`, error.message)
+      lastError = error
+
+      if (attempt < maxRetries) {
+        console.log(`[CometAPI-3D] Waiting ${attempt * 3}s before retry...`)
+        await new Promise(resolve => setTimeout(resolve, attempt * 3000))
       }
     }
-
-    throw new Error("No model data in response")
-  } catch (error: any) {
-    console.error("[CometAPI-3D] Error:", error.message)
-    throw error
   }
+
+  // All retries failed
+  console.error("[CometAPI-3D] All retries failed:", lastError?.message)
+  throw lastError || new Error("3D generation failed after all retries")
 }
 
 // ============ TRIPO3D API (FREE TIER - 300 CREDITS/MONTH - FAST COLORED MODELS) ============
