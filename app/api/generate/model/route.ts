@@ -592,30 +592,30 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ MAIN GENERATION (PARALLEL RACING FOR SPEED) ============
+// ============ MAIN GENERATION (TEXTURED MODELS ONLY - COLORED OUTPUT) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // PHASE 1: Race the fastest generators (45 second timeout per generator)
-  // Cube3D is fastest but geometry-only, Hunyuan3D is textured
-  console.log("[3D-Gen] Phase 1: Racing fast generators...")
+  // ONLY TEXTURED GENERATORS - so models come with colors/textures built-in
+  console.log("[3D-Gen] Generating TEXTURED model (with colors)...")
 
-  const fastGenerators = [
-    { name: "Cube3D", fn: generateWithCube3D },           // Fastest - geometry only
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },   // Textured - usually faster
-    { name: "Shap-E", fn: generateWithShapE },            // Fast fallback
+  // Primary textured generators - race them for speed
+  const texturedGenerators = [
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },   // Tencent - TEXTURED
+    { name: "TRELLIS", fn: generateWithTrellis },         // Microsoft - TEXTURED
+    { name: "TripoSR", fn: generateWithTripoSR },         // Stability AI - TEXTURED
   ]
 
-  // Create racing promises with 45-second individual timeouts
-  const racePromises = fastGenerators.map(async (gen): Promise<ModelResult> => {
+  // Create racing promises with 90-second individual timeouts (textured takes longer)
+  const racePromises = texturedGenerators.map(async (gen): Promise<ModelResult> => {
     console.log(`[3D-Gen] Starting ${gen.name}...`)
     try {
       const result = await Promise.race([
         gen.fn(prompt),
         new Promise<ModelResult>((_, reject) =>
-          setTimeout(() => reject(new Error(`${gen.name} timeout`)), 45000)
+          setTimeout(() => reject(new Error(`${gen.name} timeout`)), 90000)
         )
       ])
       if (result.model_url) {
-        console.log(`[3D-Gen] ✅ ${gen.name} succeeded!`)
+        console.log(`[3D-Gen] ✅ ${gen.name} succeeded with TEXTURED model!`)
         return result
       }
       throw new Error("No model URL")
@@ -625,30 +625,28 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     }
   })
 
-  // Return the first successful result using Promise.any
+  // Return the first successful textured result
   try {
     const firstSuccess = await Promise.any(racePromises)
     if (firstSuccess?.model_url) return firstSuccess
   } catch {
-    console.log("[3D-Gen] Phase 1 failed, trying Phase 2...")
+    console.log("[3D-Gen] Primary textured generators failed, trying backups...")
   }
 
-  // PHASE 2: Try remaining textured generators sequentially (slower but higher quality)
-  console.log("[3D-Gen] Phase 2: Trying slower textured generators...")
-
-  const slowGenerators = [
-    { name: "TRELLIS", fn: generateWithTrellis },
-    { name: "TripoSR", fn: generateWithTripoSR },
+  // Backup textured generators
+  const backupGenerators = [
     { name: "LGM", fn: generateWithLGM },
+    { name: "InstantMesh", fn: generateWithInstantMesh },
+    { name: "Cube3D+Texture", fn: generateWithCube3DTextured }, // Geometry + AI texture
   ]
 
-  for (const gen of slowGenerators) {
-    console.log(`[3D-Gen] Trying ${gen.name}...`)
+  for (const gen of backupGenerators) {
+    console.log(`[3D-Gen] Trying backup: ${gen.name}...`)
     try {
       const result = await Promise.race([
         gen.fn(prompt),
         new Promise<ModelResult>((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), 60000)
+          setTimeout(() => reject(new Error("Timeout")), 120000)
         )
       ])
       if (result.model_url) {
