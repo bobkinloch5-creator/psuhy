@@ -750,14 +750,14 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // ============ FREE TEXT-TO-3D FIRST (Best quality, no cost!) ============
-  // Hunyuan3D-2 and TRELLIS are top-tier free options with amazing textures
-  console.log("[3D-Gen] Trying FREE text-to-3D generators first...")
+  // ============ FREE TEXT-TO-3D FIRST (Fast + Quality) ============
+  // Reduced timeouts for faster generation - 60s max per generator
+  console.log("[3D-Gen] Trying FREE text-to-3D generators (fast mode)...")
 
   const freeTexturedGenerators = [
-    { name: "Hunyuan3D-2 (Tencent)", fn: generateWithHunyuan3D, timeout: 150000 },  // Best free - 4K PBR textures
-    { name: "TRELLIS (Microsoft)", fn: generateWithTrellis, timeout: 150000 },       // Excellent quality
-    { name: "LGM (Gaussian)", fn: generateWithLGM, timeout: 120000 },                // Good fallback
+    { name: "Hunyuan3D-2 (Tencent)", fn: generateWithHunyuan3D, timeout: 60000 },  // 60s max
+    { name: "TRELLIS (Microsoft)", fn: generateWithTrellis, timeout: 60000 },       // 60s max
+    { name: "LGM (Gaussian)", fn: generateWithLGM, timeout: 45000 },                // 45s - faster
   ]
 
   // Race all free generators - return first success
@@ -785,10 +785,10 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] CometAPI failed:", error.message)
   }
 
-  // ============ SECONDARY FREE FALLBACKS ============
+  // ============ SECONDARY FREE FALLBACKS (Fast) ============
   const secondaryGenerators = [
-    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 120000 },
-    { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 45000 },  // 45s
+    { name: "TripoSR", fn: generateWithTripoSR, timeout: 45000 },          // 45s
   ]
 
   const secondaryPromises = secondaryGenerators.map(gen => {
