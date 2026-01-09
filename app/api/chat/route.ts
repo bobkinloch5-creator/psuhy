@@ -322,28 +322,54 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
         const assetPattern = /\[INSERT_ASSET:\s*([^\]]+)\]/gi
         for (const match of aiResponse.matchAll(assetPattern)) {
             const assetName = match[1].trim()
+            let found = false
+
             try {
-                // Use the Roblox search API that works
-                const searchUrl = `https://apis.roblox.com/toolbox-service/v1/items/details?assetType=Model&keyword=${encodeURIComponent(assetName)}&limit=1`
-                const response = await fetch(searchUrl, {
-                    headers: {
-                        "Accept": "application/json",
-                        "User-Agent": "Roblox/WinInet"
+                // Try multiple search endpoints for better results
+                const searchEndpoints = [
+                    // Primary: Roblox catalog search
+                    `https://catalog.roblox.com/v1/search/items?category=Models&keyword=${encodeURIComponent(assetName)}&limit=10`,
+                    // Fallback: Toolbox service
+                    `https://apis.roblox.com/toolbox-service/v1/marketplace?keyword=${encodeURIComponent(assetName)}&category=FreeModels&pageNumber=1&limit=10`,
+                ]
+
+                for (const searchUrl of searchEndpoints) {
+                    if (found) break
+
+                    try {
+                        const response = await fetch(searchUrl, {
+                            headers: {
+                                "Accept": "application/json",
+                                "User-Agent": "Roblox/WinInet"
+                            }
+                        })
+
+                        if (response.ok) {
+                            const data = await response.json()
+                            const items = data.data || data.results || data.items || []
+
+                            if (items.length > 0) {
+                                // Find the best match
+                                const asset = items[0]
+                                const assetId = asset.id || asset.assetId || asset.asset?.id
+                                const assetNameFound = asset.name || asset.assetName || asset.asset?.name || assetName
+
+                                if (assetId) {
+                                    const command = createInsertModelCommand(assetId, assetNameFound)
+                                    await addCommand(userData.id, command)
+                                    insertedItems.push(`Model: ${assetNameFound}`)
+                                    console.log(`[AI Chat] Queued asset: ${assetNameFound} (${assetId})`)
+                                    found = true
+                                }
+                            }
+                        }
+                    } catch (endpointErr) {
+                        console.log(`[AI Chat] Endpoint failed for ${assetName}:`, endpointErr)
                     }
-                })
-                if (response.ok) {
-                    const data = await response.json()
-                    if (data.data && data.data.length > 0) {
-                        const asset = data.data[0]
-                        const command = createInsertModelCommand(asset.asset.id, asset.asset.name || assetName)
-                        await addCommand(userData.id, command)
-                        insertedItems.push(`Model: ${asset.asset.name}`)
-                        console.log(`[AI Chat] Queued asset: ${asset.asset.name} (${asset.asset.id})`)
-                    } else {
-                        console.log(`[AI Chat] No assets found for: ${assetName}`)
-                    }
-                } else {
-                    console.log(`[AI Chat] Asset search returned ${response.status}: ${assetName}`)
+                }
+
+                if (!found) {
+                    console.log(`[AI Chat] No assets found for: ${assetName} - AI will create using INSERT_PART instead`)
                 }
             } catch (err) {
                 console.error(`[AI Chat] Asset search failed: ${assetName}`, err)
