@@ -758,7 +758,7 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   // Increased timeouts for better success rate with textured models
   const texturedGenerators = [
     { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 120000 },   // Tencent - TEXTURED (2min for quality)
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 90000 },              // Microsoft - TEXTURED (90s)
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 120000 },      // TencentARC - TEXTURED (2min)
     { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },              // StabilityAI - TEXTURED (90s)
   ]
 
@@ -776,36 +776,9 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] Primary textured generators all failed:", aggregateError)
   }
 
-  console.log("[3D-Gen] Trying backup generators...")
-
-  // Backup generators (sequential - only fast ones with 45s timeout)
-  const backupGenerators = [
-    { name: "LGM", fn: generateWithLGM, timeout: 45000 },
-    { name: "Shap-E", fn: generateWithShapE, timeout: 45000 },  // Fast geometry fallback
-  ]
-
-  for (const gen of backupGenerators) {
-    console.log(`[3D-Gen] Trying backup: ${gen.name}...`)
-    try {
-      const result = await safeGenerate(gen.name, gen.fn, gen.timeout)
-      if (result.model_url) {
-        return result
-      }
-    } catch (error: any) {
-      console.log(`[3D-Gen] Backup ${gen.name} failed:`, error.message)
-    }
-  }
-
-  // Final fallback - try geometry-only as last resort
-  console.log("[3D-Gen] All textured generators failed, trying geometry fallback...")
-  try {
-    const cubeResult = await safeGenerate("Cube3D", generateWithCube3D, 90000)
-    if (cubeResult.model_url) {
-      return cubeResult
-    }
-  } catch {
-    console.log("[3D-Gen] Geometry fallback also failed")
-  }
+  // REMOVED: No more untextured fallbacks (LGM, Shap-E, Cube3D)
+  // We only want textured models - better to fail than return white/grey mesh
+  console.log("[3D-Gen] ⚠️ All textured generators failed. Not using untextured fallbacks to avoid white models.")
 
   return {
     model_url: null,
