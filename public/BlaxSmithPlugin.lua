@@ -8582,7 +8582,7 @@ connectBtn.MouseButton1Click:Connect(function()
             isConnected = true
             connectBtn.Text = " CONNECTED"
             connectBtn.BackgroundColor3 = COLORS.GREEN
-            status.Text = "Connected to Desktop App"
+            status.Text = "Connected to BlaxSmith.dev"
             status.TextColor3 = COLORS.GREEN
         else
             connectBtn.Text = " Failed - Retry"
