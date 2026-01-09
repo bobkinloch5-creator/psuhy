@@ -552,6 +552,13 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                             </div>
                             <div className="text-xs text-white/50 mt-1">Elapsed</div>
                         </div>
+                        <div className="w-px h-12 bg-white/20"></div>
+                        <div className="text-center">
+                            <div className="text-lg font-semibold text-cyan-400">
+                                {remainingTime > 0 ? new Date(Date.now() + remainingTime * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : "Soon..."}
+                            </div>
+                            <div className="text-xs text-white/50 mt-1">Ready At</div>
+                        </div>
                     </div>
 
                     {/* Status Text */}
@@ -572,7 +579,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
                     {/* Progress Percentage */}
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/50">Multi-Engine AI</span>
+                        <span className="text-xs text-white/50">Multi-Engine AI • High Quality Mode</span>
                         <span className="text-sm font-bold text-white/80">{Math.round(progress)}%</span>
                     </div>
                 </div>
