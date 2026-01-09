@@ -368,10 +368,10 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
       client.predict("/text-to-3d", [
         enhancedPrompt,
         0,        // seed
-        20.0,     // guidance_scale (increased for better detail)
-        128,      // num_steps (doubled for higher quality)
+        15.0,     // guidance_scale
+        64,       // num_steps (max is 100, using 64 for speed)
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
     ]) as any
 
     const resultData = result.data as any[]
@@ -743,12 +743,33 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] Primary textured generators all failed:", aggregateError)
   }
 
-  // Fallback generators - geometry only but reliable (users can add color in Roblox)
-  console.log("[3D-Gen] Trying fallback generators (may need manual coloring)...")
+  // Fallback generators - try Cube3D textured first (Roblox official), then geometry-only
+  console.log("[3D-Gen] Trying fallback generators...")
 
+  // First try Cube3D with AI textures (more reliable than HF free spaces)
+  try {
+    console.log("[3D-Gen] Trying Cube3D+Texture (Roblox Official)...")
+    const cube3dResult = await safeGenerate("Cube3D+Tex", generateWithCube3DTextured, 180000)
+    if (cube3dResult?.model_url) return cube3dResult
+  } catch (error: any) {
+    console.log("[3D-Gen] Cube3D+Tex failed:", error.message)
+  }
+
+  // Try geometry-only Cube3D (fastest, most reliable)
+  try {
+    console.log("[3D-Gen] Trying Cube3D geometry-only...")
+    const cube3dBasic = await safeGenerate("Cube3D", generateWithCube3D, 90000)
+    if (cube3dBasic?.model_url) {
+      cube3dBasic.source = "Cube3D (Add color in Roblox Studio)"
+      return cube3dBasic
+    }
+  } catch (error: any) {
+    console.log("[3D-Gen] Cube3D basic failed:", error.message)
+  }
+
+  // Final fallbacks
   const fallbackGenerators = [
-    { name: "LGM", fn: generateWithLGM, timeout: 60000 },
-    { name: "Shap-E", fn: generateWithShapE, timeout: 60000 },
+    { name: "Shap-E", fn: generateWithShapE, timeout: 90000 },
   ]
 
   for (const gen of fallbackGenerators) {
