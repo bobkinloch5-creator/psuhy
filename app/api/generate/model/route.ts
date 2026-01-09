@@ -750,26 +750,28 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // ============ COMETAPI FIRST (FAST + RELIABLE) ============
-  // Paid but fast and reliable - prioritize user experience
-  console.log("[3D-Gen] Trying CometAPI (fast + reliable)...")
+  // ============ 100% FREE GENERATORS ONLY ============
+  // Cube3D is Roblox's official model generator - most reliable
+  console.log("[3D-Gen] Trying Cube3D (Roblox Official - FREE + Reliable)...")
+
   try {
-    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 60000) // 60s max
-    if (cometResult?.model_url) {
-      console.log("[3D-Gen] ✅ CometAPI succeeded!")
-      return cometResult
+    const cube3dResult = await safeGenerate("Cube3D", generateWithCube3D, 60000) // 60s max
+    if (cube3dResult?.model_url) {
+      console.log("[3D-Gen] ✅ Cube3D (Roblox Official) succeeded!")
+      cube3dResult.source = "Cube3D (Roblox Official - Free)"
+      return cube3dResult
     }
   } catch (error: any) {
-    console.log("[3D-Gen] CometAPI failed, trying free generators...", error.message)
+    console.log("[3D-Gen] Cube3D failed, trying other free generators...", error.message)
   }
 
-  // ============ FREE FALLBACKS (if paid fails) ============
-  console.log("[3D-Gen] Trying FREE text-to-3D generators...")
+  // ============ OTHER FREE GENERATORS ============
+  console.log("[3D-Gen] Trying other FREE text-to-3D generators...")
 
   const freeTexturedGenerators = [
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 30000 },  // 30s max
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 30000 },        // 30s max
-    { name: "LGM", fn: generateWithLGM, timeout: 30000 },                 // 30s max
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 45000 },  // 45s max
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 45000 },        // 45s max
+    { name: "LGM", fn: generateWithLGM, timeout: 45000 },                 // 45s max
   ]
 
   // Race all free generators - return first success
@@ -785,13 +787,13 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
       return freeSuccess
     }
   } catch (freeError) {
-    console.log("[3D-Gen] Free generators failed...", freeError)
+    console.log("[3D-Gen] Free textured generators failed...", freeError)
   }
 
-  // ============ SECONDARY FREE FALLBACKS (Fast) ============
+  // ============ SECONDARY FREE FALLBACKS ============
   const secondaryGenerators = [
-    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 45000 },  // 45s
-    { name: "TripoSR", fn: generateWithTripoSR, timeout: 45000 },          // 45s
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 60000 },  // 60s
+    { name: "TripoSR", fn: generateWithTripoSR, timeout: 60000 },          // 60s
   ]
 
   const secondaryPromises = secondaryGenerators.map(gen => {
@@ -806,28 +808,13 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] Secondary generators all failed:", aggregateError)
   }
 
-  // Fallback generators - try Cube3D textured first (Roblox official), then geometry-only
-  console.log("[3D-Gen] Trying fallback generators...")
-
-  // First try Cube3D with AI textures (more reliable than HF free spaces)
+  // Final fallbacks - try Cube3D with AI textures for better quality
   try {
-    console.log("[3D-Gen] Trying Cube3D+Texture (Roblox Official)...")
-    const cube3dResult = await safeGenerate("Cube3D+Tex", generateWithCube3DTextured, 180000)
+    console.log("[3D-Gen] Trying Cube3D+Texture (Roblox Official + AI Texture)...")
+    const cube3dResult = await safeGenerate("Cube3D+Tex", generateWithCube3DTextured, 90000)
     if (cube3dResult?.model_url) return cube3dResult
   } catch (error: any) {
     console.log("[3D-Gen] Cube3D+Tex failed:", error.message)
-  }
-
-  // Try geometry-only Cube3D (fastest, most reliable)
-  try {
-    console.log("[3D-Gen] Trying Cube3D geometry-only...")
-    const cube3dBasic = await safeGenerate("Cube3D", generateWithCube3D, 90000)
-    if (cube3dBasic?.model_url) {
-      cube3dBasic.source = "Cube3D (Add color in Roblox Studio)"
-      return cube3dBasic
-    }
-  } catch (error: any) {
-    console.log("[3D-Gen] Cube3D basic failed:", error.message)
   }
 
   // Final fallbacks
