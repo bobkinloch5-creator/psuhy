@@ -776,9 +776,27 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] Primary textured generators all failed:", aggregateError)
   }
 
-  // REMOVED: No more untextured fallbacks (LGM, Shap-E, Cube3D)
-  // We only want textured models - better to fail than return white/grey mesh
-  console.log("[3D-Gen] ⚠️ All textured generators failed. Not using untextured fallbacks to avoid white models.")
+  // Fallback generators - geometry only but reliable (users can add color in Roblox)
+  console.log("[3D-Gen] Trying fallback generators (may need manual coloring)...")
+
+  const fallbackGenerators = [
+    { name: "LGM", fn: generateWithLGM, timeout: 60000 },
+    { name: "Shap-E", fn: generateWithShapE, timeout: 60000 },
+  ]
+
+  for (const gen of fallbackGenerators) {
+    console.log(`[3D-Gen] Trying fallback: ${gen.name}...`)
+    try {
+      const result = await safeGenerate(gen.name, gen.fn, gen.timeout)
+      if (result?.model_url) {
+        // Mark as needing color so UI can show warning
+        result.source = `${gen.name} (Add color in Roblox Studio)`
+        return result
+      }
+    } catch (error: any) {
+      console.log(`[3D-Gen] Fallback ${gen.name} failed:`, error.message)
+    }
+  }
 
   return {
     model_url: null,
