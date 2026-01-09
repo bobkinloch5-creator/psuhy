@@ -196,17 +196,27 @@ Help **${userData.username}** build amazing Roblox games. Be smart, be fast. ðŸ”
         for (const match of aiResponse.matchAll(assetPattern)) {
             const assetName = match[1].trim()
             try {
-                const searchUrl = `https://www.roblox.com/catalog/json?Keyword=${encodeURIComponent(assetName)}&Category=6&MaxPrice=0&ResultsPerPage=1`
-                const response = await fetch(searchUrl, { headers: { "Accept": "application/json" } })
-                if (response.ok) {
-                    const items = await response.json()
-                    if (Array.isArray(items) && items.length > 0 && items[0].AssetId) {
-                        const asset = items[0]
-                        const command = createInsertModelCommand(asset.AssetId, asset.Name || assetName)
-                        await addCommand(userData.id, command)
-                        insertedItems.push(`Model: ${asset.Name}`)
-                        console.log(`[AI Chat] Queued asset: ${asset.Name} (${asset.AssetId})`)
+                // Use the Roblox search API that works
+                const searchUrl = `https://apis.roblox.com/toolbox-service/v1/items/details?assetType=Model&keyword=${encodeURIComponent(assetName)}&limit=1`
+                const response = await fetch(searchUrl, {
+                    headers: {
+                        "Accept": "application/json",
+                        "User-Agent": "Roblox/WinInet"
                     }
+                })
+                if (response.ok) {
+                    const data = await response.json()
+                    if (data.data && data.data.length > 0) {
+                        const asset = data.data[0]
+                        const command = createInsertModelCommand(asset.asset.id, asset.asset.name || assetName)
+                        await addCommand(userData.id, command)
+                        insertedItems.push(`Model: ${asset.asset.name}`)
+                        console.log(`[AI Chat] Queued asset: ${asset.asset.name} (${asset.asset.id})`)
+                    } else {
+                        console.log(`[AI Chat] No assets found for: ${assetName}`)
+                    }
+                } else {
+                    console.log(`[AI Chat] Asset search returned ${response.status}: ${assetName}`)
                 }
             } catch (err) {
                 console.error(`[AI Chat] Asset search failed: ${assetName}`, err)
