@@ -510,15 +510,30 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                     <div className="p-3 border-t border-white/10">
                         <select
                             value={selectedModel}
-                            onChange={(e) => setSelectedModel(e.target.value)}
+                            onChange={(e) => {
+                                // Only allow if not a locked model
+                                const isLocked = !isPro && ["claude-sonnet-4-5-20250929", "claude-sonnet-4", "claude-haiku"].includes(e.target.value)
+                                if (!isLocked) {
+                                    setSelectedModel(e.target.value)
+                                }
+                            }}
                             className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-lg text-white text-sm"
                         >
                             <option value="gemini-3-flash">Gemini 3 Flash (Free)</option>
                             <option value="grok-3">Grok-3 (Fast)</option>
-                            {isPro && <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5 ⭐</option>}
-                            {isPro && <option value="claude-sonnet-4">Claude Sonnet 4</option>}
-                            {isPro && <option value="claude-haiku">Claude Haiku</option>}
+                            <option value="claude-sonnet-4-5-20250929" disabled={!isPro} className={!isPro ? "text-gray-500" : ""}>
+                                {!isPro ? "🔒 " : ""}Claude Sonnet 4.5 ⭐ {!isPro ? "(Pro Only)" : ""}
+                            </option>
+                            <option value="claude-sonnet-4" disabled={!isPro} className={!isPro ? "text-gray-500" : ""}>
+                                {!isPro ? "🔒 " : ""}Claude Sonnet 4 {!isPro ? "(Pro Only)" : ""}
+                            </option>
+                            <option value="claude-haiku" disabled={!isPro} className={!isPro ? "text-gray-500" : ""}>
+                                {!isPro ? "🔒 " : ""}Claude Haiku {!isPro ? "(Pro Only)" : ""}
+                            </option>
                         </select>
+                        {!isPro && (
+                            <p className="text-xs text-orange-400 mt-1">⬆️ Upgrade to Pro for Claude models</p>
+                        )}
                     </div>
 
                     {/* Discord Link */}

@@ -168,7 +168,7 @@ export function OnboardingFlow({ user }: { user: User }) {
 
           <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
             <p className="text-orange-300 text-sm">
-              <strong>Free tier:</strong> 30 unified credits (AI Chat + 3D Models)
+              <strong>Free tier:</strong> 25 AI Chat credits + 2 3D models per month
             </p>
           </div>
         </div>

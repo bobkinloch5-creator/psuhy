@@ -125,11 +125,7 @@ async function generateWithTripo3D(prompt: string): Promise<ModelResult> {
       },
       body: JSON.stringify({
         type: "text_to_model",
-        prompt: `${prompt}, high quality, vibrant colors, textured, game-ready`,
-        model_version: "v2.0-20240919",
-        face_limit: 10000,
-        texture: true,
-        pbr: true,
+        prompt: prompt,
       }),
     })
 
@@ -981,6 +977,35 @@ export async function POST(request: Request) {
     }
 
     console.log(`[3D-Gen] Rate limit passed, generating model...`)
+
+    // ========== MONTHLY MODEL LIMITS ==========
+    // Free: 2/month, Pro: 50/month - resets on 1st of each month
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    const { count: monthlyGenerations } = await serviceClient
+      .from("creations")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userData.id)
+      .eq("type", "3d_model")
+      .gte("created_at", startOfMonth.toISOString())
+
+    const MODEL_LIMIT = isPremiumUser ? 50 : 2
+    const usedModels = monthlyGenerations || 0
+
+    if (usedModels >= MODEL_LIMIT) {
+      console.log(`[3D-Gen] User ${userData.id} has reached ${MODEL_LIMIT} model limit for this month`)
+      return NextResponse.json({
+        error: "Monthly model limit reached!",
+        message: isPremiumUser
+          ? `Pro users can generate up to ${MODEL_LIMIT} models per month. You've used ${usedModels}. Resets on the 1st!`
+          : `Free users can generate up to ${MODEL_LIMIT} models per month. Upgrade to Pro for 50 models/month!`,
+        modelsUsed: usedModels,
+        modelLimit: MODEL_LIMIT,
+      }, { status: 403 })
+    }
+    console.log(`[3D-Gen] User: ${usedModels}/${MODEL_LIMIT} models used this month`)
 
     // Generate model
     const result = await generateModel(prompt, style)
