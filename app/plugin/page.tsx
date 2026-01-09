@@ -59,7 +59,7 @@ export default async function PluginPage() {
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/20 border border-orange-500/30 rounded-full text-orange-400 text-sm font-semibold mb-6">
                 <Zap className="w-4 h-4" />
-                Roblox Studio Plugin v8.0
+                Roblox Studio Plugin v6.5
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-white mb-6">
                 <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
@@ -135,7 +135,7 @@ export default async function PluginPage() {
                       className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-orange-500/30"
                     >
                       <Download className="w-5 h-5" />
-                      Download Plugin v8.0.0
+                      Download Plugin v6.5.0
                     </a>
                   </div>
                 </div>
