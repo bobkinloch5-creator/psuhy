@@ -43,8 +43,8 @@ local PathfindingService = game:GetService("PathfindingService")
 -- CONFIGURATION
 -- ============================================
 local CONFIG = {
-    APP_URL = "http://127.0.0.1:3005",  -- Backend server with command queue (port 3005)
-    PLUGIN_VERSION = "6.4.0",  -- Version bump: Server Controls UI + v4.2.0 App
+    APP_URL = "https://www.blaxsmith.dev",  -- Live website (NOT localhost!)
+    PLUGIN_VERSION = "6.5.0",  -- Version bump: Website Integration
     SDK_VERSION = "6.1",
     TOTAL_MODULES = 250,
     -- City Builder Placement Settings
@@ -138,9 +138,26 @@ local function startPolling()
         end
         print("[BlaxSmith]  executeCommand ready! Starting command polling...")
         
+        -- Get Studio user ID for authentication with website
+        local studioUserId = nil
+        pcall(function()
+            local StudioService = game:GetService("StudioService")
+            studioUserId = tostring(StudioService:GetUserId())
+        end)
+        
+        -- Fallback: Use a unique machine identifier if no Studio user
+        if not studioUserId or studioUserId == "0" then
+            studioUserId = "plugin_" .. HttpService:GenerateGUID(false):sub(1, 8)
+            print("[BlaxSmith]  Using generated ID:", studioUserId)
+        else
+            print("[BlaxSmith]  Connected as Roblox User ID:", studioUserId)
+        end
+        
         while pollingActive do
             pcall(function()
-                local response = HttpService:GetAsync(CONFIG.APP_URL .. "/plugin/poll")
+                -- Poll with user ID so website knows who we are
+                local pollUrl = CONFIG.APP_URL .. "/api/plugin/poll?userId=" .. studioUserId
+                local response = HttpService:GetAsync(pollUrl)
                 if response and response ~= "" and response ~= "[]" then
                     local commands = HttpService:JSONDecode(response)
                     -- Process each command
@@ -551,7 +568,7 @@ end)
 end -- END SPLASH SCREEN SCOPE
 local function updateStatus(connected)
     if connected then 
-        StatusLabel.Text = " Connected to Desktop App"
+        StatusLabel.Text = " Connected to BlaxSmith.dev"
         StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
         animationActive = false
         -- Keep splash visible, just show connected status
