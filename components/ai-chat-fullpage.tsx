@@ -337,6 +337,7 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                         >
                             <option value="gemini-3-flash">Gemini 3 Flash (Free)</option>
                             <option value="grok-3">Grok-3 (Fast)</option>
+                            {isPro && <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5 ⭐</option>}
                             {isPro && <option value="claude-sonnet-4">Claude Sonnet 4</option>}
                             {isPro && <option value="claude-haiku">Claude Haiku</option>}
                         </select>

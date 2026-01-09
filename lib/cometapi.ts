@@ -6,11 +6,11 @@ export const COMETAPI_BASE_URL = "https://api.cometapi.com/v1"
 // Model configurations for different tasks
 // Branded as ForgeMind™ and MasterForge™
 export const MODELS = {
-  // MasterForge™ - Premium tier with Claude Sonnet 4 (BEST)
+  // MasterForge™ - Premium tier with Claude Sonnet 4.5 (BEST)
   masterforge: {
-    script: "claude-sonnet-4-20250514", // Claude Sonnet 4 - Best for code
-    world: "claude-sonnet-4-20250514", // Claude Sonnet 4 - Best for everything
-    system: "claude-sonnet-4-20250514", // Claude Sonnet 4 - Ultimate intelligence
+    script: "claude-sonnet-4-5-20250929", // Claude Sonnet 4.5 - Best for code
+    world: "claude-sonnet-4-5-20250929", // Claude Sonnet 4.5 - Best for everything
+    system: "claude-sonnet-4-5-20250929", // Claude Sonnet 4.5 - Ultimate intelligence
   },
   // ForgeMind Pro - Budget-friendly premium
   premium: {
