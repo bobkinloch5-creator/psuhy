@@ -455,6 +455,16 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                                 {user.subscription_tier?.toUpperCase() || 'FREE'}
                             </span>
                         </div>
+                        {/* Reset Countdown */}
+                        <div className="mt-2 pt-2 border-t border-white/5">
+                            <p className="text-xs text-white/40 flex items-center gap-1">
+                                <span>🔄</span>
+                                <span>Resets on {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                <span className="text-orange-400 ml-1">
+                                    ({Math.ceil((new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days)
+                                </span>
+                            </p>
+                        </div>
                     </div>
 
                     {/* New Chat Button */}
