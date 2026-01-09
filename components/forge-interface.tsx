@@ -13,7 +13,6 @@ import { ModelViewer3D } from "@/components/model-viewer-3d"
 import { InlineModelViewer } from "@/components/inline-model-viewer"
 import { UpgradeModal } from "@/components/upgrade-modal"
 import { PluginStatus } from "@/components/plugin-status"
-import ToolboxBrowser from "@/components/toolbox-browser"
 import { BlaxSmith3DGenerator } from "@/components/blaxsmith-3d-generator"
 import { MyGallery } from "@/components/my-gallery"
 
@@ -312,11 +311,6 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
             modelCredits={user.model_credits}
             onCreditsUpdate={(newCredits) => setUser({ ...user, model_credits: newCredits })}
           />
-        </div>
-
-        {/* Toolbox Store - Compact */}
-        <div className="mb-8">
-          <ToolboxBrowser />
         </div>
       </div>
 

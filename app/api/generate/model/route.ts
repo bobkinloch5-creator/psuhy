@@ -27,20 +27,41 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
 
     console.log("[Hunyuan3D-2] Connected to Hugging Face space")
 
-    // Try to get API info first
+    // Try multiple endpoints - the API may have changed
     let result: any
-    try {
-      // Try the main predict endpoint with index 0
-      result = await Promise.race([
-        client.predict(0, [prompt]),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
-      ])
-    } catch {
-      // Fallback: try with named endpoint
-      result = await Promise.race([
-        client.predict("/run", { text: prompt }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
-      ])
+    const endpoints = [
+      // Try named endpoints first
+      { endpoint: "/generation", args: { prompt } },
+      { endpoint: "/generate", args: { prompt } },
+      { endpoint: "/text_to_3d", args: { prompt } },
+      { endpoint: "/predict", args: [prompt] },
+      // Try function indices
+      { endpoint: 1, args: [prompt] },
+      { endpoint: 2, args: [prompt] },
+      { endpoint: 3, args: [prompt] },
+    ]
+
+    for (const ep of endpoints) {
+      try {
+        console.log(`[Hunyuan3D-2] Trying endpoint: ${ep.endpoint}`)
+        result = await Promise.race([
+          Array.isArray(ep.args)
+            ? client.predict(ep.endpoint, ep.args)
+            : client.predict(ep.endpoint, ep.args),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Endpoint timeout")), 30000))
+        ])
+        if (result?.data) {
+          console.log("[Hunyuan3D-2] Found working endpoint:", ep.endpoint)
+          break
+        }
+      } catch (e: any) {
+        console.log(`[Hunyuan3D-2] Endpoint ${ep.endpoint} failed:`, e.message?.slice(0, 100))
+        continue
+      }
+    }
+
+    if (!result?.data) {
+      throw new Error("No working endpoint found")
     }
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
