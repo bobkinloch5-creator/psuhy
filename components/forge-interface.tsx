@@ -85,60 +85,101 @@ export function ForgeInterface({ user }: ForgeInterfaceProps) {
   const renderHome = () => (
     <>
       <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold text-white mb-4">Welcome back, {user.username}!</h2>
+        <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Welcome back, {user.username}!</h2>
         <p className="text-zinc-400 text-lg">Choose a tool to start creating</p>
       </div>
 
-      {/* Tool Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      {/* Tool Cards - Premium Design */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto px-4">
         {/* AI Chat */}
         <button onClick={() => setActiveTool("chat")} className="group text-left">
-          <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 rounded-3xl p-8 border border-white/10 hover:border-orange-500/50 transition-all hover:scale-[1.02] cursor-pointer shadow-xl">
-            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform">
-              <MessageSquare className="w-8 h-8 text-white" />
+          <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl overflow-hidden border border-white/10 hover:border-cyan-500/50 transition-all hover:scale-[1.02] cursor-pointer shadow-2xl">
+            {/* Image */}
+            <div className="h-48 overflow-hidden">
+              <img
+                src="/images/ai-chat-card.png"
+                alt="AI Chat"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">AI Chat</h3>
-            <p className="text-zinc-400">
-              Chat with ForgeMind AI to get help with your Roblox projects, scripts, and ideas.
-            </p>
-            <div className="mt-6 flex items-center gap-2 text-orange-400 font-semibold">
-              <Sparkles className="w-4 h-4" />
-              Start Chatting
+            {/* Content */}
+            <div className="p-6 relative">
+              <div className="absolute -top-8 left-6 w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/40 border-4 border-zinc-950">
+                <MessageSquare className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2 mt-6">AI Chat</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                Chat with ForgeMind AI to get help with your Roblox projects, scripts, and ideas.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-cyan-400 font-semibold">
+                <Sparkles className="w-4 h-4" />
+                Start Chatting
+              </div>
             </div>
           </div>
         </button>
 
         {/* 3D Model Generation */}
         <button onClick={() => setActiveTool("models")} className="group text-left">
-          <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 rounded-3xl p-8 border border-white/10 hover:border-yellow-500/50 transition-all hover:scale-[1.02] cursor-pointer shadow-xl">
-            <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-yellow-500/30 group-hover:scale-110 transition-transform">
-              <Box className="w-8 h-8 text-white" />
+          <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl overflow-hidden border border-white/10 hover:border-orange-500/50 transition-all hover:scale-[1.02] cursor-pointer shadow-2xl">
+            {/* Image */}
+            <div className="h-48 overflow-hidden">
+              <img
+                src="/images/3d-models-card.png"
+                alt="3D Models"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">3D Models</h3>
-            <p className="text-zinc-400">
-              Generate stunning 3D models from text descriptions. Perfect for characters, props, and more.
-            </p>
-            <div className="mt-6 flex items-center gap-2 text-yellow-400 font-semibold">
-              <span className="text-sm bg-yellow-500/20 px-2 py-1 rounded">{user.model_credits || user.generation_credits} credits</span>
+            {/* Content */}
+            <div className="p-6 relative">
+              <div className="absolute -top-8 left-6 w-14 h-14 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/40 border-4 border-zinc-950">
+                <Box className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2 mt-6">3D Models</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                Generate stunning 3D models from text descriptions. Perfect for characters, props, and more.
+              </p>
+              <div className="mt-4 flex items-center gap-2">
+                <span className="text-sm bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full font-semibold">
+                  {user.model_credits || user.generation_credits} credits
+                </span>
+              </div>
             </div>
           </div>
         </button>
 
         {/* World Generation */}
-        <button onClick={() => setActiveTool("world")} className="group text-left opacity-60">
-          <div className="bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 rounded-3xl p-8 border border-white/10 shadow-xl relative overflow-hidden">
-            <div className="absolute top-4 right-4 bg-yellow-500/20 text-yellow-400 text-xs font-bold px-3 py-1 rounded-full">
+        <button onClick={() => setActiveTool("world")} className="group text-left">
+          <div className="relative bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+            {/* Coming Soon Badge */}
+            <div className="absolute top-4 right-4 z-10 bg-purple-500/90 text-white text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm">
               Coming Soon
             </div>
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30">
-              <Map className="w-8 h-8 text-white" />
+            {/* Image */}
+            <div className="h-48 overflow-hidden opacity-70">
+              <img
+                src="/images/world-gen-card.png"
+                alt="World Generation"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">World Generation</h3>
-            <p className="text-zinc-400">
-              Create entire game environments and maps with AI. Fantasy, sci-fi, adventure - you name it.
-            </p>
-            <div className="mt-6 flex items-center gap-2 text-purple-400 font-semibold">
-              <span className="text-sm bg-purple-500/20 px-2 py-1 rounded">{user.world_credits} credits</span>
+            {/* Content */}
+            <div className="p-6 relative opacity-70">
+              <div className="absolute -top-8 left-6 w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/40 border-4 border-zinc-950">
+                <Map className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2 mt-6">World Generation</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                Create entire game environments and maps with AI. Fantasy, sci-fi, adventure - you name it.
+              </p>
+              <div className="mt-4 flex items-center gap-2">
+                <span className="text-sm bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full font-semibold">
+                  {user.world_credits} credits
+                </span>
+              </div>
             </div>
           </div>
         </button>
