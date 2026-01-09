@@ -26,4 +26,3 @@ function KbdGroup({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 export { Kbd, KbdGroup }
-
