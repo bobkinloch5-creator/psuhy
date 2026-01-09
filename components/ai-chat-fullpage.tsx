@@ -1,11 +1,168 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { MessageSquare, Plus, Trash2, StopCircle, Undo2, Send, Sparkles, ArrowLeft, Zap, Clock } from "lucide-react"
+import { MessageSquare, Plus, Trash2, StopCircle, Undo2, Send, Sparkles, ArrowLeft, Zap, Clock, Search, Download, ExternalLink } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import ReactMarkdown from "react-markdown"
 import Image from "next/image"
 import Link from "next/link"
+
+// Toolbox Asset type
+interface ToolboxAsset {
+    id: number
+    name: string
+    creatorName: string
+    thumbnailUrl: string
+}
+
+// HUGE Toolbox Search Card Component
+function ToolboxSearchCard({ searchTerm, userId }: { searchTerm: string, userId: string }) {
+    const [assets, setAssets] = useState<ToolboxAsset[]>([])
+    const [loading, setLoading] = useState(true)
+    const [inserting, setInserting] = useState<number | null>(null)
+
+    useEffect(() => {
+        const fetchAssets = async () => {
+            try {
+                const res = await fetch(`/api/toolbox/search?query=${encodeURIComponent(searchTerm)}&limit=6`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setAssets(data.assets || [])
+                }
+            } catch (err) {
+                console.error("Toolbox search failed:", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchAssets()
+    }, [searchTerm])
+
+    const insertAsset = async (asset: ToolboxAsset) => {
+        setInserting(asset.id)
+        try {
+            await fetch("/api/plugin/insert-asset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId,
+                    assetId: asset.id,
+                    assetName: asset.name
+                })
+            })
+        } catch (err) {
+            console.error("Insert failed:", err)
+        } finally {
+            setInserting(null)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="my-4 p-6 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border-2 border-purple-500/40 rounded-2xl">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-purple-500 rounded-xl animate-pulse">
+                        <Search className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-lg font-bold text-white">🔍 Searching Roblox Toolbox...</p>
+                        <p className="text-sm text-purple-300">"{searchTerm}"</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="bg-black/40 rounded-xl p-4 animate-pulse">
+                            <div className="w-full h-28 bg-white/10 rounded-lg mb-3" />
+                            <div className="h-4 bg-white/10 rounded w-3/4" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    if (assets.length === 0) {
+        return (
+            <div className="my-4 p-6 bg-gradient-to-br from-red-900/20 to-orange-900/20 border-2 border-red-500/30 rounded-2xl">
+                <p className="text-red-300">❌ No assets found for "{searchTerm}"</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="my-4 p-6 bg-gradient-to-br from-purple-900/30 to-blue-900/30 border-2 border-purple-500/40 rounded-2xl shadow-lg shadow-purple-500/10">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl shadow-lg">
+                    <Search className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                    <p className="text-xl font-bold text-white">🎮 Roblox Toolbox Results</p>
+                    <p className="text-sm text-purple-300">Showing {assets.length} results for "{searchTerm}"</p>
+                </div>
+            </div>
+
+            {/* HUGE Asset Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {assets.map((asset) => (
+                    <div
+                        key={asset.id}
+                        className="group bg-black/50 border border-white/10 rounded-xl overflow-hidden hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300"
+                    >
+                        {/* HUGE Thumbnail */}
+                        <div className="relative w-full h-32 bg-gradient-to-br from-gray-800 to-gray-900">
+                            <img
+                                src={asset.thumbnailUrl}
+                                alt={asset.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = "/placeholder-model.png"
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        </div>
+
+                        {/* Asset Info */}
+                        <div className="p-4">
+                            <h3 className="font-bold text-white truncate text-base mb-1">{asset.name}</h3>
+                            <p className="text-xs text-white/50 mb-3">by {asset.creatorName}</p>
+
+                            {/* BIG Insert Button */}
+                            <button
+                                onClick={() => insertAsset(asset)}
+                                disabled={inserting === asset.id}
+                                className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-green-500/30"
+                            >
+                                {inserting === asset.id ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Inserting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="w-5 h-5" />
+                                        Insert to Studio
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* View More Link */}
+            <a
+                href={`https://create.roblox.com/store/models?keyword=${encodeURIComponent(searchTerm)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 flex items-center justify-center gap-2 text-purple-300 hover:text-purple-200 text-sm transition-colors"
+            >
+                <ExternalLink className="w-4 h-4" />
+                View more on Roblox Creator Hub
+            </a>
+        </div>
+    )
+}
 
 interface Conversation {
     id: string
@@ -451,9 +608,44 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                                     >
                                         {msg.role === "assistant" ? (
                                             <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-code:text-orange-400">
-                                                <ReactMarkdown>
-                                                    {msg.content}
-                                                </ReactMarkdown>
+                                                {/* Parse message for [INSERT_ASSET: term] and render ToolboxSearchCards */}
+                                                {(() => {
+                                                    const assetPattern = /\[INSERT_ASSET:\s*([^\]]+)\]/g
+                                                    const parts: React.ReactNode[] = []
+                                                    let lastIndex = 0
+                                                    let match
+
+                                                    while ((match = assetPattern.exec(msg.content)) !== null) {
+                                                        // Add text before this match
+                                                        if (match.index > lastIndex) {
+                                                            parts.push(
+                                                                <ReactMarkdown key={`text-${lastIndex}`}>
+                                                                    {msg.content.slice(lastIndex, match.index)}
+                                                                </ReactMarkdown>
+                                                            )
+                                                        }
+                                                        // Add the HUGE Toolbox Search Card
+                                                        parts.push(
+                                                            <ToolboxSearchCard
+                                                                key={`toolbox-${match.index}`}
+                                                                searchTerm={match[1].trim()}
+                                                                userId={user.id}
+                                                            />
+                                                        )
+                                                        lastIndex = match.index + match[0].length
+                                                    }
+
+                                                    // Add remaining text after last match
+                                                    if (lastIndex < msg.content.length) {
+                                                        parts.push(
+                                                            <ReactMarkdown key={`text-${lastIndex}`}>
+                                                                {msg.content.slice(lastIndex)}
+                                                            </ReactMarkdown>
+                                                        )
+                                                    }
+
+                                                    return parts.length > 0 ? parts : <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                                })()}
                                             </div>
                                         ) : (
                                             <p className="whitespace-pre-wrap">{msg.content}</p>
