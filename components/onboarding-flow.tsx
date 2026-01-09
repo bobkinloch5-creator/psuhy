@@ -29,7 +29,7 @@ export function OnboardingFlow({ user }: { user: User }) {
   const completeOnboarding = async () => {
     setIsCompleting(true)
     await supabase.from("users").update({ onboarding_completed: true }).eq("id", user.id)
-    router.push("/dashboard")
+    router.push("/forge")
   }
 
   const steps = [
@@ -60,7 +60,7 @@ export function OnboardingFlow({ user }: { user: User }) {
       content: (
         <div className="max-w-md mx-auto">
           <p className="text-zinc-400 mb-6 text-center">
-            This unique token connects Roblox Studio to your BlaxSmith account. Copy it now - you'll need it in the next
+            This unique User ID connects Roblox Studio to your BlaxSmith account. Copy it now - you'll need it in the next
             step.
           </p>
 
@@ -168,7 +168,7 @@ export function OnboardingFlow({ user }: { user: User }) {
 
           <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
             <p className="text-orange-300 text-sm">
-              <strong>Free tier:</strong> 25 chat credits + 5 model generations
+              <strong>Free tier:</strong> 30 unified credits (AI Chat + 3D Models)
             </p>
           </div>
         </div>
@@ -196,9 +196,8 @@ export function OnboardingFlow({ user }: { user: User }) {
           {steps.map((_, i) => (
             <div
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === step ? "w-8 bg-orange-500" : i < step ? "w-2 bg-orange-500/50" : "w-2 bg-white/20"
-              }`}
+              className={`h-2 rounded-full transition-all duration-300 ${i === step ? "w-8 bg-orange-500" : i < step ? "w-2 bg-orange-500/50" : "w-2 bg-white/20"
+                }`}
             />
           ))}
         </div>
@@ -238,7 +237,7 @@ export function OnboardingFlow({ user }: { user: User }) {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    Go to Dashboard
+                    Go to Forge
                   </>
                 )}
               </button>
