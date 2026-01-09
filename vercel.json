@@ -1,4 +1,15 @@
 {
+    "functions": {
+        "app/api/generate/model/route.ts": {
+            "maxDuration": 300
+        },
+        "app/api/generate/rig/route.ts": {
+            "maxDuration": 120
+        },
+        "app/api/generate/animate/route.ts": {
+            "maxDuration": 120
+        }
+    },
     "headers": [
         {
             "source": "/api/plugin/(.*)",
