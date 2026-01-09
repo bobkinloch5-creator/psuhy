@@ -19,69 +19,26 @@ interface ModelResult {
   source: string
 }
 
-// ============ COMETAPI 3D GENERATION WITH IMAGE-TO-3D PIPELINE ============
-// Two-step approach: Generate image first, then convert to 3D for better reliability
+// ============ COMETAPI 3D GENERATION - FAST DIRECT APPROACH ============
+// Single-step: Direct text-to-3D with Hunyuan3D-2 for speed
 async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
-  console.log("[CometAPI-3D] Starting 3D generation for:", prompt)
+  console.log("[CometAPI-3D] Starting FAST 3D generation for:", prompt)
 
   const apiKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
   if (!apiKey) {
     throw new Error("No CometAPI key configured")
   }
 
-  const maxRetries = 3
+  const maxRetries = 2 // Reduced retries
   let lastError: Error | null = null
 
-  // STEP 1: Generate a reference image using Flux Schnell (fast and reliable)
-  console.log("[CometAPI-3D] Step 1: Generating reference image...")
-  let referenceImageUrl: string | null = null
-
-  try {
-    const imageResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "flux-schnell",
-        prompt: `${prompt}, 3D render, isometric view, single object centered, white background, professional lighting, high detail`,
-        n: 1,
-        size: "1024x1024",
-      }),
-    })
-
-    if (imageResponse.ok) {
-      const imageData = await imageResponse.json()
-      if (imageData.data?.[0]?.url) {
-        referenceImageUrl = imageData.data[0].url
-        console.log("[CometAPI-3D] ✅ Got reference image:", referenceImageUrl?.slice(0, 80))
-      } else if (imageData.data?.[0]?.b64_json) {
-        referenceImageUrl = `data:image/png;base64,${imageData.data[0].b64_json}`
-        console.log("[CometAPI-3D] ✅ Got reference image as base64")
-      }
-    } else {
-      console.log("[CometAPI-3D] Image generation failed, will try direct 3D generation")
-    }
-  } catch (imgError: any) {
-    console.log("[CometAPI-3D] Image generation error:", imgError.message)
-  }
-
-  // STEP 2: Generate 3D model with Hunyuan3D-2
+  // DIRECT 3D generation with Hunyuan3D-2 - no image step
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[CometAPI-3D] Step 2: 3D generation attempt ${attempt}/${maxRetries}...`)
+      console.log(`[CometAPI-3D] Direct 3D attempt ${attempt}/${maxRetries}...`)
 
-      // Build request body - use image if we have one, otherwise text-only
-      const requestBody: any = {
-        model: "Hunyuan3D-2",
-        prompt: `${prompt}, high quality 3D model, vibrant colors, detailed textures, game-ready asset, colorful materials`,
-      }
-
-      if (referenceImageUrl && !referenceImageUrl.startsWith('data:')) {
-        requestBody.image = referenceImageUrl
-        console.log("[CometAPI-3D] Using reference image for better quality")
-      }
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 90000) // 90s timeout per attempt
 
       const response = await fetch("https://api.cometapi.com/v1/images/generations", {
         method: "POST",
@@ -89,86 +46,64 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          model: "Hunyuan3D-2",
+          prompt: `${prompt}, high quality 3D model, vibrant colors, detailed textures, game-ready asset, colorful materials, PBR textures, NOT white, FULLY COLORED`,
+        }),
+        signal: controller.signal,
       })
 
+      clearTimeout(timeout)
+
       const responseText = await response.text()
-      console.log("[CometAPI-3D] Response status:", response.status, "Body:", responseText.slice(0, 500))
+      console.log("[CometAPI-3D] Response:", response.status, responseText.slice(0, 300))
 
       if (!response.ok) {
-        // Check if server is busy - retry after delay
-        const isBusy = responseText.includes("busy") ||
-          responseText.includes("rate") ||
-          responseText.includes("overloaded") ||
-          response.status === 429 ||
-          response.status === 503
-
-        if (isBusy) {
-          const waitTime = attempt * 8000 // Longer wait times: 8s, 16s, 24s
-          console.log(`[CometAPI-3D] Server busy, waiting ${waitTime / 1000}s before retry...`)
-          await new Promise(resolve => setTimeout(resolve, waitTime))
-          lastError = new Error(`Server is busy (attempt ${attempt})`)
+        // Check if server is busy - quick retry
+        const isBusy = responseText.includes("busy") || response.status === 429 || response.status === 503
+        if (isBusy && attempt < maxRetries) {
+          console.log(`[CometAPI-3D] Server busy, quick retry in 3s...`)
+          await new Promise(r => setTimeout(r, 3000))
+          lastError = new Error(`Server busy (attempt ${attempt})`)
           continue
         }
-
-        throw new Error(`API error: ${response.status} - ${responseText}`)
+        throw new Error(`API error: ${response.status}`)
       }
 
-      // Parse the response
-      let data
-      try {
-        data = JSON.parse(responseText)
-      } catch {
-        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
-      }
+      const data = JSON.parse(responseText)
 
-      console.log("[CometAPI-3D] Parsed response:", JSON.stringify(data).slice(0, 300))
-
-      // Handle successful response
-      if (data.data && data.data.length > 0) {
-        const result = data.data[0]
-
-        if (result.url) {
-          console.log("[CometAPI-3D] ✅ SUCCESS! Got 3D model URL:", result.url)
-          return {
-            model_url: result.url,
-            preview_url: referenceImageUrl || result.url.replace(".glb", ".png") || null,
-            formats: { glb: result.url, obj: null, fbx: null },
-            source: "CometAPI Hunyuan3D-2"
-          }
-        }
-
-        if (result.b64_json) {
-          console.log("[CometAPI-3D] ✅ SUCCESS! Got base64 GLB data")
-          const dataUrl = `data:model/gltf-binary;base64,${result.b64_json}`
-          return {
-            model_url: dataUrl,
-            preview_url: referenceImageUrl,
-            formats: { glb: dataUrl, obj: null, fbx: null },
-            source: "CometAPI Hunyuan3D-2"
-          }
+      if (data.data?.[0]?.url) {
+        console.log("[CometAPI-3D] ✅ Got colored 3D model!")
+        return {
+          model_url: data.data[0].url,
+          preview_url: data.data[0].url.replace(".glb", ".png"),
+          formats: { glb: data.data[0].url, obj: null, fbx: null },
+          source: "CometAPI Hunyuan3D-2"
         }
       }
 
-      // No data returned - retry
-      console.log(`[CometAPI-3D] No model data in response, retrying...`)
-      lastError = new Error("No model data in response")
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      if (data.data?.[0]?.b64_json) {
+        const dataUrl = `data:model/gltf-binary;base64,${data.data[0].b64_json}`
+        return {
+          model_url: dataUrl,
+          preview_url: null,
+          formats: { glb: dataUrl, obj: null, fbx: null },
+          source: "CometAPI Hunyuan3D-2"
+        }
+      }
 
+      lastError = new Error("No model URL in response")
     } catch (error: any) {
-      console.error(`[CometAPI-3D] Attempt ${attempt} error:`, error.message)
+      console.error(`[CometAPI-3D] Attempt ${attempt} failed:`, error.message)
       lastError = error
-
-      if (attempt < maxRetries) {
-        console.log(`[CometAPI-3D] Waiting ${attempt * 5}s before retry...`)
-        await new Promise(resolve => setTimeout(resolve, attempt * 5000))
+      if (error.name === 'AbortError') {
+        console.log("[CometAPI-3D] Request timed out")
+        lastError = new Error("Request timed out")
       }
     }
   }
 
-  // All retries failed
-  console.error("[CometAPI-3D] All retries failed:", lastError?.message)
-  throw lastError || new Error("3D generation failed after all retries")
+  throw lastError || new Error("CometAPI failed")
 }
 
 // ============ TRIPO3D API (FREE TIER - 300 CREDITS/MONTH - FAST COLORED MODELS) ============
@@ -847,98 +782,88 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 
 // ============ MAIN GENERATION WITH GLB VALIDATION PIPELINE ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult & { validation?: GLBValidationResult }> {
-  console.log("[3D-Gen] Generating 3D model with GLB validation pipeline...")
+  console.log("[3D-Gen] Starting 3D generation pipeline...")
   console.log("[3D-Gen] Prompt:", prompt)
 
-  // Only use CometAPI - all free generators have GPU quota issues
-  const apiKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error("No COMETAPI_KEY configured. Please add your CometAPI key to Vercel environment variables.")
+  // ========== PRIORITY 1: TRIPO3D (COLORED + FAST + RELIABLE) ==========
+  const tripoKey = process.env.TRIPO_API_KEY
+  if (tripoKey) {
+    try {
+      console.log("[3D-Gen] Trying Tripo3D (primary - colored models)...")
+      const tripoResult = await generateWithTripo3D(prompt)
+      if (tripoResult?.model_url) {
+        console.log("[3D-Gen] ✅ Tripo3D SUCCESS - colored model!")
+
+        // Run GLB validation
+        try {
+          const validation = await validateGLB(tripoResult.model_url)
+          logQualityReport(validation, tripoResult.source)
+          const quality = assessModelQuality(validation)
+          const qualityLabel = quality === 'premium' ? '🌟 Premium' : quality === 'standard' ? '✓ Standard' : '○ Basic'
+
+          return {
+            ...tripoResult,
+            source: `${tripoResult.source} | ${qualityLabel}`,
+            validation,
+          }
+        } catch (e) {
+          return tripoResult // Return even if validation fails
+        }
+      }
+    } catch (error: any) {
+      console.error("[3D-Gen] Tripo3D failed:", error.message)
+    }
+  } else {
+    console.log("[3D-Gen] No TRIPO_API_KEY - skipping Tripo3D")
   }
 
-  try {
-    const result = await generateWithCometAPI(prompt)
-    if (result?.model_url) {
-      console.log("[3D-Gen] ✅ CometAPI succeeded!")
+  // ========== PRIORITY 2: COMETAPI (HUNYUAN3D-2) ==========
+  const cometKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
+  if (cometKey) {
+    try {
+      console.log("[3D-Gen] Trying CometAPI Hunyuan3D-2...")
+      const result = await generateWithCometAPI(prompt)
+      if (result?.model_url) {
+        console.log("[3D-Gen] ✅ CometAPI succeeded!")
 
-      // ========== GLB VALIDATION PIPELINE ==========
-      // This ensures we ALWAYS know if the model has textures
-      console.log("[3D-Gen] Running GLB validation pipeline...")
+        // Run GLB validation
+        try {
+          const validation = await validateGLB(result.model_url)
+          logQualityReport(validation, result.source)
+          const quality = assessModelQuality(validation)
+          const qualityLabel = quality === 'premium' ? '🌟 Premium' : quality === 'standard' ? '✓ Standard' : '○ Basic'
 
-      try {
-        const validation = await validateGLB(result.model_url)
-        logQualityReport(validation, result.source)
+          if (!validation.hasBaseColorTexture && !validation.hasEmbeddedImages) {
+            console.log("[3D-Gen] ⚠️ Model lacks textures")
+            const defaultColor = getDefaultMaterialColor(prompt)
+            console.log("[3D-Gen] Suggested color:", defaultColor)
 
-        const quality = assessModelQuality(validation)
-
-        // Add quality info to source
-        const qualityLabel = quality === 'premium' ? '🌟 Premium Quality' :
-          quality === 'standard' ? '✓ Standard Quality' :
-            '○ Basic Quality'
-
-        // If model lacks proper textures, add warning to source
-        if (!validation.hasBaseColorTexture && !validation.hasEmbeddedImages) {
-          console.log("[3D-Gen] ⚠️ Model lacks embedded textures - applying fallback color")
-
-          // Get a sensible default color based on the prompt
-          const defaultColor = getDefaultMaterialColor(prompt)
-          console.log("[3D-Gen] Default color for prompt:", defaultColor)
+            return {
+              ...result,
+              source: `${result.source} | ${qualityLabel} | ⚠️ Limited textures`,
+              validation,
+            }
+          }
 
           return {
             ...result,
-            source: `${result.source} | ${qualityLabel} | ⚠️ Limited textures`,
+            source: `${result.source} | ${qualityLabel}`,
             validation,
           }
+        } catch (e) {
+          return result
         }
-
-        return {
-          ...result,
-          source: `${result.source} | ${qualityLabel}`,
-          validation,
-        }
-
-      } catch (validationError: any) {
-        console.error("[3D-Gen] Validation failed (non-fatal):", validationError.message)
-        // Return model even if validation fails - better to have a model than none
-        return result
       }
+    } catch (error: any) {
+      console.error("[3D-Gen] CometAPI failed:", error.message)
     }
-  } catch (error: any) {
-    console.error("[3D-Gen] CometAPI failed:", error.message)
+  } else {
+    console.log("[3D-Gen] No COMETAPI_KEY - skipping CometAPI")
   }
 
-  // ========== FALLBACK CASCADE ==========
-  // If CometAPI fails, try free generators as fallback
-  console.log("[3D-Gen] Trying fallback generators...")
-
-  // Fallback 1: Try Hunyuan3D-2 free HuggingFace space
-  try {
-    console.log("[3D-Gen] Trying Hunyuan3D-2 (HuggingFace)...")
-    const hunyuanResult = await generateWithHunyuan3D(prompt)
-    if (hunyuanResult?.model_url) {
-      console.log("[3D-Gen] ✅ Hunyuan3D-2 fallback succeeded!")
-      return hunyuanResult
-    }
-  } catch (e: any) {
-    console.log("[3D-Gen] Hunyuan3D-2 fallback failed:", e.message)
-  }
-
-  // Fallback 2: Try Shap-E (geometry-only but reliable)
-  try {
-    console.log("[3D-Gen] Trying Shap-E fallback...")
-    const shapeResult = await generateWithShapE(prompt)
-    if (shapeResult?.model_url) {
-      console.log("[3D-Gen] ✅ Shap-E fallback succeeded!")
-      return shapeResult
-    }
-  } catch (e: any) {
-    console.log("[3D-Gen] Shap-E fallback failed:", e.message)
-  }
-
-  // All generators failed
-  throw new Error("All 3D generation services failed. Please try again later.")
+  // ========== ALL FAILED ==========
+  throw new Error("All 3D generation services failed. Please check API keys (TRIPO_API_KEY, COMETAPI_KEY).")
 }
-
 // ============ STORAGE ============
 async function uploadModelToSupabase(
   supabase: any,
