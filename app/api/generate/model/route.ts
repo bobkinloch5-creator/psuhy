@@ -592,19 +592,16 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ MAIN GENERATION (PRIORITIZE TEXTURED) ============
+// ============ MAIN GENERATION (PRIORITIZE SPEED) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // PRIORITY ORDER: Textured models first (full 3D assets with materials/colors)
-  // Cube3D+Textured uses Roblox's Cube3D for geometry + AI texture application
+  // PRIORITY ORDER: Fast generators first for quick results
+  // Can texture later in Roblox Studio
   const generators = [
-    { name: "Cube3D+Texture", fn: generateWithCube3DTextured }, // Roblox geometry + AI textures ⭐
-    { name: "TRELLIS", fn: generateWithTrellis },               // Microsoft - HIGH QUALITY TEXTURED
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },         // Tencent - high quality with TEXTURES
-    { name: "TripoSR", fn: generateWithTripoSR },               // Stability AI - TEXTURED
-    { name: "InstantMesh", fn: generateWithInstantMesh },       // TencentARC - TEXTURED
-    { name: "LGM", fn: generateWithLGM },                       // Large Gaussian Model - TEXTURED
-    { name: "Cube3D", fn: generateWithCube3D },                 // Roblox - geometry only fallback
-    { name: "Shap-E", fn: generateWithShapE },                  // OpenAI - geometry only fallback
+    { name: "Cube3D", fn: generateWithCube3D },                 // FASTEST - Roblox optimized geometry
+    { name: "Shap-E", fn: generateWithShapE },                  // Fast - OpenAI geometry
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },         // Textured but slower
+    { name: "TRELLIS", fn: generateWithTrellis },               // Microsoft - textured
+    { name: "Cube3D+Texture", fn: generateWithCube3DTextured }, // Slowest - 2 API calls
   ]
 
   for (const gen of generators) {
