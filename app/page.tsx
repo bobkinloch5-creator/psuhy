@@ -197,11 +197,7 @@ export default async function HomePage() {
                   <ul className="space-y-4 mb-8">
                     <li className="flex items-center gap-3 text-zinc-300">
                       <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 text-sm">✓</span>
-                      <span><strong>25</strong> AI Chat Credits</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-zinc-300">
-                      <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 text-sm">✓</span>
-                      <span><strong>5</strong> 3D Model Generations</span>
+                      <span><strong>30</strong> Credits <span className="text-zinc-500 text-xs">(AI Chat + 3D Models)</span></span>
                     </li>
                     <li className="flex items-center gap-3 text-zinc-300">
                       <span className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 text-sm">⏳</span>
@@ -229,11 +225,7 @@ export default async function HomePage() {
                   <ul className="space-y-4 mb-8">
                     <li className="flex items-center gap-3 text-zinc-300">
                       <span className="w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-orange-400 text-sm">✓</span>
-                      <span><strong>100</strong> AI Chat Credits</span>
-                    </li>
-                    <li className="flex items-center gap-3 text-zinc-300">
-                      <span className="w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-orange-400 text-sm">✓</span>
-                      <span><strong>50</strong> 3D Model Generations</span>
+                      <span><strong>150</strong> Credits <span className="text-zinc-500 text-xs">(AI Chat + 3D Models)</span></span>
                     </li>
                     <li className="flex items-center gap-3 text-zinc-300">
                       <span className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 text-sm">⏳</span>

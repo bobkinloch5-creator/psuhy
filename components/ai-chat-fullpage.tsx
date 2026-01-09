@@ -703,7 +703,7 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
                         </div>
                         {user.generation_credits <= 0 && (
                             <p className="text-center text-red-400 text-sm mt-2">
-                                No prompts remaining! <Link href="/forge" className="text-orange-400 hover:underline">Upgrade to Pro for 100 prompts/month</Link>
+                                No credits remaining! <Link href="/forge" className="text-orange-400 hover:underline">Upgrade to Pro for 150 credits/month</Link>
                             </p>
                         )}
                     </div>

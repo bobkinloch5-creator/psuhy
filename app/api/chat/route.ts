@@ -35,10 +35,10 @@ export async function POST(request: Request) {
         if (currentCredits <= 0) {
             const isPro = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
             return NextResponse.json({
-                error: "No prompt credits remaining!",
+                error: "No credits remaining!",
                 message: isPro
-                    ? "Your 100 prompt credits have been used. Credits reset monthly."
-                    : "You've used your 50 free prompts! Upgrade to Pro for 100 prompts/month.",
+                    ? "Your 150 credits have been used. Credits reset monthly."
+                    : "You've used your 30 free credits! Upgrade to Pro for 150 credits/month.",
                 creditsRemaining: 0
             }, { status: 403 })
         }
