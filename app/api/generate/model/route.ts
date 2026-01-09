@@ -35,7 +35,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
         model: "flux-schnell",  // Fast image generation
         prompt: `${prompt}, 3D render, single object, isometric view, centered, studio lighting, white background, high quality`,
         n: 1,
-        size: "512x512",
+        size: "1024x1024",
       }),
     })
 
