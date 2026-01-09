@@ -447,20 +447,48 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
         const { addCommand, createInsertModelCommand } = await import('@/lib/command-queue')
         const insertedItems: string[] = []
 
-        // 1. Parse INSERT_ASSET commands (from Roblox Toolbox)
+        // 1. Parse INSERT_ASSET commands (from Roblox Toolbox - COMPREHENSIVE SEARCH)
         const assetPattern = /\[INSERT_ASSET:\s*([^\]]+)\]/gi
         for (const match of aiResponse.matchAll(assetPattern)) {
             const assetName = match[1].trim()
             let found = false
 
             try {
-                // Try multiple search endpoints for better results
-                const searchEndpoints = [
-                    // Primary: Roblox catalog search
-                    `https://catalog.roblox.com/v1/search/items?category=Models&keyword=${encodeURIComponent(assetName)}&limit=10`,
-                    // Fallback: Toolbox service
-                    `https://apis.roblox.com/toolbox-service/v1/marketplace?keyword=${encodeURIComponent(assetName)}&category=FreeModels&pageNumber=1&limit=10`,
+                console.log(`[AI Chat] 🔍 Searching Roblox Toolbox for: "${assetName}"`)
+
+                // Generate multiple search keywords for better matches
+                const searchKeywords = [
+                    assetName,
+                    assetName.toLowerCase(),
+                    assetName.replace(/\s+/g, ''),
+                    ...assetName.split(' ').filter(w => w.length > 2)
                 ]
+
+                // Comprehensive Roblox API endpoints for FREE VERIFIED MODELS
+                const searchEndpoints = [
+                    // 1. Roblox Catalog API - Free Models
+                    `https://catalog.roblox.com/v1/search/items?category=Models&keyword=${encodeURIComponent(assetName)}&limit=20&sortType=Relevance`,
+
+                    // 2. Roblox Catalog API - All Free Items
+                    `https://catalog.roblox.com/v1/search/items?category=All&keyword=${encodeURIComponent(assetName)}&limit=20&minPrice=0&maxPrice=0`,
+
+                    // 3. Roblox Toolbox Service - Free Models
+                    `https://apis.roblox.com/toolbox-service/v1/marketplace?keyword=${encodeURIComponent(assetName)}&category=FreeModels&pageNumber=1&limit=20&sortOrder=Relevance`,
+
+                    // 4. Roblox Toolbox Service - All Categories
+                    `https://apis.roblox.com/toolbox-service/v1/marketplace?keyword=${encodeURIComponent(assetName)}&category=All&pageNumber=1&limit=20`,
+
+                    // 5. Roblox Develop API - Search Models
+                    `https://develop.roblox.com/v1/search?keyword=${encodeURIComponent(assetName)}&limit=20`,
+
+                    // 6. Try with different keyword combinations
+                    ...searchKeywords.slice(1).map(kw =>
+                        `https://apis.roblox.com/toolbox-service/v1/marketplace?keyword=${encodeURIComponent(kw)}&category=FreeModels&pageNumber=1&limit=10`
+                    )
+                ]
+
+                let bestAsset: { id: number, name: string, verified?: boolean } | null = null
+                let bestScore = 0
 
                 for (const searchUrl of searchEndpoints) {
                     if (found) break
@@ -470,38 +498,75 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
                             headers: {
                                 "Accept": "application/json",
                                 "User-Agent": "Roblox/WinInet"
-                            }
+                            },
+                            signal: AbortSignal.timeout(5000) // 5 second timeout per endpoint
                         })
 
                         if (response.ok) {
                             const data = await response.json()
-                            const items = data.data || data.results || data.items || []
+                            const items = data.data || data.results || data.items || data.Results || []
 
-                            if (items.length > 0) {
-                                // Find the best match
-                                const asset = items[0]
-                                const assetId = asset.id || asset.assetId || asset.asset?.id
-                                const assetNameFound = asset.name || asset.assetName || asset.asset?.name || assetName
+                            // Score each result for best match
+                            for (const asset of items) {
+                                const assetId = asset.id || asset.assetId || asset.asset?.id || asset.AssetId
+                                const assetNameFound = asset.name || asset.assetName || asset.asset?.name || asset.Name || assetName
+                                const isVerified = asset.creatorHasVerifiedBadge || asset.verified || asset.isVerified || false
+                                const isFree = asset.price === 0 || asset.price === undefined || asset.isFree !== false
 
-                                if (assetId) {
-                                    const command = createInsertModelCommand(assetId, assetNameFound)
-                                    await addCommand(userData.id, command)
-                                    insertedItems.push(`Model: ${assetNameFound}`)
-                                    console.log(`[AI Chat] Queued asset: ${assetNameFound} (${assetId})`)
+                                if (!assetId || !isFree) continue
+
+                                // Calculate relevance score
+                                let score = 0
+                                const nameLower = assetNameFound.toLowerCase()
+                                const searchLower = assetName.toLowerCase()
+
+                                // Exact match = highest score
+                                if (nameLower === searchLower) score += 100
+                                // Contains full search term
+                                else if (nameLower.includes(searchLower)) score += 50
+                                // Contains all words
+                                else if (searchLower.split(' ').every(w => nameLower.includes(w))) score += 30
+                                // Contains some words
+                                else score += searchLower.split(' ').filter(w => nameLower.includes(w)).length * 10
+
+                                // Bonus for verified creators
+                                if (isVerified) score += 25
+
+                                // Bonus for being first in results (already sorted by relevance)
+                                score += Math.max(0, 10 - items.indexOf(asset))
+
+                                if (score > bestScore) {
+                                    bestScore = score
+                                    bestAsset = { id: assetId, name: assetNameFound, verified: isVerified }
+                                }
+
+                                // If we have a very good match, use it immediately
+                                if (score >= 100) {
                                     found = true
+                                    break
                                 }
                             }
                         }
-                    } catch (endpointErr) {
-                        console.log(`[AI Chat] Endpoint failed for ${assetName}:`, endpointErr)
+                    } catch (endpointErr: any) {
+                        // Silent fail for individual endpoints
+                        console.log(`[AI Chat] Endpoint ${searchUrl.slice(0, 50)} failed:`, endpointErr.message)
                     }
                 }
 
+                // Use best found asset
+                if (bestAsset) {
+                    const command = createInsertModelCommand(bestAsset.id, bestAsset.name)
+                    await addCommand(userData.id, command)
+                    insertedItems.push(`Model: ${bestAsset.name}${bestAsset.verified ? ' ✓' : ''}`)
+                    console.log(`[AI Chat] ✅ Queued toolbox asset: ${bestAsset.name} (ID: ${bestAsset.id}, Score: ${bestScore}, Verified: ${bestAsset.verified})`)
+                    found = true
+                }
+
                 if (!found) {
-                    console.log(`[AI Chat] No assets found for: ${assetName} - AI will create using INSERT_PART instead`)
+                    console.log(`[AI Chat] ⚠️ No toolbox assets found for: "${assetName}" - AI should use INSERT_PART instead`)
                 }
             } catch (err) {
-                console.error(`[AI Chat] Asset search failed: ${assetName}`, err)
+                console.error(`[AI Chat] ❌ Asset search failed for "${assetName}":`, err)
             }
         }
 
