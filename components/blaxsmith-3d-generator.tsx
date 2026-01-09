@@ -27,15 +27,39 @@ interface BlaxSmith3DGeneratorProps {
 }
 
 const STYLE_OPTIONS = [
+    { id: "none", name: "No Style", icon: "🚫", image: null },
+    { id: "roblox", name: "Roblox", icon: "🎮", image: "/images/styles/roblox.png" },
     { id: "realistic", name: "Realistic", icon: "🎯", image: "/images/styles/realistic.png" },
-    { id: "stylized", name: "Stylized", icon: "🎨", image: "/images/styles/stylized.png" },
-    { id: "lowpoly", name: "Low Poly", icon: "💎", image: "/images/styles/lowpoly.png" },
     { id: "cartoon", name: "Cartoon", icon: "🎪", image: "/images/styles/cartoon.png" },
-    { id: "voxel", name: "Voxel", icon: "🧱", image: "/images/styles/voxel.png" },
-    { id: "scifi", name: "Sci-Fi", icon: "🚀", image: "/images/styles/scifi.png" },
-    { id: "fantasy", name: "Fantasy", icon: "🏰", image: "/images/styles/fantasy.png" },
-    { id: "anime", name: "Anime", icon: "✨", image: "/images/styles/anime.png" },
+    { id: "anime", name: "Detailed Anime", icon: "✨", image: "/images/styles/anime.png" },
+    { id: "stylized_anime", name: "Stylized Anime", icon: "🌸", image: "/images/styles/stylized.png" },
+    { id: "lowpoly", name: "Low Poly", icon: "💎", image: "/images/styles/lowpoly.png" },
+    { id: "clay", name: "Clay Morphic", icon: "🧱", image: "/images/styles/clay.png" },
+    { id: "cozy", name: "Cozy Mobile", icon: "🏠", image: "/images/styles/cozy.png" },
+    { id: "isometric", name: "Isometric", icon: "🏰", image: "/images/styles/isometric.png" },
+    { id: "retro", name: "Retro/90s", icon: "📺", image: "/images/styles/retro.png" },
+    { id: "hand_painted", name: "Hand-Painted", icon: "🎨", image: "/images/styles/hand_painted.png" },
 ]
+
+const QUALITY_OPTIONS = [
+    { id: "high", name: "High Quality", description: "Best quality, longer generation" },
+    { id: "low_poly", name: "Low Poly", description: "Optimized for games" },
+    { id: "3d_print", name: "3D Print", description: "Watertight mesh for printing" },
+]
+
+const TEXTURE_OPTIONS = [
+    { id: "none", name: "None", resolution: null },
+    { id: "512", name: "512 × 512", resolution: 512 },
+    { id: "1k", name: "1k × 1k", resolution: 1024 },
+    { id: "2k", name: "2k × 2k", resolution: 2048 },
+]
+
+const TOPOLOGY_OPTIONS = [
+    { id: "auto", name: "Auto" },
+    { id: "triangles", name: "Triangles" },
+    { id: "quads", name: "Quads" },
+]
+
 
 // Load model-viewer script dynamically
 const loadModelViewer = () => {
@@ -143,7 +167,12 @@ function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
 
 export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmith3DGeneratorProps) {
     const [prompt, setPrompt] = useState("")
-    const [selectedStyle, setSelectedStyle] = useState("realistic")
+    const [selectedStyle, setSelectedStyle] = useState("roblox")
+    const [selectedQuality, setSelectedQuality] = useState("high")
+    const [selectedTexture, setSelectedTexture] = useState("2k")
+    const [selectedTopology, setSelectedTopology] = useState("auto")
+    const [showStyleModal, setShowStyleModal] = useState(false)
+    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [generatedModel, setGeneratedModel] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
@@ -318,37 +347,98 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 </div>
             </div>
 
-            {/* Style Selection - Sloyd style */}
-            <div className="space-y-2">
-                <div className="flex items-center gap-2 text-white/60 text-xs mb-2">
-                    <Palette className="w-3 h-3" />
-                    <span>Select Style:</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                    {STYLE_OPTIONS.map((style) => (
+            {/* Style Selection - Compact Button */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                    {/* Quality Selector */}
+                    <div className="flex-1">
+                        <label className="text-white/60 text-xs mb-1.5 block">Quality:</label>
+                        <div className="flex rounded-lg bg-black/40 border border-white/10 p-1">
+                            {QUALITY_OPTIONS.map((q) => (
+                                <button
+                                    key={q.id}
+                                    onClick={() => setSelectedQuality(q.id)}
+                                    className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${selectedQuality === q.id
+                                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                        : "text-white/60 hover:text-white"
+                                        }`}
+                                >
+                                    {q.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Style Selector Button */}
+                    <div>
+                        <label className="text-white/60 text-xs mb-1.5 block">Style:</label>
                         <button
-                            key={style.id}
-                            onClick={() => setSelectedStyle(style.id)}
-                            className={`relative overflow-hidden rounded-xl border transition-all text-center aspect-[4/3] ${selectedStyle === style.id
-                                ? "border-purple-500/50 shadow-lg shadow-purple-500/20 ring-2 ring-purple-500/50"
-                                : "border-white/10 hover:border-white/20"
-                                }`}
+                            onClick={() => setShowStyleModal(true)}
+                            className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-lg text-cyan-400 text-sm font-medium hover:bg-cyan-500/30 transition-all flex items-center gap-2"
                         >
-                            {/* Background Image */}
-                            <img
-                                src={style.image}
-                                alt={style.name}
-                                className="absolute inset-0 w-full h-full object-cover"
-                            />
-                            {/* Dark overlay for text readability */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                            {/* Label */}
-                            <span className={`absolute bottom-2 left-0 right-0 text-xs font-medium ${selectedStyle === style.id ? "text-white" : "text-white/80"}`}>
-                                {style.name}
-                            </span>
+                            {STYLE_OPTIONS.find(s => s.id === selectedStyle)?.icon || "🎨"}
+                            {STYLE_OPTIONS.find(s => s.id === selectedStyle)?.name || "Select Style"}
+                            <ChevronDown className="w-4 h-4" />
                         </button>
-                    ))}
+                    </div>
                 </div>
+
+                {/* Advanced Options Toggle */}
+                <button
+                    onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                    className="text-white/50 text-xs hover:text-white/80 transition-colors flex items-center gap-1"
+                >
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedOptions ? "rotate-180" : ""}`} />
+                    {showAdvancedOptions ? "Less" : "More"} options
+                </button>
+
+                {/* Advanced Options Panel */}
+                {showAdvancedOptions && (
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-black/30 rounded-xl border border-white/5">
+                        {/* Topology */}
+                        <div>
+                            <label className="text-white/60 text-xs mb-1.5 block">Topology:</label>
+                            <div className="flex rounded-lg bg-black/40 border border-white/10 p-1">
+                                {TOPOLOGY_OPTIONS.map((t) => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setSelectedTopology(t.id)}
+                                        className={`flex-1 px-2 py-1 text-xs font-medium rounded-md transition-all ${selectedTopology === t.id
+                                            ? "bg-purple-500/80 text-white"
+                                            : "text-white/60 hover:text-white"
+                                            }`}
+                                    >
+                                        {t.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Max Faces - Just display */}
+                        <div>
+                            <label className="text-white/60 text-xs mb-1.5 block">Max Faces:</label>
+                            <div className="px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm">
+                                40000
+                            </div>
+                        </div>
+
+                        {/* Texture Resolution */}
+                        <div>
+                            <label className="text-white/60 text-xs mb-1.5 block">Texture:</label>
+                            <select
+                                value={selectedTexture}
+                                onChange={(e) => setSelectedTexture(e.target.value)}
+                                className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50"
+                            >
+                                {TEXTURE_OPTIONS.map((t) => (
+                                    <option key={t.id} value={t.id} className="bg-zinc-900">
+                                        {t.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Prompt Input - Sloyd style */}
@@ -360,8 +450,8 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     type="text"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe your 3D model... (e.g., medieval sword, treasure chest, sci-fi helmet)"
-                    className="w-full pl-11 pr-20 py-4 bg-black/60 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all text-sm"
+                    placeholder="Describe your 3D model idea..."
+                    className="w-full pl-11 pr-32 py-4 bg-black/60 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all text-sm"
                     disabled={isGenerating}
                     onKeyDown={(e) => e.key === "Enter" && !isGenerating && prompt.trim() && localCredits > 0 && generateModel()}
                 />
@@ -638,6 +728,69 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     💡 <span className="font-semibold text-white/70">To import into Roblox:</span> Download the GLB file → In Roblox Studio: Home → Import 3D → Select your file
                 </p>
             </div>
+
+            {/* Style Selection Modal */}
+            {showStyleModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowStyleModal(false)}>
+                    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Choose a Style</h3>
+                            <button
+                                onClick={() => setShowStyleModal(false)}
+                                className="text-white/50 hover:text-white text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4">
+                            {STYLE_OPTIONS.map((style) => (
+                                <button
+                                    key={style.id}
+                                    onClick={() => {
+                                        setSelectedStyle(style.id)
+                                        setShowStyleModal(false)
+                                    }}
+                                    className={`relative overflow-hidden rounded-xl border-2 transition-all aspect-square ${selectedStyle === style.id
+                                            ? "border-cyan-500 shadow-lg shadow-cyan-500/30"
+                                            : "border-white/10 hover:border-white/30"
+                                        }`}
+                                >
+                                    {style.image ? (
+                                        <>
+                                            <img
+                                                src={style.image}
+                                                alt={style.name}
+                                                className="absolute inset-0 w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                                        </>
+                                    ) : (
+                                        <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center">
+                                            <span className="text-4xl">🚫</span>
+                                        </div>
+                                    )}
+                                    <span className="absolute bottom-2 left-2 right-2 text-center text-sm font-medium text-white">
+                                        {style.name}
+                                    </span>
+                                    {selectedStyle === style.id && (
+                                        <div className="absolute top-2 right-2 w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center">
+                                            <Check className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setShowStyleModal(false)}
+                            className="mt-6 w-full px-6 py-3 bg-cyan-500 text-white rounded-xl font-bold hover:bg-cyan-600 transition-colors"
+                        >
+                            Done
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
