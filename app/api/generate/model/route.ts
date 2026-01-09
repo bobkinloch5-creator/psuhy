@@ -40,7 +40,7 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
         30,         // steps (generation steps)
         5,          // guidance_scale
         1234,       // seed
-        256,        // octree_res (octree resolution)
+        128,        // octree_res (lower for speed)
         true,       // rembg (remove background)
         8000,       // num_chunks
         true,       // randomize_seed
@@ -158,7 +158,7 @@ async function generateWithCube3DTextured(prompt: string): Promise<ModelResult> 
           meshBlob,     // mesh file
           prompt,       // text prompt for texture style
           42,           // seed
-          1024,         // texture_size
+          512,          // texture_size (lower for speed)
         ]),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Texture generation timeout")), 120000))
       ]) as any
@@ -228,7 +228,7 @@ async function generateWithCube3D(prompt: string): Promise<ModelResult> {
         1.0,          // bbox_x - length (if use_bbox is true)
         1.0,          // bbox_y - height (if use_bbox is true)
         1.0,          // bbox_z - depth (if use_bbox is true)
-        true,         // hi_res - enable high resolution for better quality
+        false,        // hi_res - disabled for faster generation
       ]),
       new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
     ]) as any
