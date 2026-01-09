@@ -164,12 +164,24 @@ local function startPolling()
                 -- Poll with pairing code so website knows who we are
                 local pollUrl = CONFIG.APP_URL .. "/api/plugin/poll?code=" .. pairingCode
                 local response = HttpService:GetAsync(pollUrl)
-                if response and response ~= "" and response ~= "[]" then
-                    local commands = HttpService:JSONDecode(response)
-                    -- Process each command
-                    if type(commands) == "table" then
-                        for _, cmd in ipairs(commands) do
-                            print("[BlaxSmith]  Received command:", cmd.type or "unknown")
+                
+                -- Check if we got a valid response (not an error)
+                if response then
+                    local decoded = HttpService:JSONDecode(response)
+                    
+                    -- If we get an array (even empty), we're connected!
+                    if type(decoded) == "table" and not decoded.error then
+                        -- Update status to connected (only once)
+                        if not _G.BlaxSmithConnected then
+                            _G.BlaxSmithConnected = true
+                            updateStatus(true)
+                            print("[BlaxSmith] ✅ Connected to BlaxSmith.dev!")
+                        end
+                        
+                        -- Process commands if any
+                        if #decoded > 0 then
+                            for _, cmd in ipairs(decoded) do
+                                print("[BlaxSmith]  Received command:", cmd.type or "unknown")
                             
                             -- SPECIAL HANDLING FOR SLOYD/3D MODEL COMMANDS
                             if cmd.type == "INSERT_ASSET" and cmd.data and cmd.data.assetId then
