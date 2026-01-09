@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import AIChatFullPage from "@/components/ai-chat-fullpage"
+import { AIChatFullPage } from "@/components/ai-chat-fullpage"
 
 export default async function ForgeChatPage() {
     const supabase = await createClient()

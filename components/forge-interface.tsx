@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { MessageSquare, Box, Map, Settings, LogOut, Zap, Crown, Sparkles } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { MessageSquare, Box, Map, Settings, LogOut, Zap, Crown, Sparkles, ChevronDown, Plug, ExternalLink, User, Shield, CreditCard } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"

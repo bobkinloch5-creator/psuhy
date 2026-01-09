@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import BlaxSmith3DGenerator from "@/components/blaxsmith-3d-generator"
+import { BlaxSmith3DGenerator } from "@/components/blaxsmith-3d-generator"
 
 export default async function ForgeModelsPage() {
     const supabase = await createClient()
@@ -22,5 +22,5 @@ export default async function ForgeModelsPage() {
         redirect("/")
     }
 
-    return <BlaxSmith3DGenerator user={userData} />
+    return <BlaxSmith3DGenerator modelCredits={userData.model_credits || userData.generation_credits || 0} />
 }
