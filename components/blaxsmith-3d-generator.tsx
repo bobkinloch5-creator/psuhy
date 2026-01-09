@@ -274,7 +274,25 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 credentials: "include", // Important: include cookies for auth
                 body: JSON.stringify({ prompt, style: selectedStyle }),
             })
-            const data = await res.json()
+
+            // Handle timeout and server errors before trying to parse JSON
+            if (res.status === 504) {
+                throw new Error("Generation timed out. Please try a simpler prompt or try again.")
+            }
+            if (res.status >= 500) {
+                throw new Error("Server is busy. Please try again in a moment.")
+            }
+
+            // Safely parse JSON - catch parsing errors
+            let data
+            try {
+                const text = await res.text()
+                data = JSON.parse(text)
+            } catch (parseError) {
+                console.error("[3D Generator] JSON parse error:", parseError)
+                throw new Error("Generation failed. Please try again.")
+            }
+
             console.log("[3D Generator] API Response:", data)
 
             // Handle auth errors specifically

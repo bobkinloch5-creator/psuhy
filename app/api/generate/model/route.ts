@@ -723,14 +723,14 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 
 // ============ MAIN GENERATION (TEXTURED MODELS ONLY - COLORED OUTPUT) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // ALWAYS TRY COMETAPI FIRST - it generates TEXTURED, COLORED models
   console.log("[3D-Gen] Generating TEXTURED model with COLORS...")
-  console.log("[3D-Gen] Priority: CometAPI Hunyuan3D-2 (Textured) → Free Generators (Fallback)")
+  console.log("[3D-Gen] Priority: Fast generators first, then slower ones")
 
   // Helper to safely wrap generator calls and prevent unhandled rejections
   const safeGenerate = async (name: string, fn: (p: string) => Promise<ModelResult>, timeout: number): Promise<ModelResult> => {
     return new Promise(async (resolve, reject) => {
       const timeoutId = setTimeout(() => {
+        console.log(`[3D-Gen] ${name} timed out after ${timeout / 1000}s`)
         reject(new Error(`${name} timeout`))
       }, timeout)
 
@@ -738,7 +738,7 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
         const result = await fn(prompt)
         clearTimeout(timeoutId)
         if (result?.model_url) {
-          console.log(`[3D-Gen] ✅ ${name} succeeded with TEXTURED model!`)
+          console.log(`[3D-Gen] ✅ ${name} succeeded!`)
           resolve(result)
         } else {
           reject(new Error("No model URL"))
@@ -751,44 +751,65 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // ============ PRIORITY 1: COMETAPI HUNYUAN3D-2 (TEXTURED + COLORED) ============
-  // This ALWAYS produces colored, textured models using DALL-E 3 → Hunyuan3D-2 pipeline
-  console.log("[3D-Gen] 🎨 Trying CometAPI Hunyuan3D-2 (TEXTURED + COLORED)...")
+  // ============ PRIORITY 1: FAST FREE GENERATORS (30-60s) ============
+  // Try these first - they're faster and more reliable
+  console.log("[3D-Gen] 🚀 Trying FAST generators first...")
 
-  try {
-    const cometResult = await safeGenerate("CometAPI-Hunyuan3D", generateWithCometAPI, 210000) // 3.5 min timeout for HD textures
-    if (cometResult?.model_url) {
-      console.log("[3D-Gen] ✅ CometAPI succeeded with TEXTURED COLORED model!")
-      return cometResult
-    }
-  } catch (error: any) {
-    console.log("[3D-Gen] ⚠️ CometAPI failed, trying free textured generators...", error.message)
-  }
-
-  // ============ PRIORITY 2: FREE TEXTURED GENERATORS ============
-  console.log("[3D-Gen] Trying FREE textured generators (text-to-3D)...")
-
-  const freeTexturedGenerators = [
-    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 60000 },
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 60000 },
-    { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },
-    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 90000 },
+  const fastGenerators = [
+    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 45000 },
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 45000 },
   ]
 
-  // Race all free textured generators - return first success
-  const freeRacePromises = freeTexturedGenerators.map(gen => {
+  // Race fast generators
+  const fastRacePromises = fastGenerators.map(gen => {
     console.log(`[3D-Gen] Starting: ${gen.name}...`)
     return safeGenerate(gen.name, gen.fn, gen.timeout)
   })
 
   try {
-    const freeSuccess = await Promise.any(freeRacePromises)
-    if (freeSuccess?.model_url) {
-      console.log("[3D-Gen] ✅ FREE textured generator succeeded!")
-      return freeSuccess
+    const fastSuccess = await Promise.any(fastRacePromises)
+    if (fastSuccess?.model_url) {
+      console.log("[3D-Gen] ✅ Fast generator succeeded!")
+      return fastSuccess
     }
-  } catch (freeError) {
-    console.log("[3D-Gen] All free textured generators failed...", freeError)
+  } catch (fastError) {
+    console.log("[3D-Gen] Fast generators failed, trying CometAPI...")
+  }
+
+  // ============ PRIORITY 2: COMETAPI HUNYUAN3D-2 (60s timeout) ============
+  console.log("[3D-Gen] 🎨 Trying CometAPI Hunyuan3D-2...")
+
+  try {
+    const cometResult = await safeGenerate("CometAPI-Hunyuan3D", generateWithCometAPI, 60000)
+    if (cometResult?.model_url) {
+      console.log("[3D-Gen] ✅ CometAPI succeeded!")
+      return cometResult
+    }
+  } catch (error: any) {
+    console.log("[3D-Gen] ⚠️ CometAPI failed:", error.message)
+  }
+
+  // ============ PRIORITY 3: SLOWER GENERATORS (90s) ============
+  console.log("[3D-Gen] Trying slower generators...")
+
+  const slowerGenerators = [
+    { name: "TripoSR", fn: generateWithTripoSR, timeout: 60000 },
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 60000 },
+  ]
+
+  const slowerRacePromises = slowerGenerators.map(gen => {
+    console.log(`[3D-Gen] Starting: ${gen.name}...`)
+    return safeGenerate(gen.name, gen.fn, gen.timeout)
+  })
+
+  try {
+    const slowerSuccess = await Promise.any(slowerRacePromises)
+    if (slowerSuccess?.model_url) {
+      console.log("[3D-Gen] ✅ Slower generator succeeded!")
+      return slowerSuccess
+    }
+  } catch (slowerError) {
+    console.log("[3D-Gen] Slower generators failed...")
   }
 
   // ============ PRIORITY 3: CUBE3D WITH TEXTURE OVERLAY ============
