@@ -756,7 +756,7 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   console.log("[3D-Gen] 🎨 Trying CometAPI Hunyuan3D-2 (TEXTURED + COLORED)...")
 
   try {
-    const cometResult = await safeGenerate("CometAPI-Hunyuan3D", generateWithCometAPI, 120000) // 2 min timeout
+    const cometResult = await safeGenerate("CometAPI-Hunyuan3D", generateWithCometAPI, 210000) // 3.5 min timeout for HD textures
     if (cometResult?.model_url) {
       console.log("[3D-Gen] ✅ CometAPI succeeded with TEXTURED COLORED model!")
       return cometResult
