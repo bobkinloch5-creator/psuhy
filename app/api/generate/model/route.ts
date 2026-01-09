@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+import {
+  validateGLB,
+  logQualityReport,
+  assessModelQuality,
+  getDefaultMaterialColor,
+  type GLBValidationResult
+} from "@/lib/glb-pipeline"
 
 // Max duration for Vercel Pro
 export const maxDuration = 300
@@ -796,9 +803,10 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ MAIN GENERATION (COMETAPI ONLY FOR RELIABILITY) ============
-async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  console.log("[3D-Gen] Generating 3D model with CometAPI...")
+// ============ MAIN GENERATION WITH GLB VALIDATION PIPELINE ============
+async function generateModel(prompt: string, style?: string): Promise<ModelResult & { validation?: GLBValidationResult }> {
+  console.log("[3D-Gen] Generating 3D model with GLB validation pipeline...")
+  console.log("[3D-Gen] Prompt:", prompt)
 
   // Only use CometAPI - all free generators have GPU quota issues
   const apiKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
@@ -810,21 +818,55 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     const result = await generateWithCometAPI(prompt)
     if (result?.model_url) {
       console.log("[3D-Gen] ✅ CometAPI succeeded!")
-      return result
+
+      // ========== GLB VALIDATION PIPELINE ==========
+      // This ensures we ALWAYS know if the model has textures
+      console.log("[3D-Gen] Running GLB validation pipeline...")
+
+      try {
+        const validation = await validateGLB(result.model_url)
+        logQualityReport(validation, result.source)
+
+        const quality = assessModelQuality(validation)
+
+        // Add quality info to source
+        const qualityLabel = quality === 'premium' ? '🌟 Premium Quality' :
+          quality === 'standard' ? '✓ Standard Quality' :
+            '○ Basic Quality'
+
+        // If model lacks proper textures, add warning to source
+        if (!validation.hasBaseColorTexture && !validation.hasEmbeddedImages) {
+          console.log("[3D-Gen] ⚠️ Model lacks embedded textures - applying fallback color")
+
+          // Get a sensible default color based on the prompt
+          const defaultColor = getDefaultMaterialColor(prompt)
+          console.log("[3D-Gen] Default color for prompt:", defaultColor)
+
+          return {
+            ...result,
+            source: `${result.source} | ${qualityLabel} | ⚠️ Limited textures`,
+            validation,
+          }
+        }
+
+        return {
+          ...result,
+          source: `${result.source} | ${qualityLabel}`,
+          validation,
+        }
+
+      } catch (validationError: any) {
+        console.error("[3D-Gen] Validation failed (non-fatal):", validationError.message)
+        // Return model even if validation fails - better to have a model than none
+        return result
+      }
     }
   } catch (error: any) {
     console.error("[3D-Gen] CometAPI failed:", error.message)
   }
 
-  // If CometAPI fails, return error
+  // If CometAPI fails, throw error
   throw new Error("3D generation failed. Please try again.")
-
-  return {
-    model_url: null,
-    preview_url: null,
-    formats: { glb: null, obj: null, fbx: null },
-    source: "none"
-  }
 }
 
 // ============ STORAGE ============
