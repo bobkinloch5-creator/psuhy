@@ -779,16 +779,16 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                 </div>
 
                                 {/* Animation Presets with Preview */}
-                                <div className="grid grid-cols-4 gap-2 mb-3">
+                                <div className="grid grid-cols-4 gap-3 mb-3">
                                     {[
-                                        { id: "idle", icon: "🧍", name: "Idle", preview: "Standing still with subtle breathing, weight shifting side to side" },
-                                        { id: "walk", icon: "🚶", name: "Walk", preview: "Natural walking cycle, arms swinging, steady pace" },
-                                        { id: "run", icon: "🏃", name: "Run", preview: "Fast running motion, dynamic arm pumping, leaning forward" },
-                                        { id: "jump", icon: "⬆️", name: "Jump", preview: "Jump up with arms raised, land with impact" },
-                                        { id: "attack", icon: "⚔️", name: "Attack", preview: "Sword slash motion, aggressive swing with follow-through" },
-                                        { id: "dance", icon: "💃", name: "Dance", preview: "Fun rhythmic dance moves, party vibes" },
-                                        { id: "wave", icon: "👋", name: "Wave", preview: "Friendly wave hello, arm raised" },
-                                        { id: "death", icon: "💀", name: "Death", preview: "Dramatic falling down defeated, collapse" },
+                                        { id: "idle", icon: "🧍", name: "Idle", preview: "Standing still with subtle breathing", img: "/images/animations/anim_idle.png" },
+                                        { id: "walk", icon: "🚶", name: "Walk", preview: "Natural walking cycle", img: "/images/animations/anim_walk.png" },
+                                        { id: "run", icon: "🏃", name: "Run", preview: "Fast running motion", img: "/images/animations/anim_run.png" },
+                                        { id: "jump", icon: "⬆️", name: "Jump", preview: "Jump with landing", img: "/images/animations/anim_jump.png" },
+                                        { id: "attack", icon: "⚔️", name: "Attack", preview: "Combat swing attack", img: "/images/animations/anim_attack.png" },
+                                        { id: "dance", icon: "💃", name: "Dance", preview: "Fun dance moves", img: "/images/animations/anim_dance.png" },
+                                        { id: "wave", icon: "👋", name: "Wave", preview: "Friendly greeting", img: "/images/animations/anim_wave.png" },
+                                        { id: "death", icon: "💀", name: "Death", preview: "Dramatic defeat", img: "/images/animations/anim_death.png" },
                                     ].map((anim) => (
                                         <div key={anim.id} className="group relative">
                                             <button
@@ -849,15 +849,26 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                                         alert("Animation failed. Please try again.")
                                                     }
                                                 }}
-                                                className="w-full flex flex-col items-center gap-1 p-2 bg-black/30 border border-white/10 rounded-lg hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all"
+                                                className="w-full flex flex-col items-center gap-2 p-3 bg-black/40 border border-white/10 rounded-xl hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all overflow-hidden"
                                             >
-                                                <span className="text-lg group-hover:scale-125 transition-transform duration-200">{anim.icon}</span>
-                                                <span className="text-xs text-white/60 group-hover:text-white">{anim.name}</span>
+                                                {/* Preview Image */}
+                                                <div className="w-full h-16 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500/20 to-cyan-500/20 relative">
+                                                    <img
+                                                        src={anim.img}
+                                                        alt={anim.name}
+                                                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                                                        loading="lazy"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-base group-hover:scale-110 transition-transform">{anim.icon}</span>
+                                                    <span className="text-xs text-white/80 font-medium group-hover:text-white">{anim.name}</span>
+                                                </div>
                                             </button>
                                             {/* Preview tooltip on hover */}
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-black/95 border border-cyan-500/50 rounded-lg text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg shadow-cyan-500/20">
-                                                <div className="font-semibold text-cyan-400 mb-1">{anim.name} Preview</div>
-                                                <div className="text-white/70 max-w-[200px] whitespace-normal">{anim.preview}</div>
+                                                <div className="font-semibold text-cyan-400">{anim.preview}</div>
                                                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-black/95 border-r border-b border-cyan-500/50 rotate-45"></div>
                                             </div>
                                         </div>

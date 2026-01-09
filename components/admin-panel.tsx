@@ -131,6 +131,181 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
         setIsLoading(false)
     }
 
+    // === PROMO CODES ===
+    const [promoCode, setPromoCode] = useState("")
+    const [promoCredits, setPromoCredits] = useState("50")
+    const [promoMaxUses, setPromoMaxUses] = useState("100")
+    const [promoCodes, setPromoCodes] = useState<any[]>([])
+
+    const handleCreatePromo = async () => {
+        setIsLoading(true)
+        try {
+            const res = await fetch("/api/admin/promo-codes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    code: promoCode || undefined,
+                    credits: parseInt(promoCredits) || 50,
+                    maxUses: parseInt(promoMaxUses) || 100
+                })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setActionResult({ type: "success", message: `✅ Promo code created: ${data.code || data.promoCode?.code}` })
+                setPromoCode("")
+                fetchPromoCodes()
+            } else {
+                throw new Error(data.error || "Failed to create promo code")
+            }
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message })
+        }
+        setIsLoading(false)
+    }
+
+    const fetchPromoCodes = async () => {
+        try {
+            const res = await fetch("/api/admin/promo-codes")
+            const data = await res.json()
+            if (data.promoCodes) setPromoCodes(data.promoCodes)
+        } catch (e) {
+            console.log("Promo codes table may not exist yet")
+        }
+    }
+
+    // === BULK CREDITS ===
+    const [bulkAmount, setBulkAmount] = useState("")
+    const [bulkTier, setBulkTier] = useState("free")
+    const [tierBulkAmount, setTierBulkAmount] = useState("")
+
+    const handleBulkGiftAll = async () => {
+        if (!bulkAmount || parseInt(bulkAmount) <= 0) {
+            setActionResult({ type: "error", message: "Enter a valid credit amount" })
+            return
+        }
+        if (!confirm(`⚠️ Gift ${bulkAmount} credits to ALL ${stats.totalUsers} users?`)) return
+        setIsLoading(true)
+        try {
+            const res = await fetch("/api/admin/bulk-credits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "gift_all", amount: parseInt(bulkAmount) })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setActionResult({ type: "success", message: `✅ Gifted ${bulkAmount} credits to ${data.affected || stats.totalUsers} users` })
+                setBulkAmount("")
+                router.refresh()
+            } else {
+                throw new Error(data.error || "Failed to gift bulk credits")
+            }
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message })
+        }
+        setIsLoading(false)
+    }
+
+    const handleBulkGiftTier = async () => {
+        if (!tierBulkAmount || parseInt(tierBulkAmount) <= 0) {
+            setActionResult({ type: "error", message: "Enter a valid credit amount" })
+            return
+        }
+        if (!confirm(`⚠️ Gift ${tierBulkAmount} credits to all ${bulkTier.toUpperCase()} users?`)) return
+        setIsLoading(true)
+        try {
+            const res = await fetch("/api/admin/bulk-credits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "gift_tier", amount: parseInt(tierBulkAmount), tier: bulkTier })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setActionResult({ type: "success", message: `✅ Gifted ${tierBulkAmount} credits to ${data.affected || 0} ${bulkTier} users` })
+                setTierBulkAmount("")
+                router.refresh()
+            } else {
+                throw new Error(data.error || "Failed to gift tier credits")
+            }
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message })
+        }
+        setIsLoading(false)
+    }
+
+    const handleResetTierCredits = async (tier: string, amount: number) => {
+        if (!confirm(`⚠️ Reset ALL ${tier} users to ${amount} credits?`)) return
+        setIsLoading(true)
+        try {
+            const res = await fetch("/api/admin/bulk-credits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "reset_tier", tier })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setActionResult({ type: "success", message: `✅ Reset ${data.affected || 0} ${tier} users to default credits` })
+                router.refresh()
+            } else {
+                throw new Error(data.error || "Failed to reset credits")
+            }
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message })
+        }
+        setIsLoading(false)
+    }
+
+    // === USER TIER MANAGEMENT ===
+    const handleChangeTier = async (userId: string, username: string, newTier: string) => {
+        if (!confirm(`Change ${username}'s tier to ${newTier}?`)) return
+        setIsLoading(true)
+        try {
+            const res = await fetch("/api/admin/change-tier", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, tier: newTier })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setActionResult({ type: "success", message: `✅ ${username} is now ${newTier.toUpperCase()}` })
+                router.refresh()
+            } else {
+                throw new Error(data.error)
+            }
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message })
+        }
+        setIsLoading(false)
+    }
+
+    // === DELETE USER ===
+    const handleDeleteUser = async (userId: string, username: string) => {
+        if (!confirm(`⚠️ PERMANENTLY DELETE ${username}? This cannot be undone!`)) return
+        if (!confirm(`Are you REALLY sure? Type YES in the next prompt to confirm.`)) return
+        setIsLoading(true)
+        try {
+            const res = await fetch("/api/admin/delete-user", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setActionResult({ type: "success", message: `🗑️ ${username} has been deleted` })
+                router.refresh()
+            } else {
+                throw new Error(data.error)
+            }
+        } catch (error: any) {
+            setActionResult({ type: "error", message: error.message })
+        }
+        setIsLoading(false)
+    }
+
+    // Load promo codes on mount
+    useEffect(() => {
+        fetchPromoCodes()
+    }, [])
+
     const filteredUsers = users.filter(u =>
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -555,8 +730,8 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                                     <td className="p-4 text-sm text-white">{gen.users?.username || "Unknown"}</td>
                                                     <td className="p-4">
                                                         <span className={`px-2 py-1 rounded text-xs font-medium ${gen.type === "3d_model" ? "bg-purple-500/20 text-purple-400" :
-                                                                gen.type === "script" ? "bg-blue-500/20 text-blue-400" :
-                                                                    "bg-green-500/20 text-green-400"
+                                                            gen.type === "script" ? "bg-blue-500/20 text-blue-400" :
+                                                                "bg-green-500/20 text-green-400"
                                                             }`}>
                                                             {gen.type || "chat"}
                                                         </span>
@@ -564,8 +739,8 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                                     <td className="p-4 text-sm text-zinc-400 max-w-xs truncate">{gen.prompt?.slice(0, 50) || "N/A"}...</td>
                                                     <td className="p-4">
                                                         <span className={`px-2 py-1 rounded text-xs font-medium ${gen.status === "completed" ? "bg-green-500/20 text-green-400" :
-                                                                gen.status === "failed" ? "bg-red-500/20 text-red-400" :
-                                                                    "bg-yellow-500/20 text-yellow-400"
+                                                            gen.status === "failed" ? "bg-red-500/20 text-red-400" :
+                                                                "bg-yellow-500/20 text-yellow-400"
                                                             }`}>
                                                             {gen.status || "completed"}
                                                         </span>
@@ -681,29 +856,71 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                     <input
                                         type="text"
                                         placeholder="Code (auto-generated if empty)"
+                                        value={promoCode}
+                                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                                         className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
                                     />
                                     <input
                                         type="number"
-                                        placeholder="Credits (default: 50)"
-                                        defaultValue={50}
+                                        placeholder="Credits"
+                                        value={promoCredits}
+                                        onChange={(e) => setPromoCredits(e.target.value)}
                                         className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
                                     />
                                     <input
                                         type="number"
-                                        placeholder="Max Uses (default: 100)"
-                                        defaultValue={100}
+                                        placeholder="Max Uses"
+                                        value={promoMaxUses}
+                                        onChange={(e) => setPromoMaxUses(e.target.value)}
                                         className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
                                     />
-                                    <button className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:opacity-90 transition-opacity">
-                                        Create Code
+                                    <button
+                                        onClick={handleCreatePromo}
+                                        disabled={isLoading}
+                                        className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    >
+                                        {isLoading ? "Creating..." : "Create Code"}
                                     </button>
                                 </div>
                             </div>
 
                             <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-white mb-4">Active Codes</h3>
-                                <p className="text-zinc-400">Run the SQL script in scripts/CREATE_PROMO_CODES_TABLE.sql to enable this feature.</p>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-bold text-white">Active Codes ({promoCodes.length})</h3>
+                                    <button onClick={fetchPromoCodes} className="text-sm text-orange-400 hover:text-orange-300">
+                                        <RefreshCw className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                {promoCodes.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead className="bg-zinc-800/50">
+                                                <tr>
+                                                    <th className="text-left p-3 text-xs font-medium text-zinc-400">Code</th>
+                                                    <th className="text-left p-3 text-xs font-medium text-zinc-400">Credits</th>
+                                                    <th className="text-left p-3 text-xs font-medium text-zinc-400">Uses</th>
+                                                    <th className="text-left p-3 text-xs font-medium text-zinc-400">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {promoCodes.map((code: any) => (
+                                                    <tr key={code.id} className="hover:bg-white/5">
+                                                        <td className="p-3 font-mono text-orange-400">{code.code}</td>
+                                                        <td className="p-3 text-white">{code.credits}</td>
+                                                        <td className="p-3 text-white">{code.current_uses || 0} / {code.max_uses}</td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-1 rounded-full text-xs ${code.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                                {code.is_active ? 'Active' : 'Disabled'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-zinc-400">No promo codes yet. Create one above!</p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -721,10 +938,16 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                         <input
                                             type="number"
                                             placeholder="Credit amount"
+                                            value={bulkAmount}
+                                            onChange={(e) => setBulkAmount(e.target.value)}
                                             className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
                                         />
-                                        <button className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:opacity-90">
-                                            Gift to All ({stats.totalUsers} users)
+                                        <button
+                                            onClick={handleBulkGiftAll}
+                                            disabled={isLoading}
+                                            className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+                                        >
+                                            {isLoading ? "Processing..." : `Gift to All (${stats.totalUsers} users)`}
                                         </button>
                                     </div>
                                 </div>
@@ -735,18 +958,29 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                         Gift by Tier
                                     </h3>
                                     <div className="space-y-4">
-                                        <select className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white">
+                                        <select
+                                            value={bulkTier}
+                                            onChange={(e) => setBulkTier(e.target.value)}
+                                            className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white"
+                                        >
                                             <option value="free">Free Users</option>
                                             <option value="pro">Pro Users</option>
+                                            <option value="premium">Premium Users</option>
                                             <option value="enterprise">Enterprise Users</option>
                                         </select>
                                         <input
                                             type="number"
                                             placeholder="Credit amount"
+                                            value={tierBulkAmount}
+                                            onChange={(e) => setTierBulkAmount(e.target.value)}
                                             className="w-full px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500"
                                         />
-                                        <button className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:opacity-90">
-                                            Gift to Tier
+                                        <button
+                                            onClick={handleBulkGiftTier}
+                                            disabled={isLoading}
+                                            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+                                        >
+                                            {isLoading ? "Processing..." : "Gift to Tier"}
                                         </button>
                                     </div>
                                 </div>
@@ -758,13 +992,25 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                                     Reset Tier Credits
                                 </h3>
                                 <div className="grid grid-cols-3 gap-4">
-                                    <button className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors">
+                                    <button
+                                        onClick={() => handleResetTierCredits("free", 30)}
+                                        disabled={isLoading}
+                                        className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                                    >
                                         Reset Free → 30 credits
                                     </button>
-                                    <button className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors">
+                                    <button
+                                        onClick={() => handleResetTierCredits("pro", 150)}
+                                        disabled={isLoading}
+                                        className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                                    >
                                         Reset Pro → 150 credits
                                     </button>
-                                    <button className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors">
+                                    <button
+                                        onClick={() => handleResetTierCredits("enterprise", 500)}
+                                        disabled={isLoading}
+                                        className="px-4 py-3 bg-zinc-800 border border-white/10 rounded-xl text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                                    >
                                         Reset Enterprise → 500 credits
                                     </button>
                                 </div>
