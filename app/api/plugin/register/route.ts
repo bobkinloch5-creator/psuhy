@@ -11,6 +11,10 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type",
 }
 
+// In-memory fallback for pairing codes (works for short sessions)
+// Key: code, Value: { user_id, created_at }
+const pairingCodes = new Map<string, { user_id?: string; created_at: Date }>()
+
 export async function OPTIONS() {
     return new NextResponse(null, { headers: corsHeaders })
 }
@@ -25,32 +29,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Code required" }, { status: 400, headers: corsHeaders })
         }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        // Store in memory (works for immediate pairing)
+        pairingCodes.set(code, { created_at: new Date() })
+        console.log(`[Plugin Register] Code ${code} registered (v${version})`)
 
-        // Store the pairing code in database using plugin_connections table
-        // First check if this code already exists
-        const { data: existing } = await supabase
-            .from("plugin_connections")
-            .select("*")
-            .eq("pairing_code", code)
-            .single()
-
-        if (!existing) {
-            // Insert new pairing code
-            const { error } = await supabase.from("plugin_connections").insert({
-                pairing_code: code,
-                plugin_version: version || "6.5",
-                status: "pending",
-                created_at: new Date().toISOString()
-            })
-
-            if (error) {
-                console.log("[Plugin Register] Insert error:", error.message)
-                // Table might not exist, try creating it or use a fallback
+        // Clean up old codes (older than 10 minutes)
+        const tenMinutesAgo = Date.now() - 10 * 60 * 1000
+        for (const [key, value] of pairingCodes.entries()) {
+            if (value.created_at.getTime() < tenMinutesAgo) {
+                pairingCodes.delete(key)
             }
         }
-
-        console.log(`[Plugin Register] Code ${code} registered (v${version})`)
 
         return NextResponse.json({
             success: true,
@@ -70,20 +59,13 @@ export async function GET(request: Request) {
         const code = searchParams.get("code")
         const userId = searchParams.get("userId")
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
         // Check if code is registered (just checking)
         if (code && !userId) {
-            const { data: codeData } = await supabase
-                .from("plugin_connections")
-                .select("*")
-                .eq("pairing_code", code)
-                .single()
-
+            const codeData = pairingCodes.get(code)
             if (codeData) {
                 return NextResponse.json({
                     valid: true,
-                    paired: codeData.status === "connected",
+                    paired: !!codeData.user_id,
                     user_id: codeData.user_id
                 }, { headers: corsHeaders })
             }
@@ -92,57 +74,34 @@ export async function GET(request: Request) {
 
         // Pair the code with a user
         if (code && userId) {
-            // First, check if code exists (might be registered by plugin)
-            const { data: existingCode } = await supabase
-                .from("plugin_connections")
-                .select("*")
-                .eq("pairing_code", code)
-                .single()
+            // Check if code exists in memory
+            let codeData = pairingCodes.get(code)
 
-            if (existingCode) {
-                // Update existing code with user
-                const { error } = await supabase
-                    .from("plugin_connections")
-                    .update({
-                        user_id: userId,
-                        status: "connected",
-                        connected_at: new Date().toISOString()
-                    })
-                    .eq("pairing_code", code)
-
-                if (error) {
-                    console.error("[Plugin Register] Update error:", error)
-                    return NextResponse.json({ error: "Failed to pair" }, { status: 500, headers: corsHeaders })
-                }
-
-                console.log(`[Plugin Register] Code ${code} paired with user ${userId}`)
-                return NextResponse.json({
-                    success: true,
-                    message: "Plugin paired successfully"
-                }, { headers: corsHeaders })
+            if (!codeData) {
+                // Code not found in memory - create it now (user might pair before plugin fully loads)
+                codeData = { created_at: new Date() }
+                pairingCodes.set(code, codeData)
             }
 
-            // Code doesn't exist - create it and pair immediately
-            const { error } = await supabase.from("plugin_connections").insert({
-                pairing_code: code,
-                user_id: userId,
-                status: "connected",
-                connected_at: new Date().toISOString()
-            })
+            // Update with user ID
+            codeData.user_id = userId
+            pairingCodes.set(code, codeData)
 
-            if (error) {
-                // Table might not exist - try upsert approach or simpler fallback
-                console.error("[Plugin Register] Insert error:", error)
+            console.log(`[Plugin Register] Code ${code} paired with user ${userId}`)
 
-                // Fallback: Just acknowledge the pairing for now
-                console.log(`[Plugin Register] Fallback: Code ${code} paired with user ${userId}`)
-                return NextResponse.json({
-                    success: true,
-                    message: "Plugin paired successfully (fallback)"
-                }, { headers: corsHeaders })
+            // Also try to store in database for persistence
+            try {
+                const supabase = createClient(supabaseUrl, supabaseServiceKey)
+                await supabase.from("command_queue").insert({
+                    user_id: userId,
+                    type: "PLUGIN_PAIRED",
+                    data: { code, paired_at: new Date().toISOString() },
+                    status: "completed"
+                })
+            } catch (dbErr) {
+                console.log("[Plugin Register] DB insert optional, skipping")
             }
 
-            console.log(`[Plugin Register] Code ${code} created and paired with user ${userId}`)
             return NextResponse.json({
                 success: true,
                 message: "Plugin paired successfully"
@@ -155,3 +114,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Failed" }, { status: 500, headers: corsHeaders })
     }
 }
+
+// Export for poll endpoint
+export { pairingCodes }
