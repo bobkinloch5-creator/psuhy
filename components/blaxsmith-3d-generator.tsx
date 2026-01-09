@@ -368,15 +368,27 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
     return (
         <div className="space-y-4">
-            {/* Sloyd-style Header with Credits */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-white/5">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                        <Wand2 className="w-5 h-5 text-white" />
+            {/* Premium Sloyd-style Header */}
+            <div className="relative p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/5 to-cyan-500/10 border border-white/10 overflow-hidden group">
+                {/* Animated background glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-pink-500/5 to-cyan-500/5 animate-pulse" />
+                <div className="absolute top-0 left-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl group-hover:bg-purple-500/30 transition-all duration-700" />
+                <div className="absolute bottom-0 right-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-all duration-700" />
+
+                <div className="relative flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center shadow-xl shadow-purple-500/40 group-hover:shadow-purple-500/60 transition-all group-hover:scale-105 duration-300">
+                        <Wand2 className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                        <h4 className="text-white font-semibold text-sm">Text-to-3D</h4>
-                        <p className="text-white/50 text-xs">Powered by 6 AI Engines</p>
+                        <h4 className="text-white font-black text-lg tracking-tight">Text-to-3D Generator</h4>
+                        <p className="text-white/50 text-sm flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-xs font-medium">
+                                <Sparkles className="w-3 h-3" />
+                                6 AI Engines
+                            </span>
+                            <span className="text-white/30">•</span>
+                            <span>Multi-format export</span>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -475,40 +487,49 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 )}
             </div>
 
-            {/* Prompt Input - Sloyd style */}
-            <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
+            {/* Premium Prompt Input */}
+            <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-cyan-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                    </div>
                 </div>
                 <input
                     type="text"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Describe your 3D model idea..."
-                    className="w-full pl-11 pr-32 py-4 bg-black/60 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all text-sm"
+                    className="relative w-full pl-14 pr-32 py-5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all text-base shadow-inner shadow-black/20"
                     disabled={isGenerating}
                     onKeyDown={(e) => e.key === "Enter" && !isGenerating && prompt.trim() && localCredits > 0 && generateModel()}
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-white/40 bg-black/40 px-2 py-1 rounded">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-purple-300 bg-purple-500/20 border border-purple-500/30 px-3 py-1.5 rounded-lg font-medium">
                     1 credit
                 </span>
             </div>
 
-            {/* Generate Button - Sloyd style gradient */}
+            {/* Premium Generate Button */}
             <button
                 onClick={generateModel}
                 disabled={isGenerating || localCredits <= 0 || !prompt.trim()}
-                className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white rounded-xl font-bold hover:shadow-xl hover:shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-base hover:scale-[1.01] active:scale-[0.99]"
+                className="group relative w-full px-6 py-5 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg hover:scale-[1.01] active:scale-[0.99] overflow-hidden"
             >
+                {/* Animated shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+
                 {isGenerating ? (
                     <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Generating 3D Model...</span>
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>Creating Your Model...</span>
                     </>
                 ) : (
                     <>
-                        <Wand2 className="w-5 h-5" />
-                        Generate 3D Model
+                        <div className="p-1.5 rounded-lg bg-white/20">
+                            <Wand2 className="w-5 h-5" />
+                        </div>
+                        <span>Generate 3D Model</span>
+                        <Sparkles className="w-5 h-5 text-yellow-200" />
                     </>
                 )}
             </button>
@@ -759,31 +780,43 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 </p>
             </div>
 
-            {/* Style Selection Modal */}
+            {/* Style Selection Modal - Premium Design */}
             {showStyleModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowStyleModal(false)}>
-                    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-white">Choose a Style</h3>
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-50 animate-[fadeIn_0.2s_ease-out]"
+                    onClick={() => setShowStyleModal(false)}
+                >
+                    <div
+                        className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/90 to-purple-900/30 border border-white/10 rounded-3xl p-8 w-full max-w-3xl max-h-[85vh] overflow-auto shadow-2xl shadow-purple-500/10 animate-[slideUp_0.3s_ease-out]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Premium Header */}
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-2xl font-black bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent">Choose a Style</h3>
+                                <p className="text-white/40 text-sm mt-1">Select an art style for your 3D model</p>
+                            </div>
                             <button
                                 onClick={() => setShowStyleModal(false)}
-                                className="text-white/50 hover:text-white text-2xl"
+                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all hover:rotate-90 duration-300"
                             >
                                 ×
                             </button>
                         </div>
 
+                        {/* Premium Grid */}
                         <div className="grid grid-cols-4 gap-4">
-                            {STYLE_OPTIONS.map((style) => (
+                            {STYLE_OPTIONS.map((style, index) => (
                                 <button
                                     key={style.id}
                                     onClick={() => {
                                         setSelectedStyle(style.id)
                                         setShowStyleModal(false)
                                     }}
-                                    className={`relative overflow-hidden rounded-xl border-2 transition-all aspect-square ${selectedStyle === style.id
-                                        ? "border-cyan-500 shadow-lg shadow-cyan-500/30"
-                                        : "border-white/10 hover:border-white/30"
+                                    style={{ animationDelay: `${index * 50}ms` }}
+                                    className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 aspect-square hover:scale-[1.02] hover:-translate-y-1 animate-[fadeIn_0.3s_ease-out_backwards] ${selectedStyle === style.id
+                                        ? "border-cyan-400 shadow-xl shadow-cyan-500/40 ring-2 ring-cyan-400/30"
+                                        : "border-white/10 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20"
                                         }`}
                                 >
                                     {style.image ? (
@@ -791,32 +824,44 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                             <img
                                                 src={style.image}
                                                 alt={style.name}
-                                                className="absolute inset-0 w-full h-full object-cover"
+                                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                             />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                                         </>
                                     ) : (
-                                        <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center">
-                                            <span className="text-4xl">🚫</span>
+                                        <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
+                                            <span className="text-5xl opacity-50 group-hover:scale-110 transition-transform">🚫</span>
                                         </div>
                                     )}
-                                    <span className="absolute bottom-2 left-2 right-2 text-center text-sm font-medium text-white">
-                                        {style.name}
-                                    </span>
+
+                                    {/* Style Label with Icon */}
+                                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-lg">{style.icon}</span>
+                                            <span className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">{style.name}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Selected Indicator */}
                                     {selectedStyle === style.id && (
-                                        <div className="absolute top-2 right-2 w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center">
+                                        <div className="absolute top-3 right-3 w-7 h-7 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/50 animate-[popIn_0.2s_ease-out]">
                                             <Check className="w-4 h-4 text-white" />
                                         </div>
                                     )}
+
+                                    {/* Hover Glow */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-transparent to-cyan-500/0 group-hover:from-purple-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
                                 </button>
                             ))}
                         </div>
 
+                        {/* Premium Done Button */}
                         <button
                             onClick={() => setShowStyleModal(false)}
-                            className="mt-6 w-full px-6 py-3 bg-cyan-500 text-white rounded-xl font-bold hover:bg-cyan-600 transition-colors"
+                            className="mt-8 w-full px-6 py-4 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 text-white rounded-2xl font-bold text-lg hover:shadow-xl hover:shadow-cyan-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden group"
                         >
-                            Done
+                            <span className="relative z-10">Done</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </button>
                     </div>
                 </div>
