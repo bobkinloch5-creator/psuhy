@@ -944,6 +944,44 @@ export async function POST(request: Request) {
       }, { status: 403 })
     }
 
+    // ========== RATE LIMITING - PROTECT API CREDITS ==========
+    // Free users: 5 minute cooldown | Pro users: 1 minute cooldown
+    const isPremiumUser = userData.subscription_tier && ["pro", "premium", "enterprise"].includes(userData.subscription_tier)
+    const COOLDOWN_SECONDS = isPremiumUser ? 60 : 300 // 1 min for pro, 5 min for free
+
+    // Check last 3D generation from creations table
+    const { data: lastGeneration } = await serviceClient
+      .from("creations")
+      .select("created_at")
+      .eq("user_id", userData.id)
+      .eq("type", "3d_model")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (lastGeneration?.created_at) {
+      const lastGenTime = new Date(lastGeneration.created_at).getTime()
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - lastGenTime) / 1000)
+      const retryAfter = COOLDOWN_SECONDS - elapsedSeconds
+
+      if (retryAfter > 0) {
+        console.log(`[3D-Gen] Rate limited: ${retryAfter}s remaining for user ${userData.id}`)
+        return NextResponse.json({
+          error: "Please wait before generating again",
+          message: isPremiumUser
+            ? `Pro users can generate every 1 minute. Please wait ${retryAfter} seconds.`
+            : `Free users can generate every 5 minutes. Please wait ${retryAfter} seconds. Upgrade to Pro for faster generation!`,
+          retryAfter: retryAfter,
+          retryAfterFormatted: retryAfter >= 60
+            ? `${Math.floor(retryAfter / 60)}m ${retryAfter % 60}s`
+            : `${retryAfter}s`,
+        }, { status: 429 })
+      }
+    }
+
+    console.log(`[3D-Gen] Rate limit passed, generating model...`)
+
     // Generate model
     const result = await generateModel(prompt, style)
 
