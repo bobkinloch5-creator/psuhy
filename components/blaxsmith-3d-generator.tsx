@@ -190,6 +190,40 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         loadModelViewer()
     }, [])
 
+    // Handle downloading with proper filename
+    const handleDownload = async (url: string, format: string) => {
+        try {
+            // Create a filename from the prompt
+            const sanitizedPrompt = prompt.trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\s+/g, '_')
+                .slice(0, 50) || 'model'
+
+            const filename = `${sanitizedPrompt}.${format}`
+
+            // Fetch the file
+            const response = await fetch(url)
+            const blob = await response.blob()
+
+            // Create download link
+            const downloadUrl = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = downloadUrl
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(downloadUrl)
+
+            setShowExportDropdown(false)
+        } catch (error) {
+            console.error('[Download] Error:', error)
+            // Fallback to direct link
+            window.open(url, '_blank')
+        }
+    }
+
     const generateModel = async () => {
         if (!prompt.trim() || localCredits <= 0) return
 
@@ -643,20 +677,16 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                         {/* Dropdown Menu - positioned above with high z-index */}
                                         {showExportDropdown && (
                                             <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden shadow-xl z-[100]">
-                                                <a
-                                                    href={generatedModel.model_url}
-                                                    download
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
-                                                    onClick={() => setShowExportDropdown(false)}
+                                                <button
+                                                    onClick={() => handleDownload(generatedModel.model_url, 'glb')}
+                                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 text-left"
                                                 >
                                                     <Download className="w-4 h-4 text-green-400" />
                                                     <div>
                                                         <p className="text-white text-sm font-medium">GLB Format</p>
                                                         <p className="text-white/50 text-xs">Best for Roblox Studio</p>
                                                     </div>
-                                                </a>
+                                                </button>
                                                 {generatedModel.formats?.fbx && (
                                                     <a
                                                         href={generatedModel.formats.fbx}
@@ -752,8 +782,8 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                         setShowStyleModal(false)
                                     }}
                                     className={`relative overflow-hidden rounded-xl border-2 transition-all aspect-square ${selectedStyle === style.id
-                                            ? "border-cyan-500 shadow-lg shadow-cyan-500/30"
-                                            : "border-white/10 hover:border-white/30"
+                                        ? "border-cyan-500 shadow-lg shadow-cyan-500/30"
+                                        : "border-white/10 hover:border-white/30"
                                         }`}
                                 >
                                     {style.image ? (
