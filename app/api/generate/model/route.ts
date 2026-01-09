@@ -160,8 +160,9 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
       new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
     ]) as any
 
+    // Use the correct endpoint with leading slash
     const result = await Promise.race([
-      client.predict("text-to-3d", [
+      client.predict("/text-to-3d", [
         prompt,
         0,        // seed
         15.0,     // guidance_scale
@@ -204,11 +205,11 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     ? `${prompt}, ${style} style, high quality 3D model`
     : `${prompt}, high quality 3D game asset`
 
-  // Priority: Hunyuan3D-2 (best quality, free) → Cube3D → Shap-E
+  // Priority: Shap-E (most reliable) → Hunyuan3D-2 → Cube3D
   const services: { name: string; fn: () => Promise<ModelResult> }[] = [
+    { name: "Shap-E", fn: () => generateWithShapE(prompt) },
     { name: "Hunyuan3D-2", fn: () => generateWithHunyuan3D(enhancedPrompt) },
     { name: "Cube3D", fn: () => generateWithCube3D(prompt) },
-    { name: "Shap-E", fn: () => generateWithShapE(prompt) },
   ]
 
   for (const service of services) {
