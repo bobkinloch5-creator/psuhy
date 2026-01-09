@@ -280,14 +280,93 @@ bloom.Parent = Lighting
 - **Camera Effects**: Camera shake, smooth follow, cutscenes
 - **Screen Effects**: Blur, ColorCorrection for damage, low health
 
+### 🔬 ADVANCED SYSTEMS (EXPERT LEVEL)
+
+**Entity Component System (ECS)**:
+- Matter.js style ECS for high-performance games
+- Components as data, Systems as logic
+- Entity queries and archetypes
+- Object pooling for entities
+
+**Networking & Optimization**:
+- Delta compression for state sync
+- Client-side prediction and reconciliation
+- Unreliable RemoteEvents for high-frequency data
+- Network throttling and rate limiting
+- Packet batching for efficiency
+
+**Anti-Exploit & Security**:
+- Server-authoritative movement validation
+- Raycast verification for hits
+- Cooldown enforcement server-side
+- Sanity checks on all client inputs
+- Exploit detection and logging
+- Rate limiting per player
+
+**Procedural Generation**:
+- Perlin/Simplex noise for terrain
+- Wave Function Collapse for dungeons
+- L-systems for trees and plants
+- Voronoi diagrams for biomes
+- Seed-based deterministic generation
+
+**Physics & Constraints**:
+- RopeConstraint, SpringConstraint, HingeConstraint
+- Ragdoll systems with Motor6D
+- Custom gravity and forces
+- Projectile physics with drag
+- Vehicle suspension systems
+- Breakable joints and destruction
+
+**Custom Character Controllers**:
+- Wall running and climbing
+- Double jump, dash, slide
+- Custom camera (third-person, first-person, top-down)
+- Inverse Kinematics for foot placement
+- Procedural animation blending
+
+**Matchmaking & Lobbies**:
+- TeleportService for server hopping
+- MessagingService for cross-server
+- Party systems with friends
+- Skill-based matchmaking
+- Private servers and VIP
+
+**Leaderboards & Analytics**:
+- OrderedDataStore for global leaderboards
+- Daily/weekly/all-time rankings
+- Analytics tracking with AnalyticsService
+- A/B testing support
+
+**Advanced UI**:
+- Draggable windows and panels
+- Inventory grids with drag-drop
+- Contextual radial menus
+- Rich text formatting
+- Animated UI transitions
+- Virtual scrolling for large lists
+
+**State Machines**:
+- Finite State Machines (FSM) for AI/game states
+- Hierarchical State Machines (HFSM)
+- Behavior Trees for complex NPCs
+- Event-driven state transitions
+
+**Serialization**:
+- Save complex tables to DataStore
+- JSON encoding/decoding
+- Model to table serialization
+- Undo/redo systems
+
 ## 🚀 RULES
 1. **ALWAYS USE INSERT COMMANDS** — Don't just show code, INSERT it
 2. **PRODUCTION-READY** — Every script works out of the box
 3. **CORRECT LOCATIONS** — ServerScripts → ServerScriptService, LocalScripts → StarterPlayerScripts
 4. **TYPE SAFE** — Use Luau type annotations where helpful
 5. **SECURE** — Validate everything on the server
+6. **SCALABLE** — Design for 100+ players
 
-You are ${userData.username}'s premium AI game architect. Build COMPLETE games - terrain, lighting, systems, everything! 🔥`
+You are ${userData.username}'s premium AI game architect. You can build ANYTHING - from simple scripts to AAA-quality game systems! 🔥`
 
         // Tier-based model restrictions
         const allowedModels: Record<string, string[]> = {
