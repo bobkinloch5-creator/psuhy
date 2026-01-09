@@ -19,8 +19,8 @@ interface ModelResult {
   source: string
 }
 
-// ============ COMETAPI 3D GENERATION WITH RETRY ============
-// Direct text-to-3D with Hunyuan3D-2 (includes automatic retry on busy server)
+// ============ COMETAPI 3D GENERATION WITH IMAGE-TO-3D PIPELINE ============
+// Two-step approach: Generate image first, then convert to 3D for better reliability
 async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   console.log("[CometAPI-3D] Starting 3D generation for:", prompt)
 
@@ -32,42 +32,99 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   const maxRetries = 3
   let lastError: Error | null = null
 
+  // STEP 1: Generate a reference image using Flux Schnell (fast and reliable)
+  console.log("[CometAPI-3D] Step 1: Generating reference image...")
+  let referenceImageUrl: string | null = null
+
+  try {
+    const imageResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "flux-schnell",
+        prompt: `${prompt}, 3D render, isometric view, single object centered, white background, professional lighting, high detail`,
+        n: 1,
+        size: "1024x1024",
+      }),
+    })
+
+    if (imageResponse.ok) {
+      const imageData = await imageResponse.json()
+      if (imageData.data?.[0]?.url) {
+        referenceImageUrl = imageData.data[0].url
+        console.log("[CometAPI-3D] ✅ Got reference image:", referenceImageUrl?.slice(0, 80))
+      } else if (imageData.data?.[0]?.b64_json) {
+        referenceImageUrl = `data:image/png;base64,${imageData.data[0].b64_json}`
+        console.log("[CometAPI-3D] ✅ Got reference image as base64")
+      }
+    } else {
+      console.log("[CometAPI-3D] Image generation failed, will try direct 3D generation")
+    }
+  } catch (imgError: any) {
+    console.log("[CometAPI-3D] Image generation error:", imgError.message)
+  }
+
+  // STEP 2: Generate 3D model with Hunyuan3D-2
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[CometAPI-3D] Attempt ${attempt}/${maxRetries}...`)
+      console.log(`[CometAPI-3D] Step 2: 3D generation attempt ${attempt}/${maxRetries}...`)
 
-      // Direct text-to-3D generation
+      // Build request body - use image if we have one, otherwise text-only
+      const requestBody: any = {
+        model: "Hunyuan3D-2",
+        prompt: `${prompt}, high quality 3D model, vibrant colors, detailed textures, game-ready asset, colorful materials`,
+      }
+
+      if (referenceImageUrl && !referenceImageUrl.startsWith('data:')) {
+        requestBody.image = referenceImageUrl
+        console.log("[CometAPI-3D] Using reference image for better quality")
+      }
+
       const response = await fetch("https://api.cometapi.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: "Hunyuan3D-2",
-          prompt: `${prompt}, high quality 3D model, vibrant colors, detailed textures, game-ready asset`,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`[CometAPI-3D] Attempt ${attempt} failed:`, errorText)
+      const responseText = await response.text()
+      console.log("[CometAPI-3D] Response status:", response.status, "Body:", responseText.slice(0, 500))
 
+      if (!response.ok) {
         // Check if server is busy - retry after delay
-        if (errorText.includes("busy") || errorText.includes("rate") || response.status === 429 || response.status === 503) {
-          console.log(`[CometAPI-3D] Server busy, waiting ${attempt * 5}s before retry...`)
-          await new Promise(resolve => setTimeout(resolve, attempt * 5000))
+        const isBusy = responseText.includes("busy") ||
+          responseText.includes("rate") ||
+          responseText.includes("overloaded") ||
+          response.status === 429 ||
+          response.status === 503
+
+        if (isBusy) {
+          const waitTime = attempt * 8000 // Longer wait times: 8s, 16s, 24s
+          console.log(`[CometAPI-3D] Server busy, waiting ${waitTime / 1000}s before retry...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
           lastError = new Error(`Server is busy (attempt ${attempt})`)
           continue
         }
 
-        throw new Error(`API error: ${response.status} - ${errorText}`)
+        throw new Error(`API error: ${response.status} - ${responseText}`)
       }
 
-      const data = await response.json()
-      console.log("[CometAPI-3D] Response received:", JSON.stringify(data).slice(0, 300))
+      // Parse the response
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch {
+        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`)
+      }
 
-      // Handle response
+      console.log("[CometAPI-3D] Parsed response:", JSON.stringify(data).slice(0, 300))
+
+      // Handle successful response
       if (data.data && data.data.length > 0) {
         const result = data.data[0]
 
@@ -75,7 +132,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
           console.log("[CometAPI-3D] ✅ SUCCESS! Got 3D model URL:", result.url)
           return {
             model_url: result.url,
-            preview_url: result.url.replace(".glb", ".png") || null,
+            preview_url: referenceImageUrl || result.url.replace(".glb", ".png") || null,
             formats: { glb: result.url, obj: null, fbx: null },
             source: "CometAPI Hunyuan3D-2"
           }
@@ -86,7 +143,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
           const dataUrl = `data:model/gltf-binary;base64,${result.b64_json}`
           return {
             model_url: dataUrl,
-            preview_url: null,
+            preview_url: referenceImageUrl,
             formats: { glb: dataUrl, obj: null, fbx: null },
             source: "CometAPI Hunyuan3D-2"
           }
@@ -103,8 +160,8 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
       lastError = error
 
       if (attempt < maxRetries) {
-        console.log(`[CometAPI-3D] Waiting ${attempt * 3}s before retry...`)
-        await new Promise(resolve => setTimeout(resolve, attempt * 3000))
+        console.log(`[CometAPI-3D] Waiting ${attempt * 5}s before retry...`)
+        await new Promise(resolve => setTimeout(resolve, attempt * 5000))
       }
     }
   }
@@ -850,8 +907,36 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.error("[3D-Gen] CometAPI failed:", error.message)
   }
 
-  // If CometAPI fails, throw error
-  throw new Error("3D generation failed. Please try again.")
+  // ========== FALLBACK CASCADE ==========
+  // If CometAPI fails, try free generators as fallback
+  console.log("[3D-Gen] Trying fallback generators...")
+
+  // Fallback 1: Try Hunyuan3D-2 free HuggingFace space
+  try {
+    console.log("[3D-Gen] Trying Hunyuan3D-2 (HuggingFace)...")
+    const hunyuanResult = await generateWithHunyuan3D(prompt)
+    if (hunyuanResult?.model_url) {
+      console.log("[3D-Gen] ✅ Hunyuan3D-2 fallback succeeded!")
+      return hunyuanResult
+    }
+  } catch (e: any) {
+    console.log("[3D-Gen] Hunyuan3D-2 fallback failed:", e.message)
+  }
+
+  // Fallback 2: Try Shap-E (geometry-only but reliable)
+  try {
+    console.log("[3D-Gen] Trying Shap-E fallback...")
+    const shapeResult = await generateWithShapE(prompt)
+    if (shapeResult?.model_url) {
+      console.log("[3D-Gen] ✅ Shap-E fallback succeeded!")
+      return shapeResult
+    }
+  } catch (e: any) {
+    console.log("[3D-Gen] Shap-E fallback failed:", e.message)
+  }
+
+  // All generators failed
+  throw new Error("All 3D generation services failed. Please try again later.")
 }
 
 // ============ STORAGE ============
