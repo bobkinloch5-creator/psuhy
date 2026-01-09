@@ -339,9 +339,9 @@ async function generateWithCube3DTextured(prompt: string): Promise<ModelResult> 
       const textureResult = await Promise.race([
         textureClient.predict("/texgen", [
           meshBlob,     // mesh file
-          prompt,       // text prompt for texture style
+          `${prompt}, vibrant colors, detailed PBR textures, colorful materials, NOT white, FULLY COLORED, realistic textures`,       // enhanced texture prompt
           42,           // seed
-          512,          // texture_size (lower for speed)
+          1024,         // texture_size (higher for better quality)
         ]),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Texture generation timeout")), 120000))
       ]) as any
@@ -825,7 +825,19 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] No COMETAPI_KEY - skipping CometAPI")
   }
 
-  // ========== PRIORITY 2: HUNYUAN3D GRADIO (FREE - COLORED - FASTEST) ==========
+  // ========== PRIORITY 2: ROBLOX CUBE3D + AI TEXTURING (FREE - COLORED) ==========
+  console.log("[3D-Gen] Trying Roblox Cube3D with AI texturing (colored)...")
+  try {
+    const cube3dTexturedResult = await generateWithCube3DTextured(prompt)
+    if (cube3dTexturedResult?.model_url) {
+      console.log("[3D-Gen] ✅ Roblox Cube3D + Textures succeeded!")
+      return cube3dTexturedResult
+    }
+  } catch (error: any) {
+    console.error("[3D-Gen] Cube3D Textured failed:", error.message)
+  }
+
+  // ========== PRIORITY 3: HUNYUAN3D GRADIO (FREE - COLORED - FALLBACK) ==========
   console.log("[3D-Gen] Trying Hunyuan3D Gradio (free, colored)...")
   try {
     const hunyuanResult = await generateWithHunyuan3D(prompt)
@@ -837,16 +849,16 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.error("[3D-Gen] Hunyuan3D Gradio failed:", error.message)
   }
 
-  // ========== PRIORITY 3: ROBLOX CUBE3D (FREE - GEOMETRY) ==========
-  console.log("[3D-Gen] Trying Roblox Cube3D (geometry)...")
+  // ========== PRIORITY 4: ROBLOX CUBE3D GEOMETRY ONLY (FREE - LAST RESORT) ==========
+  console.log("[3D-Gen] Trying Roblox Cube3D (geometry only - last resort)...")
   try {
     const cube3dResult = await generateWithCube3D(prompt)
     if (cube3dResult?.model_url) {
-      console.log("[3D-Gen] ✅ Roblox Cube3D succeeded!")
+      console.log("[3D-Gen] ✅ Roblox Cube3D geometry succeeded!")
       return cube3dResult
     }
   } catch (error: any) {
-    console.error("[3D-Gen] Cube3D failed:", error.message)
+    console.error("[3D-Gen] Cube3D geometry failed:", error.message)
   }
 
   // ========== ALL FAILED ==========

@@ -867,10 +867,10 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                                         alert("Animation failed. Please try again.")
                                                     }
                                                 }}
-                                                className="w-full flex flex-col items-center gap-2 p-3 bg-black/40 border border-white/10 rounded-xl hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all overflow-hidden"
+                                                className="w-full flex flex-col items-center gap-2 p-2 bg-black/40 border border-white/10 rounded-xl hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all overflow-hidden aspect-square"
                                             >
                                                 {/* Preview Image */}
-                                                <div className="w-full h-16 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500/20 to-cyan-500/20 relative">
+                                                <div className="w-full flex-1 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500/20 to-cyan-500/20 relative min-h-[60px]">
                                                     <img
                                                         src={anim.img}
                                                         alt={anim.name}
