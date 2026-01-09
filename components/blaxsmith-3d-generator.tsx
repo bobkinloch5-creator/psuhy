@@ -709,36 +709,28 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                                                     </div>
                                                 </button>
                                                 {generatedModel.formats?.fbx && (
-                                                    <a
-                                                        href={generatedModel.formats.fbx}
-                                                        download
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
-                                                        onClick={() => setShowExportDropdown(false)}
+                                                    <button
+                                                        onClick={() => handleDownload(generatedModel.formats.fbx, 'fbx')}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 text-left"
                                                     >
                                                         <Download className="w-4 h-4 text-blue-400" />
                                                         <div>
                                                             <p className="text-white text-sm font-medium">FBX Format</p>
-                                                            <p className="text-white/50 text-xs">For Unity, Unreal, Blender</p>
+                                                            <p className="text-white/50 text-xs">For Unity, Unreal, Blender, Roblox</p>
                                                         </div>
-                                                    </a>
+                                                    </button>
                                                 )}
                                                 {generatedModel.formats?.obj && (
-                                                    <a
-                                                        href={generatedModel.formats.obj}
-                                                        download
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
-                                                        onClick={() => setShowExportDropdown(false)}
+                                                    <button
+                                                        onClick={() => handleDownload(generatedModel.formats.obj, 'obj')}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
                                                     >
                                                         <Download className="w-4 h-4 text-orange-400" />
                                                         <div>
                                                             <p className="text-white text-sm font-medium">OBJ Format</p>
                                                             <p className="text-white/50 text-xs">Universal 3D format</p>
                                                         </div>
-                                                    </a>
+                                                    </button>
                                                 )}
                                                 {!generatedModel.formats?.fbx && !generatedModel.formats?.obj && (
                                                     <div className="px-4 py-3 text-white/40 text-xs text-center">
