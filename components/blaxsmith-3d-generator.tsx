@@ -229,61 +229,89 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
         }
     }
 
-    const generateModel = async () => {
+    const generateModel = async (retryCount = 0) => {
+        const MAX_RETRIES = 3
+        const BASE_RETRY_DELAY_MS = 2000 // 2 seconds
+
         if (!prompt.trim() || localCredits <= 0) return
 
-        setIsGenerating(true)
-        setGeneratedModel(null)
-        setError(null)
-        setProgress(0)
-        setProgressText("Initializing...")
-        setElapsedTime(0)
-        setRemainingTime(210)  // 3.5 minutes for HD textured models
+        // Only reset state on first attempt
+        if (retryCount === 0) {
+            setIsGenerating(true)
+            setGeneratedModel(null)
+            setError(null)
+            setProgress(0)
+            setProgressText("Initializing...")
+            setElapsedTime(0)
+            setRemainingTime(210)  // 3.5 minutes for HD textured models
 
-        // Start progress simulation (LGM typically takes 60-120 seconds)
-        const startTime = Date.now()
-        const estimatedDuration = 180000 // 3 minutes estimate for CometAPI HD textures
+            // Start progress simulation
+            const startTime = Date.now()
+            const estimatedDuration = 180000
 
-        progressIntervalRef.current = setInterval(() => {
-            const elapsed = Date.now() - startTime
-            const elapsedSeconds = Math.floor(elapsed / 1000)
-            const remainingSeconds = Math.max(0, 210 - elapsedSeconds)  // 3.5 min max
-            const progressPercent = Math.min(95, (elapsed / estimatedDuration) * 100)
+            progressIntervalRef.current = setInterval(() => {
+                const elapsed = Date.now() - startTime
+                const elapsedSeconds = Math.floor(elapsed / 1000)
+                const remainingSeconds = Math.max(0, 210 - elapsedSeconds)
+                const progressPercent = Math.min(95, (elapsed / estimatedDuration) * 100)
 
-            setProgress(progressPercent)
-            setElapsedTime(elapsedSeconds)
-            setRemainingTime(remainingSeconds)
+                setProgress(progressPercent)
+                setElapsedTime(elapsedSeconds)
+                setRemainingTime(remainingSeconds)
 
-            if (progressPercent < 20) {
-                setProgressText("🔍 Analyzing prompt...")
-            } else if (progressPercent < 40) {
-                setProgressText("🎨 Generating mesh...")
-            } else if (progressPercent < 60) {
-                setProgressText("🖼️ Adding textures...")
-            } else if (progressPercent < 80) {
-                setProgressText("⚡ Optimizing model...")
-            } else {
-                setProgressText("✨ Finalizing...")
-            }
-        }, 200)
+                if (progressPercent < 20) {
+                    setProgressText("🔍 Analyzing prompt...")
+                } else if (progressPercent < 40) {
+                    setProgressText("🎨 Generating mesh...")
+                } else if (progressPercent < 60) {
+                    setProgressText("🖼️ Adding textures...")
+                } else if (progressPercent < 80) {
+                    setProgressText("⚡ Optimizing model...")
+                } else {
+                    setProgressText("✨ Finalizing...")
+                }
+            }, 200)
+        } else {
+            // Update progress text for retry
+            setProgressText(`🔄 Retrying... (Attempt ${retryCount + 1}/${MAX_RETRIES + 1})`)
+        }
 
         try {
             const res = await fetch("/api/generate/model", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include", // Important: include cookies for auth
+                credentials: "include",
                 body: JSON.stringify({ prompt, style: selectedStyle }),
             })
 
-            // Handle timeout and server errors before trying to parse JSON
-            if (res.status === 504) {
-                throw new Error("Generation timed out. Please try a simpler prompt or try again.")
+            // Handle timeout and server errors - check if retryable
+            if (res.status === 504 || res.status === 503 || res.status === 502) {
+                const errorMsg = res.status === 504 ? "Generation timed out" : "Server is busy"
+
+                if (retryCount < MAX_RETRIES) {
+                    const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount) // Exponential backoff: 2s, 4s, 8s
+                    console.warn(`[3D Generator] ${errorMsg}, retrying in ${delay / 1000}s... (Attempt ${retryCount + 1}/${MAX_RETRIES})`)
+                    setProgressText(`⏳ ${errorMsg}. Retrying in ${delay / 1000}s...`)
+
+                    await new Promise(r => setTimeout(r, delay))
+                    return generateModel(retryCount + 1) // Recursive retry
+                }
+                throw new Error(`${errorMsg}. Please try again later.`)
             }
+
             if (res.status >= 500) {
+                if (retryCount < MAX_RETRIES) {
+                    const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount)
+                    console.warn(`[3D Generator] Server error ${res.status}, retrying in ${delay / 1000}s...`)
+                    setProgressText(`⏳ Server busy. Retrying in ${delay / 1000}s...`)
+
+                    await new Promise(r => setTimeout(r, delay))
+                    return generateModel(retryCount + 1)
+                }
                 throw new Error("Server is busy. Please try again in a moment.")
             }
 
-            // Safely parse JSON - catch parsing errors
+            // Safely parse JSON
             let data
             try {
                 const text = await res.text()
@@ -295,7 +323,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
             console.log("[3D Generator] API Response:", data)
 
-            // Handle auth errors specifically
+            // Handle auth errors
             if (res.status === 401) {
                 setError("Session expired. Please refresh the page or click your profile to sign in again.")
                 if (progressIntervalRef.current) {
@@ -303,7 +331,6 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     progressIntervalRef.current = null
                 }
                 setIsGenerating(false)
-                // Try to refresh the page after a short delay
                 setTimeout(() => {
                     window.location.reload()
                 }, 3000)
@@ -325,11 +352,9 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 setLocalCredits(newCredits)
                 onCreditsUpdate?.(newCredits)
 
-                // Extract model data from various possible response structures
                 const modelData = data.model || data.creation?.asset_data || data.creation || {}
                 const formats = modelData.formats || modelData.asset_data?.formats || {}
 
-                // Deep search for GLB URL in nested response
                 const findGlbUrl = (obj: any, depth = 0): string | null => {
                     if (depth > 6) return null;
                     if (typeof obj === 'string' && (obj.includes('.glb') || obj.includes('storage.googleapis.com'))) return obj;
@@ -342,7 +367,6 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     return null;
                 };
 
-                // Try all possible paths for the model URL
                 const modelUrl = modelData.model_url || modelData.glb_url || modelData.glbUrl ||
                     modelData.downloadUrl || modelData.download_url ||
                     modelData.files?.glb || formats.glb ||
@@ -354,7 +378,6 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     modelData.asset_data?.preview_url || null;
 
                 console.log("[3D Generator] Found model URL:", modelUrl);
-                console.log("[3D Generator] Full API response structure:", JSON.stringify(data, null, 2));
 
                 const extractedModel = {
                     name: modelData.name || modelData.prompt || prompt,
@@ -371,21 +394,43 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                 console.log("[3D Generator] Extracted model:", extractedModel)
                 setGeneratedModel(extractedModel)
             } else {
-                setError(data.error || "Model generation failed")
+                // Check if error is retryable
+                const errorMsg = data.error || "Model generation failed"
+                if ((errorMsg.includes("busy") || errorMsg.includes("timeout")) && retryCount < MAX_RETRIES) {
+                    const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount)
+                    setProgressText(`⏳ ${errorMsg}. Retrying in ${delay / 1000}s...`)
+                    await new Promise(r => setTimeout(r, delay))
+                    return generateModel(retryCount + 1)
+                }
+                setError(errorMsg)
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("[3D Generator] Error:", err)
-            setError("Generation failed. Please try again.")
+
+            // Check if we should retry
+            const errorMsg = err.message || "Generation failed"
+            if ((errorMsg.includes("busy") || errorMsg.includes("timeout") || errorMsg.includes("network")) && retryCount < MAX_RETRIES) {
+                const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount)
+                console.warn(`[3D Generator] Retrying after error: ${errorMsg}`)
+                setProgressText(`⏳ ${errorMsg}. Retrying in ${delay / 1000}s...`)
+                await new Promise(r => setTimeout(r, delay))
+                return generateModel(retryCount + 1)
+            }
+
+            setError(errorMsg)
             if (progressIntervalRef.current) {
                 clearInterval(progressIntervalRef.current)
                 progressIntervalRef.current = null
             }
         } finally {
-            setIsGenerating(false)
-            setTimeout(() => {
-                setProgress(0)
-                setProgressText("")
-            }, 1000)
+            // Only clean up on final attempt or success
+            if (retryCount >= MAX_RETRIES || !error) {
+                setIsGenerating(false)
+                setTimeout(() => {
+                    setProgress(0)
+                    setProgressText("")
+                }, 1000)
+            }
         }
     }
 
@@ -534,7 +579,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
             {/* Premium Generate Button */}
             <button
-                onClick={generateModel}
+                onClick={() => generateModel()}
                 disabled={isGenerating || localCredits <= 0 || !prompt.trim()}
                 className="group relative w-full px-6 py-5 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg hover:scale-[1.01] active:scale-[0.99] overflow-hidden"
             >
