@@ -173,22 +173,53 @@ export async function POST(request: Request) {
 3. **Architect** — Design systems: "Use ModuleScript in ReplicatedStorage, call from server/client"
 4. **Toolbox** — Find assets with [INSERT_ASSET: term]
 5. **Optimize** — Identify performance issues, suggest fixes
+6. **Build** — Create parts, models, UI directly in Roblox workspace
 
-## COMMANDS
+## COMMANDS (IMPORTANT - use these to INSERT things into Roblox!)
 
-\`[INSERT_ASSET: searchTerm]\` — Toolbox search with thumbnails
+### For 3D Objects (Parts, Models):
+\`[INSERT_PART: Name]\` — Creates a Part/Block/Sphere directly in workspace
+\`\`\`lua
+-- Lua code that creates the part/model
+\`\`\`
+\`[/INSERT_PART]\`
+
+\`[INSERT_MODEL: Name]\` — Creates a complex Model with multiple parts
+\`\`\`lua
+-- Lua code that creates the model
+\`\`\`
+\`[/INSERT_MODEL]\`
+
+### For Scripts:
 \`[INSERT_SCRIPT: Name]\` + \`\`\`lua code\`\`\` + \`[/INSERT_SCRIPT]\` — Server script
 \`[INSERT_LOCALSCRIPT: Name]\` + \`\`\`lua code\`\`\` + \`[/INSERT_LOCALSCRIPT]\` — Client script
 \`[INSERT_MODULE: Name]\` + \`\`\`lua code\`\`\` + \`[/INSERT_MODULE]\` — ModuleScript
+
+### For UI:
 \`[INSERT_GUI: Name]\` + \`\`\`lua code\`\`\` + \`[/INSERT_GUI]\` — GUI with LocalScript
+
+### For Toolbox Assets:
+\`[INSERT_ASSET: searchTerm]\` — Search Roblox toolbox for pre-made models
+
+## WHEN TO USE WHAT:
+
+**User asks for simple objects** (cube, sphere, wall, floor, platform):
+→ Use \`[INSERT_PART]\` with Lua that creates Instance.new("Part")
+
+**User asks for complex models** (car, house, tree, character):  
+→ Use \`[INSERT_MODEL]\` OR \`[INSERT_ASSET]\` if toolbox has it
+
+**User asks for scripts/systems** (combat, save data, NPC):
+→ Use \`[INSERT_SCRIPT]\` or \`[INSERT_LOCALSCRIPT]\`
+
+**User asks for UI** (health bar, shop menu, inventory):
+→ Use \`[INSERT_GUI]\`
 
 ## STYLE RULES
 
 - **1-3 sentences** for explanations (no essays)
 - **Short code** — get to the point
-- **Descriptive script names**: "CombatHandler", "ShopSystem", "DataManager" — NEVER "Script1"
-- **Terrain**: Tell user to right-click → Run Script in Edit Mode for permanence
-- When user wants models → use \`[INSERT_ASSET: query]\`
+- **Descriptive names**: "RedCube", "SpawnPlatform", "ShopGUI" — NEVER "Script1"
 
 ## DEBUG FORMAT
 
@@ -389,6 +420,42 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
             await addCommand(userData.id, command)
             insertedItems.push(`Module: ${moduleName.trim()}`)
             console.log(`[AI Chat] Queued module: ${moduleName.trim()}`)
+        }
+
+        // 6. Parse INSERT_PART commands (for 3D parts/objects)
+        const partPattern = /\[INSERT_PART:\s*([^\]]+)\][\s\S]*?```lua([\s\S]*?)```[\s\S]*?\[\/INSERT_PART\]/gi
+        for (const match of aiResponse.matchAll(partPattern)) {
+            const [, partName, code] = match
+            const command = {
+                type: "INSERT_PART",
+                data: {
+                    name: partName.trim(),
+                    location: "Workspace",
+                    scriptType: "Script"  // Runs once to create the part
+                },
+                code: code.trim()
+            }
+            await addCommand(userData.id, command)
+            insertedItems.push(`Part: ${partName.trim()}`)
+            console.log(`[AI Chat] Queued part: ${partName.trim()}`)
+        }
+
+        // 7. Parse INSERT_MODEL commands (for complex multi-part models)
+        const modelPattern = /\[INSERT_MODEL:\s*([^\]]+)\][\s\S]*?```lua([\s\S]*?)```[\s\S]*?\[\/INSERT_MODEL\]/gi
+        for (const match of aiResponse.matchAll(modelPattern)) {
+            const [, modelName, code] = match
+            const command = {
+                type: "INSERT_MODEL",
+                data: {
+                    name: modelName.trim(),
+                    location: "Workspace",
+                    scriptType: "Script"  // Runs once to create the model
+                },
+                code: code.trim()
+            }
+            await addCommand(userData.id, command)
+            insertedItems.push(`Model: ${modelName.trim()}`)
+            console.log(`[AI Chat] Queued model build: ${modelName.trim()}`)
         }
 
         // Save AI response
