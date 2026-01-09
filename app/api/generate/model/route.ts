@@ -29,7 +29,7 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
 
     // Use the correct /generation_all endpoint with 13 parameters:
     // [caption, image, mv_front, mv_back, mv_left, mv_right, steps, guidance_scale, seed, octree_res, rembg, num_chunks, randomize_seed]
-    // BALANCED: good quality (25 steps, 96 res) with faster timeout
+    // HIGH QUALITY: maximum settings for sharp, detailed models
     const result = await Promise.race([
       client.predict("/generation_all", [
         prompt,     // caption (text prompt)
@@ -38,15 +38,15 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
         null,       // mv_image_back
         null,       // mv_image_left
         null,       // mv_image_right
-        25,         // steps (BALANCED - was 30, good quality)
-        5,          // guidance_scale
+        30,         // steps (MAXIMUM for best quality)
+        7,          // guidance_scale (increased for sharper details)
         1234,       // seed
-        96,         // octree_res (BALANCED - was 128, good detail)
+        128,        // octree_res (MAXIMUM for sharp mesh)
         true,       // rembg (remove background)
-        6000,       // num_chunks (BALANCED - was 8000)
+        8000,       // num_chunks (MAXIMUM for detail)
         true,       // randomize_seed
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 75000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 90000))
     ]) as any
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
