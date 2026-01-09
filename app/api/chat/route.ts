@@ -123,6 +123,7 @@ export async function POST(request: Request) {
 - Short code blocks (no bloat)
 - Use \`[INSERT_ASSET]\` when user wants models/assets
 - For terrain: "Right-click → Run Script for permanent terrain"
+- **SCRIPT NAMES MUST be descriptive** (e.g. "GrassTerrain", "SwordCombat", "DataSaveHandler") — NEVER use generic names like "Script1" or "AIScript"
 
 **DEBUGGING FORMAT**:
 🔧 **Issue**: [1 line]
