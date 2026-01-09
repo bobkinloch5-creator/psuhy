@@ -164,13 +164,13 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a]">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] via-[#0f0f1a] to-[#0a0a0a] mesh-gradient-bg">
       {/* Beta Notice Banner */}
-      <div className="bg-gradient-to-r from-purple-900/80 to-blue-900/80 border-b border-purple-500/30 py-2 px-4">
+      <div className="bg-gradient-to-r from-purple-900/80 via-pink-900/60 to-blue-900/80 border-b border-purple-500/30 py-2 px-4 shimmer-effect">
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm">
-          <span className="px-2 py-0.5 bg-yellow-500 text-black font-bold rounded text-xs">BETA</span>
+          <span className="px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold rounded text-xs animate-pulse">BETA</span>
           <span className="text-white/90">Some features may not work perfectly. We're working hard on fixes!</span>
-          <a href="https://discord.gg/xdFVu6cagw" target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 underline font-medium">
+          <a href="https://discord.gg/xdFVu6cagw" target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-purple-200 underline font-medium hover:text-white transition-colors">
             Report issues on Discord
           </a>
         </div>
@@ -179,24 +179,25 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Image src="/blaxsmith-logo.png" alt="BlaxSmith" width={40} height={40} className="rounded-lg" />
+              <Image src="/blaxsmith-logo.png" alt="BlaxSmith" width={40} height={40} className="rounded-lg float-element" />
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="text-2xl font-bold bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 bg-clip-text text-transparent">
+                  <div className="text-2xl font-bold text-gradient-animated">
                     BlaxSmith AI
                   </div>
-                  <span className="px-1.5 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold rounded">BETA</span>
+                  <span className="px-1.5 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold rounded shimmer-effect">BETA</span>
                 </div>
                 <div className="text-xs text-orange-400 font-mono">blaxsmith.dev</div>
               </div>
             </div>
 
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/60 border border-white/5">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${studioConnected ? 'bg-green-900/20 border border-green-500/30' : 'bg-black/60 border border-white/5'}`}>
                 <div
-                  className={`w-2 h-2 rounded-full ${studioConnected ? "bg-green-400 animate-pulse" : "bg-red-400"}`}
+                  className={`w-2 h-2 rounded-full ${studioConnected ? "bg-green-400 status-dot-glow" : "bg-red-400 animate-pulse"}`}
+                  style={studioConnected ? { color: 'rgb(74 222 128)' } : undefined}
                 />
-                <span className="text-sm text-white/70">{studioConnected ? "Studio Connected" : "Studio Offline"}</span>
+                <span className={`text-sm ${studioConnected ? 'text-green-400 font-medium' : 'text-white/70'}`}>{studioConnected ? "Studio Connected" : "Studio Offline"}</span>
               </div>
 
               <Link
@@ -292,16 +293,16 @@ export function ForgeInterface({ user: initialUser }: { user: User }) {
         </div>
 
         {/* BlaxSmith AI 3D Model Generator - Uses Credits */}
-        <div className="mb-6 glassmorphism rounded-2xl p-4 border-cyan-500/30">
+        <div className="mb-6 glass-card-premium rounded-2xl p-4 border-cyan-500/30 animated-border hover-lift">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30 neon-cyan float-element">
                 <Box className="w-4 h-4 text-white" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   AI 3D Model Generator
-                  <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-[9px] font-bold rounded-full">CUBE3D</span>
+                  <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-[9px] font-bold rounded-full shimmer-effect">CUBE3D</span>
                 </h3>
                 <p className="text-[10px] text-white/60">Create 3D models with AI using your model credits</p>
               </div>

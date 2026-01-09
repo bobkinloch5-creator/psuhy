@@ -138,24 +138,21 @@ async function searchRobloxDevelop(query: string, limit: number, offset: number 
     }
 }
 
-// Use Roblox Catalog JSON endpoint - verified FREE models only
+// Use Roblox Catalog v2 API - more reliable endpoint for free models
 async function searchCatalogJSON(query: string, limit: number, offset: number = 0): Promise<any[]> {
     try {
-        const params = new URLSearchParams({
-            Keyword: query,
-            Category: "6", // Models only
-            Subcategory: "0",
-            SortType: "2", // Favorited - quality sort
-            SortAggregation: "5",
-            ResultsPerPage: Math.min(limit * 2, 100).toString(),
-            PageNumber: Math.floor(offset / limit + 1).toString(),
-            IncludeNotForSale: "false",
-            MaxPrice: "0", // FREE MODELS ONLY
-            CreatorType: "User,Group", // Real creators
+        // Try the newer catalog search v2 endpoint
+        const searchParams = new URLSearchParams({
+            category: "DevelopmentAssets",
+            subcategory: "Models",
+            keyword: query,
+            sortType: "1", // Relevance
+            limit: String(Math.min(limit, 30)),
+            cursor: offset > 0 ? btoa(JSON.stringify({ offset })) : "",
         })
 
         const response = await fetch(
-            `https://www.roblox.com/catalog/json?${params}`,
+            `https://catalog.roblox.com/v2/search/items/details?${searchParams}`,
             {
                 headers: {
                     "Accept": "application/json",
@@ -166,57 +163,148 @@ async function searchCatalogJSON(query: string, limit: number, offset: number = 
         )
 
         if (!response.ok) {
-            console.log("[Toolbox] Catalog JSON failed:", response.status)
-            return []
+            console.log("[Toolbox] Catalog v2 failed, trying v1:", response.status)
+            return await searchCatalogV1(query, limit, offset)
         }
 
-        const items = await response.json()
-        if (!Array.isArray(items) || items.length === 0) {
-            return []
+        const data = await response.json()
+        if (!data.data || data.data.length === 0) {
+            return await searchCatalogV1(query, limit, offset)
         }
 
-        // Filter to only items that are definitely free and insertable
-        const freeItems = items.filter((item: any) => {
-            const price = item.Price || item.price || 0
-            const isForSale = item.IsForSale !== false
-            const assetType = item.AssetType || item.assetType
-            // Only models (type 10) that are free and for sale
-            return price === 0 && isForSale && (!assetType || assetType === 10 || assetType === "Model")
-        })
-
-        // Get thumbnails
-        const assetIds = freeItems.map((item: any) => item.AssetId || item.Id).filter(Boolean).join(",")
+        // Get thumbnails for all assets
+        const assetIds = data.data.map((item: any) => item.id).filter(Boolean).join(",")
         const thumbnails = await getThumbnails(assetIds)
 
-        // Map and verify each result
-        const mapped = freeItems.slice(0, limit).map((item: any) => {
-            const id = item.AssetId || item.Id
-            return {
-                id,
-                name: item.Name || "Unnamed Model",
-                description: item.Description || "",
+        // Map to our format
+        return data.data
+            .filter((item: any) => item.price === 0 || item.price === undefined)
+            .slice(0, limit)
+            .map((item: any) => ({
+                id: item.id,
+                name: item.name || "Unnamed Model",
+                description: item.description || "",
                 price: 0,
                 priceLabel: "Free",
                 assetType: "Model",
-                creatorName: item.Creator?.Name || item.CreatorName || "Roblox Creator",
-                creatorVerified: item.Creator?.HasVerifiedBadge || false,
-                favoriteCount: item.FavoriteCount || 0,
-                thumbnailUrl: thumbnails[id] || `https://www.roblox.com/asset-thumbnail/image?assetId=${id}&width=420&height=420&format=png`,
-                productUrl: `https://www.roblox.com/library/${id}`,
-                verified: true, // Mark as verified free model
-            }
-        })
-
-        // Prioritize results with matching names
-        const lowerQuery = query.toLowerCase()
-        return mapped.sort((a: any, b: any) => {
-            const aMatch = a.name.toLowerCase().includes(lowerQuery) ? 1 : 0
-            const bMatch = b.name.toLowerCase().includes(lowerQuery) ? 1 : 0
-            if (aMatch !== bMatch) return bMatch - aMatch
-            return (b.favoriteCount || 0) - (a.favoriteCount || 0)
-        })
+                creatorName: item.creatorName || "Roblox Creator",
+                creatorVerified: item.creatorHasVerifiedBadge || false,
+                favoriteCount: item.favoriteCount || 0,
+                thumbnailUrl: thumbnails[item.id] || `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`,
+                productUrl: `https://www.roblox.com/library/${item.id}`,
+                verified: true,
+            }))
     } catch (err) {
         console.log("[Toolbox] Catalog search error:", err)
+        return await searchCatalogV1(query, limit, offset)
+    }
+}
+
+// Fallback to catalog v1 API
+async function searchCatalogV1(query: string, limit: number, offset: number = 0): Promise<any[]> {
+    try {
+        // Use the Games API to search for models as fallback
+        const params = new URLSearchParams({
+            keyword: query,
+            startRows: String(offset),
+            maxRows: String(limit),
+            sortOrder: "Desc",
+            sortColumn: "Favorite",
+        })
+
+        const response = await fetch(
+            `https://apis.roblox.com/toolbox-service/v1/models?${params}`,
+            {
+                headers: {
+                    "Accept": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+                cache: "no-store",
+            }
+        )
+
+        if (!response.ok) {
+            console.log("[Toolbox] Toolbox service failed:", response.status)
+            // Final fallback - use economy API
+            return await searchEconomyFallback(query, limit)
+        }
+
+        const data = await response.json()
+        if (!data.data || !Array.isArray(data.data)) {
+            return await searchEconomyFallback(query, limit)
+        }
+
+        const assetIds = data.data.map((item: any) => item.id || item.assetId).filter(Boolean).join(",")
+        const thumbnails = await getThumbnails(assetIds)
+
+        return data.data
+            .filter((item: any) => (item.price === 0 || item.price === undefined))
+            .slice(0, limit)
+            .map((item: any) => {
+                const id = item.id || item.assetId
+                return {
+                    id,
+                    name: item.name || "Unnamed Model",
+                    description: item.description || "",
+                    price: 0,
+                    priceLabel: "Free",
+                    assetType: "Model",
+                    creatorName: item.creatorName || item.creator?.name || "Roblox Creator",
+                    creatorVerified: item.creatorHasVerifiedBadge || false,
+                    favoriteCount: item.favoriteCount || item.favoritedCount || 0,
+                    thumbnailUrl: thumbnails[id] || `https://www.roblox.com/asset-thumbnail/image?assetId=${id}&width=420&height=420&format=png`,
+                    productUrl: `https://www.roblox.com/library/${id}`,
+                    verified: true,
+                }
+            })
+    } catch (err) {
+        console.log("[Toolbox] V1 fallback error:", err)
+        return []
+    }
+}
+
+// Economy catalog fallback
+async function searchEconomyFallback(query: string, limit: number): Promise<any[]> {
+    try {
+        // Use the economy catalog endpoint
+        const response = await fetch(
+            `https://economy.roblox.com/v2/assets?keyword=${encodeURIComponent(query)}&assetType=Model&limit=${limit}`,
+            {
+                headers: {
+                    "Accept": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+                cache: "no-store",
+            }
+        )
+
+        if (!response.ok) return []
+
+        const data = await response.json()
+        if (!data.data) return []
+
+        const assetIds = data.data.map((item: any) => item.id).filter(Boolean).join(",")
+        const thumbnails = await getThumbnails(assetIds)
+
+        return data.data
+            .filter((item: any) => item.price === 0 || item.priceInRobux === 0)
+            .slice(0, limit)
+            .map((item: any) => ({
+                id: item.id,
+                name: item.name || "Unnamed Model",
+                description: item.description || "",
+                price: 0,
+                priceLabel: "Free",
+                assetType: "Model",
+                creatorName: item.creator?.name || "Roblox Creator",
+                creatorVerified: false,
+                favoriteCount: item.favoriteCount || 0,
+                thumbnailUrl: thumbnails[item.id] || `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`,
+                productUrl: `https://www.roblox.com/library/${item.id}`,
+                verified: true,
+            }))
+    } catch (err) {
+        console.log("[Toolbox] Economy fallback error:", err)
         return []
     }
 }
