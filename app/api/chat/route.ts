@@ -370,19 +370,21 @@ You are ${userData.username}'s premium AI game architect. You can build ANYTHING
 
         // Tier-based model restrictions
         const allowedModels: Record<string, string[]> = {
-            free: ["grok-3"],
-            premium: ["grok-3", "claude-haiku", "claude-sonnet-4"],
-            pro: ["grok-3", "claude-haiku", "claude-sonnet-4"],
-            enterprise: ["grok-3", "claude-haiku", "claude-sonnet-4"],
+            free: ["grok-3", "gemini-3-flash"],
+            premium: ["grok-3", "gemini-3-flash", "claude-haiku", "claude-sonnet-4", "claude-sonnet-4-5-20250929"],
+            pro: ["grok-3", "gemini-3-flash", "claude-haiku", "claude-sonnet-4", "claude-sonnet-4-5-20250929"],
+            enterprise: ["grok-3", "gemini-3-flash", "claude-haiku", "claude-sonnet-4", "claude-sonnet-4-5-20250929"],
         }
 
         const userTier = (userData?.subscription_tier as string) || "free"
-        const requestedModel = model || "grok-3"
+        const requestedModel = model || "gemini-3-flash"
 
         // Map model IDs to actual API model names
         const modelMapping: Record<string, string> = {
             "grok-3": "grok-3",
+            "gemini-3-flash": "gemini-3-flash",
             "claude-sonnet-4": "claude-sonnet-4-20250514",
+            "claude-sonnet-4-5-20250929": "claude-sonnet-4-5-20250929",
             "claude-haiku": "claude-3-5-haiku-20241022",
         }
 
@@ -395,7 +397,7 @@ You are ${userData.username}'s premium AI game architect. You can build ANYTHING
             }, { status: 403 })
         }
 
-        const selectedModelName = modelMapping[requestedModel] || "grok-3"
+        const selectedModelName = modelMapping[requestedModel] || "gemini-3-flash"
 
         // Build message with context
         let messageWithContext = message
