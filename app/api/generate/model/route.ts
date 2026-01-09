@@ -165,15 +165,15 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
         null,       // mv_image_back
         null,       // mv_image_left
         null,       // mv_image_right
-        50,         // steps (MAXIMUM 50 for best quality)
-        9.0,        // guidance_scale (higher = more detailed)
+        30,         // steps (reduced for speed)
+        7.5,        // guidance_scale
         1234,       // seed
-        256,        // octree_res (MAXIMUM 256 for sharp mesh)
+        128,        // octree_res (reduced for speed)
         true,       // rembg (remove background)
-        16000,      // num_chunks (MAXIMUM for high detail)
+        8000,       // num_chunks (reduced for speed)
         true,       // randomize_seed
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 50000))
     ]) as any
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
@@ -750,14 +750,26 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // ============ FREE TEXT-TO-3D FIRST (Fast + Quality) ============
-  // Reduced timeouts for faster generation - 60s max per generator
-  console.log("[3D-Gen] Trying FREE text-to-3D generators (fast mode)...")
+  // ============ COMETAPI FIRST (FAST + RELIABLE) ============
+  // Paid but fast and reliable - prioritize user experience
+  console.log("[3D-Gen] Trying CometAPI (fast + reliable)...")
+  try {
+    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 60000) // 60s max
+    if (cometResult?.model_url) {
+      console.log("[3D-Gen] ✅ CometAPI succeeded!")
+      return cometResult
+    }
+  } catch (error: any) {
+    console.log("[3D-Gen] CometAPI failed, trying free generators...", error.message)
+  }
+
+  // ============ FREE FALLBACKS (if paid fails) ============
+  console.log("[3D-Gen] Trying FREE text-to-3D generators...")
 
   const freeTexturedGenerators = [
-    { name: "Hunyuan3D-2 (Tencent)", fn: generateWithHunyuan3D, timeout: 60000 },  // 60s max
-    { name: "TRELLIS (Microsoft)", fn: generateWithTrellis, timeout: 60000 },       // 60s max
-    { name: "LGM (Gaussian)", fn: generateWithLGM, timeout: 45000 },                // 45s - faster
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 30000 },  // 30s max
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 30000 },        // 30s max
+    { name: "LGM", fn: generateWithLGM, timeout: 30000 },                 // 30s max
   ]
 
   // Race all free generators - return first success
@@ -773,16 +785,7 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
       return freeSuccess
     }
   } catch (freeError) {
-    console.log("[3D-Gen] Free generators failed, trying paid CometAPI...", freeError)
-  }
-
-  // ============ PAID FALLBACK: CometAPI (if free fails) ============
-  console.log("[3D-Gen] Trying CometAPI Hunyuan3D-2 (Premium fallback)...")
-  try {
-    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 120000)
-    if (cometResult?.model_url) return cometResult
-  } catch (error: any) {
-    console.log("[3D-Gen] CometAPI failed:", error.message)
+    console.log("[3D-Gen] Free generators failed...", freeError)
   }
 
   // ============ SECONDARY FREE FALLBACKS (Fast) ============
