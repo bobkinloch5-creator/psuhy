@@ -96,8 +96,13 @@ function ModelViewerComponent({ src, alt }: { src: string; alt: string }) {
                 viewer.setAttribute('camera-controls', '')
                 viewer.setAttribute('auto-rotate', '')
                 viewer.setAttribute('shadow-intensity', '1')
-                viewer.setAttribute('exposure', '1')
-                viewer.setAttribute('environment-image', 'neutral')
+                viewer.setAttribute('exposure', '1.5')  // Brighter exposure for colors
+                viewer.setAttribute('environment-image', 'neutral')  // Neutral HDR environment
+                viewer.setAttribute('tone-mapping', 'commerce')  // Best for colored products
+                viewer.setAttribute('shadow-softness', '0.5')
+                viewer.setAttribute('camera-orbit', '45deg 55deg 2.5m')
+                viewer.setAttribute('min-camera-orbit', 'auto auto 0.5m')
+                viewer.setAttribute('max-camera-orbit', 'Infinity 180deg 10m')
                 viewer.setAttribute('data-viewer-key', viewerKey)
                 viewer.style.width = '100%'
                 viewer.style.height = '100%'
