@@ -12,9 +12,9 @@ interface ModelResult {
   source: string
 }
 
-// ============ COMETAPI HUNYUAN3D-2 (PAID - TEXT-TO-3D DIRECT) ============
+// ============ COMETAPI HUNYUAN3D-2 (PAID - IMAGE-TO-3D) ============
 async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
-  console.log("[CometAPI-3D] Generating with CometAPI Hunyuan3D-2 (Text-to-3D):", prompt)
+  console.log("[CometAPI-3D] Generating with CometAPI Hunyuan3D-2 (Image-to-3D):", prompt)
 
   const apiKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
   if (!apiKey) {
@@ -22,8 +22,53 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   }
 
   try {
-    // Direct text-to-3D using Hunyuan3D-2 - no reference image needed
-    console.log("[CometAPI-3D] Generating 3D model directly from text prompt...")
+    // Step 1: Generate a reference image using gpt-image-1 (DALL-E 3)
+    console.log("[CometAPI-3D] Step 1: Generating reference image with gpt-image-1...")
+
+    const imagePrompt = `${prompt}, 3D render, single centered object, isometric view, white background, studio lighting, high quality, clean edges, vibrant colors, textured, professional product shot`
+
+    const imageResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-image-1",  // DALL-E 3 via CometAPI
+        prompt: imagePrompt,
+        quality: "hd",
+        size: "1024x1024",
+        n: 1,
+      }),
+    })
+
+    if (!imageResponse.ok) {
+      const errorText = await imageResponse.text()
+      console.error("[CometAPI-3D] Reference image generation failed:", errorText)
+      throw new Error(`Reference image generation failed: ${imageResponse.status}`)
+    }
+
+    const imageData = await imageResponse.json()
+    let referenceImageUrl: string | null = null
+
+    if (imageData.data && imageData.data.length > 0) {
+      const imgData = imageData.data[0]
+      if (imgData.url) {
+        referenceImageUrl = imgData.url
+      } else if (imgData.b64_json) {
+        // Convert base64 to data URL for the next step
+        referenceImageUrl = `data:image/png;base64,${imgData.b64_json}`
+      }
+    }
+
+    if (!referenceImageUrl) {
+      throw new Error("Failed to generate reference image")
+    }
+
+    console.log("[CometAPI-3D] Got reference image, proceeding to 3D generation...")
+
+    // Step 2: Use Hunyuan3D-2 with the reference image (IMAGE-TO-3D)
+    console.log("[CometAPI-3D] Step 2: Converting to 3D with Hunyuan3D-2...")
 
     const enhancedPrompt = `${prompt}, highly detailed 3D model with FULL COLOR TEXTURES, vibrant colors, PBR materials, albedo map, normal map, clean topology, sharp edges, professional quality, game-ready asset, 4K textures, NOT WHITE, NOT GREY, FULLY TEXTURED AND COLORED`
 
@@ -34,11 +79,9 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "Hunyuan3D-2",  // CometAPI's Hunyuan3D-2 model - supports text-to-3D
-        prompt: enhancedPrompt, // Enhanced prompt for better quality
-        // Request highest quality settings
-        quality: "hd",
-        size: "1024x1024",
+        model: "Hunyuan3D-2",  // CometAPI's Hunyuan3D-2 model - requires image
+        prompt: enhancedPrompt,
+        image: referenceImageUrl, // REQUIRED: Reference image for image-to-3D
       }),
     })
 
@@ -55,39 +98,35 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
     if (modelData.data && modelData.data.length > 0) {
       const data = modelData.data[0]
 
-      // Check for direct URL
+      // Check for direct URL (GLB file)
       if (data.url) {
         console.log("[CometAPI-3D] ✅ Got 3D model URL:", data.url)
         return {
           model_url: data.url,
-          preview_url: null,
+          preview_url: referenceImageUrl, // Use the generated reference image as preview
           formats: {
             glb: data.url,
             obj: null,
             fbx: null,
           },
-          source: "CometAPI Hunyuan3D-2 (Premium HD)"
+          source: "CometAPI Hunyuan3D-2 (Premium HD Textured)"
         }
       }
 
-      // Handle base64 response - upload to Supabase
+      // Handle base64 response - convert to data URL
       if (data.b64_json) {
-        console.log("[CometAPI-3D] Got base64 data, converting...")
-        // Return with base64 data for the caller to handle storage
-        const modelBuffer = Buffer.from(data.b64_json, 'base64')
-        const blob = new Blob([modelBuffer], { type: 'model/gltf-binary' })
-        // Create a data URL for now - will be stored in Supabase later
+        console.log("[CometAPI-3D] Got base64 GLB data, converting...")
         const dataUrl = `data:model/gltf-binary;base64,${data.b64_json}`
 
         return {
           model_url: dataUrl,
-          preview_url: null,
+          preview_url: referenceImageUrl, // Use the generated reference image as preview
           formats: {
             glb: dataUrl,
             obj: null,
             fbx: null,
           },
-          source: "CometAPI Hunyuan3D-2 (Premium HD)"
+          source: "CometAPI Hunyuan3D-2 (Premium HD Textured)"
         }
       }
     }
@@ -712,10 +751,10 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   }
 
   // Primary generators - try CometAPI first (paid), then free fallbacks
-  // CometAPI Hunyuan3D-2: $0.08/model - reliable, high quality
-  console.log("[3D-Gen] Trying CometAPI Hunyuan3D-2 (Premium)...")
+  // CometAPI Hunyuan3D-2: 2-step process (image + 3D) - reliable, high quality, textured models
+  console.log("[3D-Gen] Trying CometAPI Hunyuan3D-2 (Premium Image-to-3D)...")
   try {
-    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 90000)
+    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 120000) // 2 min for 2-step process
     if (cometResult?.model_url) return cometResult
   } catch (error: any) {
     console.log("[3D-Gen] CometAPI failed, trying free generators...", error.message)
