@@ -201,29 +201,18 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
 
 // ============ MAIN GENERATION ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  const enhancedPrompt = style
-    ? `${prompt}, ${style} style, high quality 3D model`
-    : `${prompt}, high quality 3D game asset`
+  // Use Shap-E only - the most reliable free service
+  // Hunyuan3D-2 and Cube3D have broken/changed Gradio endpoints
+  console.log("[3D-Gen] Using Shap-E for generation...")
 
-  // Priority: Shap-E (most reliable) → Hunyuan3D-2 → Cube3D
-  const services: { name: string; fn: () => Promise<ModelResult> }[] = [
-    { name: "Shap-E", fn: () => generateWithShapE(prompt) },
-    { name: "Hunyuan3D-2", fn: () => generateWithHunyuan3D(enhancedPrompt) },
-    { name: "Cube3D", fn: () => generateWithCube3D(prompt) },
-  ]
-
-  for (const service of services) {
-    try {
-      console.log(`[3D-Gen] Trying ${service.name}...`)
-      const result = await service.fn()
-      if (result.model_url) {
-        console.log(`[3D-Gen] ✅ Success with ${service.name}`)
-        return result
-      }
-    } catch (error: any) {
-      console.log(`[3D-Gen] ${service.name} failed:`, error.message)
-      continue
+  try {
+    const result = await generateWithShapE(prompt)
+    if (result.model_url) {
+      console.log("[3D-Gen] ✅ Success with Shap-E")
+      return result
     }
+  } catch (error: any) {
+    console.log("[3D-Gen] Shap-E failed:", error.message)
   }
 
   return {
