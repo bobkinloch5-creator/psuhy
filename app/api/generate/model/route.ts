@@ -750,36 +750,57 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // Primary generators - try CometAPI first (paid), then free fallbacks
-  // CometAPI Hunyuan3D-2: 2-step process (image + 3D) - reliable, high quality, textured models
-  console.log("[3D-Gen] Trying CometAPI Hunyuan3D-2 (Premium Image-to-3D)...")
-  try {
-    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 120000) // 2 min for 2-step process
-    if (cometResult?.model_url) return cometResult
-  } catch (error: any) {
-    console.log("[3D-Gen] CometAPI failed, trying free generators...", error.message)
-  }
+  // ============ FREE TEXT-TO-3D FIRST (Best quality, no cost!) ============
+  // Hunyuan3D-2 and TRELLIS are top-tier free options with amazing textures
+  console.log("[3D-Gen] Trying FREE text-to-3D generators first...")
 
-  // Fallback to free HuggingFace generators (race them)
-  // Increased timeouts for better success rate with textured models
-  const texturedGenerators = [
-    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 120000 },   // Tencent - TEXTURED (2min for quality)
-    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 120000 },      // TencentARC - TEXTURED (2min)
-    { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },              // StabilityAI - TEXTURED (90s)
+  const freeTexturedGenerators = [
+    { name: "Hunyuan3D-2 (Tencent)", fn: generateWithHunyuan3D, timeout: 150000 },  // Best free - 4K PBR textures
+    { name: "TRELLIS (Microsoft)", fn: generateWithTrellis, timeout: 150000 },       // Excellent quality
+    { name: "LGM (Gaussian)", fn: generateWithLGM, timeout: 120000 },                // Good fallback
   ]
 
-  // Create racing promises with safe wrappers
-  const racePromises = texturedGenerators.map(gen => {
-    console.log(`[3D-Gen] Starting ${gen.name}...`)
+  // Race all free generators - return first success
+  const freeRacePromises = freeTexturedGenerators.map(gen => {
+    console.log(`[3D-Gen] Starting FREE: ${gen.name}...`)
     return safeGenerate(gen.name, gen.fn, gen.timeout)
   })
 
-  // Return the first successful textured result
   try {
-    const firstSuccess = await Promise.any(racePromises)
-    if (firstSuccess?.model_url) return firstSuccess
+    const freeSuccess = await Promise.any(freeRacePromises)
+    if (freeSuccess?.model_url) {
+      console.log("[3D-Gen] ✅ FREE generator succeeded!")
+      return freeSuccess
+    }
+  } catch (freeError) {
+    console.log("[3D-Gen] Free generators failed, trying paid CometAPI...", freeError)
+  }
+
+  // ============ PAID FALLBACK: CometAPI (if free fails) ============
+  console.log("[3D-Gen] Trying CometAPI Hunyuan3D-2 (Premium fallback)...")
+  try {
+    const cometResult = await safeGenerate("CometAPI-3D", generateWithCometAPI, 120000)
+    if (cometResult?.model_url) return cometResult
+  } catch (error: any) {
+    console.log("[3D-Gen] CometAPI failed:", error.message)
+  }
+
+  // ============ SECONDARY FREE FALLBACKS ============
+  const secondaryGenerators = [
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 120000 },
+    { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },
+  ]
+
+  const secondaryPromises = secondaryGenerators.map(gen => {
+    console.log(`[3D-Gen] Trying secondary: ${gen.name}...`)
+    return safeGenerate(gen.name, gen.fn, gen.timeout)
+  })
+
+  try {
+    const secondarySuccess = await Promise.any(secondaryPromises)
+    if (secondarySuccess?.model_url) return secondarySuccess
   } catch (aggregateError) {
-    console.log("[3D-Gen] Primary textured generators all failed:", aggregateError)
+    console.log("[3D-Gen] Secondary generators all failed:", aggregateError)
   }
 
   // Fallback generators - try Cube3D textured first (Roblox official), then geometry-only
