@@ -12,9 +12,9 @@ interface ModelResult {
   source: string
 }
 
-// ============ COMETAPI HUNYUAN3D-2 (PAID - $0.08/REQUEST - MOST RELIABLE) ============
+// ============ COMETAPI HUNYUAN3D-2 (PAID - TEXT-TO-3D DIRECT) ============
 async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
-  console.log("[CometAPI-3D] Generating with CometAPI Hunyuan3D-2:", prompt)
+  console.log("[CometAPI-3D] Generating with CometAPI Hunyuan3D-2 (Text-to-3D):", prompt)
 
   const apiKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
   if (!apiKey) {
@@ -22,40 +22,8 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   }
 
   try {
-    // Step 1: Generate a reference image from the prompt using CometAPI image generation
-    console.log("[CometAPI-3D] Step 1: Generating HD reference image...")
-
-    const imageResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "flux-schnell",  // Fast image generation
-        prompt: `${prompt}, 3D render, single object, isometric view, centered, studio lighting, white background, high quality, vibrant colors, detailed textures, fully colored`,
-        n: 1,
-        size: "1024x1024",
-      }),
-    })
-
-    if (!imageResponse.ok) {
-      const errorText = await imageResponse.text()
-      console.error("[CometAPI-3D] Image generation failed:", errorText)
-      throw new Error(`Image generation failed: ${imageResponse.status}`)
-    }
-
-    const imageData = await imageResponse.json()
-    const imageUrl = imageData.data?.[0]?.url
-
-    if (!imageUrl) {
-      throw new Error("No image URL returned from CometAPI")
-    }
-
-    console.log("[CometAPI-3D] Got reference image:", imageUrl.slice(0, 100))
-
-    // Step 2: Generate 3D model using Hunyuan3D-2 via same endpoint (OpenAI-compatible)
-    console.log("[CometAPI-3D] Step 2: Generating HIGH QUALITY 3D model with Hunyuan3D-2...")
+    // Direct text-to-3D using Hunyuan3D-2 - no reference image needed
+    console.log("[CometAPI-3D] Generating 3D model directly from text prompt...")
 
     const enhancedPrompt = `${prompt}, highly detailed 3D model with FULL COLOR TEXTURES, vibrant colors, PBR materials, albedo map, normal map, clean topology, sharp edges, professional quality, game-ready asset, 4K textures, NOT WHITE, NOT GREY, FULLY TEXTURED AND COLORED`
 
@@ -66,10 +34,9 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "Hunyuan3D-2",  // CometAPI's Hunyuan3D-2 model
+        model: "Hunyuan3D-2",  // CometAPI's Hunyuan3D-2 model - supports text-to-3D
         prompt: enhancedPrompt, // Enhanced prompt for better quality
-        image: imageUrl,      // Reference image URL
-        // Request highest quality settings if supported
+        // Request highest quality settings
         quality: "hd",
         size: "1024x1024",
       }),
@@ -93,7 +60,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
         console.log("[CometAPI-3D] ✅ Got 3D model URL:", data.url)
         return {
           model_url: data.url,
-          preview_url: imageUrl,
+          preview_url: null,
           formats: {
             glb: data.url,
             obj: null,
@@ -114,7 +81,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
 
         return {
           model_url: dataUrl,
-          preview_url: imageUrl,
+          preview_url: null,
           formats: {
             glb: dataUrl,
             obj: null,
