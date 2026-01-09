@@ -29,7 +29,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
     throw new Error("No CometAPI key configured")
   }
 
-  const maxRetries = 2 // Reduced retries
+  const maxRetries = 1 // Single attempt to stay within Vercel timeout
   let lastError: Error | null = null
 
   // DIRECT 3D generation with Hunyuan3D-2 - no image step
@@ -38,7 +38,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
       console.log(`[CometAPI-3D] Direct 3D attempt ${attempt}/${maxRetries}...`)
 
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 90000) // 90s timeout per attempt
+      const timeout = setTimeout(() => controller.abort(), 45000) // 45s timeout to leave room for fallbacks
 
       const response = await fetch("https://api.cometapi.com/v1/images/generations", {
         method: "POST",
@@ -825,20 +825,8 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] No COMETAPI_KEY - skipping CometAPI")
   }
 
-  // ========== PRIORITY 2: ROBLOX CUBE3D + AI TEXTURES (FREE - COLORED) ==========
-  console.log("[3D-Gen] Trying Roblox Cube3D with AI textures...")
-  try {
-    const cube3dResult = await generateWithCube3DTextured(prompt)
-    if (cube3dResult?.model_url) {
-      console.log("[3D-Gen] ✅ Roblox Cube3D + Textures succeeded!")
-      return cube3dResult
-    }
-  } catch (error: any) {
-    console.error("[3D-Gen] Cube3D Textured failed:", error.message)
-  }
-
-  // ========== PRIORITY 3: HUNYUAN3D GRADIO (FREE - TENCENT COLORED) ==========
-  console.log("[3D-Gen] Trying Hunyuan3D Gradio...")
+  // ========== PRIORITY 2: HUNYUAN3D GRADIO (FREE - COLORED - FASTEST) ==========
+  console.log("[3D-Gen] Trying Hunyuan3D Gradio (free, colored)...")
   try {
     const hunyuanResult = await generateWithHunyuan3D(prompt)
     if (hunyuanResult?.model_url) {
@@ -849,20 +837,20 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.error("[3D-Gen] Hunyuan3D Gradio failed:", error.message)
   }
 
-  // ========== PRIORITY 4: TRELLIS (FREE - MICROSOFT TEXTURED) ==========
-  console.log("[3D-Gen] Trying TRELLIS...")
+  // ========== PRIORITY 3: ROBLOX CUBE3D (FREE - GEOMETRY) ==========
+  console.log("[3D-Gen] Trying Roblox Cube3D (geometry)...")
   try {
-    const trellisResult = await generateWithTrellis(prompt)
-    if (trellisResult?.model_url) {
-      console.log("[3D-Gen] ✅ TRELLIS succeeded!")
-      return trellisResult
+    const cube3dResult = await generateWithCube3D(prompt)
+    if (cube3dResult?.model_url) {
+      console.log("[3D-Gen] ✅ Roblox Cube3D succeeded!")
+      return cube3dResult
     }
   } catch (error: any) {
-    console.error("[3D-Gen] TRELLIS failed:", error.message)
+    console.error("[3D-Gen] Cube3D failed:", error.message)
   }
 
   // ========== ALL FAILED ==========
-  throw new Error("All 3D generation services failed. Please try again later or check API keys.")
+  throw new Error("3D generation failed. Please try again.")
 }
 // ============ STORAGE ============
 async function uploadModelToSupabase(
