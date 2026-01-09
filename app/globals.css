@@ -43,8 +43,9 @@
 }
 
 @theme inline {
-  --font-sans: "Inter", "Geist", "Geist Fallback", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Geist Mono", monospace;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -81,6 +82,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Premium Design System Colors */
+  --electric-blue: #3A7BFF;
+  --neon-mint: #4FF3C0;
+  --soft-purple: #A855F7;
+  --deep-black: #0E0E0F;
+  --graphite: #1A1B1D;
 }
 
 @layer base {
@@ -91,6 +99,23 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: var(--font-mono);
   }
 }
 
@@ -703,4 +728,134 @@ html {
   border: 2px solid currentColor;
   animation: ripple-out 0.6s ease-out;
   pointer-events: none;
+}
+/* ========================================
+   PREMIUM BLAXSMITH DESIGN SYSTEM
+   Electric Blue & Neon Mint Accents
+   ======================================== */
+
+/* Electric Blue glow effects */
+.neon-blue {
+  box-shadow:
+    0 0 5px rgba(58, 123, 255, 0.5),
+    0 0 20px rgba(58, 123, 255, 0.3),
+    0 0 40px rgba(58, 123, 255, 0.2);
+}
+
+.glow-blue {
+  box-shadow: 0 0 30px rgba(58, 123, 255, 0.5), 0 0 60px rgba(58, 123, 255, 0.3);
+}
+
+/* Neon Mint glow effects */
+.neon-mint {
+  box-shadow:
+    0 0 5px rgba(79, 243, 192, 0.5),
+    0 0 20px rgba(79, 243, 192, 0.3),
+    0 0 40px rgba(79, 243, 192, 0.2);
+}
+
+.glow-mint {
+  box-shadow: 0 0 30px rgba(79, 243, 192, 0.5), 0 0 60px rgba(79, 243, 192, 0.3);
+}
+
+/* Premium button with Electric Blue */
+.btn-electric {
+  background: linear-gradient(135deg, #3A7BFF 0%, #2563eb 100%);
+  box-shadow: 0 4px 20px rgba(58, 123, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.btn-electric:hover {
+  box-shadow: 0 8px 40px rgba(58, 123, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Premium card with blue glow on hover */
+.card-premium {
+  background: linear-gradient(135deg, rgba(26, 27, 29, 0.9) 0%, rgba(14, 14, 15, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-premium:hover {
+  border-color: rgba(58, 123, 255, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(58, 123, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Success card with mint accent */
+.card-success {
+  border-color: rgba(79, 243, 192, 0.3);
+}
+
+.card-success:hover {
+  border-color: rgba(79, 243, 192, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(79, 243, 192, 0.15);
+}
+
+/* Magnetic button effect */
+.btn-magnetic {
+  transition: transform 0.2s ease-out;
+}
+
+/* Smooth parallax sections */
+.parallax-section {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Premium input with glow */
+.input-premium {
+  background: rgba(26, 27, 29, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.input-premium:focus {
+  border-color: rgba(58, 123, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(58, 123, 255, 0.2), 0 0 20px rgba(58, 123, 255, 0.1);
+  outline: none;
+}
+
+/* AI energy gradient animation */
+@keyframes ai-energy {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.ai-gradient {
+  background: linear-gradient(135deg, #3A7BFF, #A855F7, #4FF3C0, #3A7BFF);
+  background-size: 300% 300%;
+  animation: ai-energy 6s ease infinite;
+}
+
+/* Text gradient with new colors */
+.text-gradient-premium {
+  background: linear-gradient(135deg, #3A7BFF 0%, #A855F7 50%, #4FF3C0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Hero background with mesh gradient */
+.hero-mesh {
+  background:
+    radial-gradient(at 10% 20%, rgba(58, 123, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(at 90% 80%, rgba(79, 243, 192, 0.1) 0%, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 70%);
+}
+
+/* Section divider gradient */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(58, 123, 255, 0.5), transparent);
 }
