@@ -138,6 +138,97 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
   }
 }
 
+// ============ TRIPO3D API (FREE TIER - 300 CREDITS/MONTH - FAST COLORED MODELS) ============
+async function generateWithTripo3D(prompt: string): Promise<ModelResult> {
+  console.log("[Tripo3D] Generating colored 3D model:", prompt)
+
+  const apiKey = process.env.TRIPO_API_KEY
+  if (!apiKey) {
+    throw new Error("No Tripo3D API key configured")
+  }
+
+  try {
+    // Step 1: Create a text-to-3D task
+    const createResponse = await fetch("https://api.tripo3d.ai/v2/openapi/task", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        type: "text_to_model",
+        prompt: `${prompt}, high quality, vibrant colors, textured, game-ready`,
+        model_version: "v2.0-20240919",
+        face_limit: 10000,
+        texture: true,
+        pbr: true,
+      }),
+    })
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text()
+      console.error("[Tripo3D] Task creation failed:", errorText)
+      throw new Error(`Tripo3D task creation failed: ${createResponse.status}`)
+    }
+
+    const createData = await createResponse.json()
+    const taskId = createData.data?.task_id
+
+    if (!taskId) {
+      throw new Error("No task ID returned from Tripo3D")
+    }
+
+    console.log("[Tripo3D] Task created:", taskId)
+
+    // Step 2: Poll for completion (max 45 seconds)
+    const maxWait = 45000
+    const pollInterval = 2000
+    let elapsed = 0
+
+    while (elapsed < maxWait) {
+      await new Promise(r => setTimeout(r, pollInterval))
+      elapsed += pollInterval
+
+      const statusResponse = await fetch(`https://api.tripo3d.ai/v2/openapi/task/${taskId}`, {
+        headers: { "Authorization": `Bearer ${apiKey}` },
+      })
+
+      if (!statusResponse.ok) continue
+
+      const statusData = await statusResponse.json()
+      const status = statusData.data?.status
+
+      console.log(`[Tripo3D] Status: ${status} (${elapsed / 1000}s)`)
+
+      if (status === "success") {
+        const output = statusData.data?.output
+        const modelUrl = output?.model || output?.pbr_model || output?.base_model
+
+        if (modelUrl) {
+          console.log("[Tripo3D] ✅ Got colored model:", modelUrl)
+          return {
+            model_url: modelUrl,
+            preview_url: output?.rendered_image || null,
+            formats: {
+              glb: modelUrl,
+              obj: null,
+              fbx: null,
+            },
+            source: "Tripo3D (Colored + Textured)"
+          }
+        }
+      } else if (status === "failed") {
+        throw new Error("Tripo3D generation failed")
+      }
+    }
+
+    throw new Error("Tripo3D timeout")
+  } catch (error: any) {
+    console.error("[Tripo3D] Error:", error.message)
+    throw error
+  }
+}
+
 // ============ HUNYUAN3D-2 (FREE - OFFICIAL TENCENT SPACE) ============
 async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
   console.log("[Hunyuan3D-2] Generating with official Tencent space:", prompt)
@@ -751,16 +842,43 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // ============ PRIORITY 1: FAST FREE GENERATORS (30-60s) ============
-  // Try these first - they're faster and more reliable
-  console.log("[3D-Gen] 🚀 Trying FAST generators first...")
+  // ============ PRIORITY 0: COMETAPI (PRIMARY - COLORED MODELS) ============
+  // CometAPI is the primary generator for production - pay-as-you-go, reliable, colored models
+  if (process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY) {
+    console.log("[3D-Gen] 🎨 Trying CometAPI Hunyuan3D-2 (PRIMARY - colored models)...")
+    try {
+      const cometResult = await safeGenerate("CometAPI-Hunyuan3D", generateWithCometAPI, 90000) // 90s timeout
+      if (cometResult?.model_url) {
+        console.log("[3D-Gen] ✅ CometAPI succeeded with COLORED model!")
+        return cometResult
+      }
+    } catch (error: any) {
+      console.log("[3D-Gen] CometAPI failed, trying Tripo3D...", error.message)
+    }
+  }
+
+  // ============ PRIORITY 1: TRIPO3D (BACKUP - FAST COLORED) ============
+  if (process.env.TRIPO_API_KEY) {
+    console.log("[3D-Gen] 🎨 Trying Tripo3D (backup)...")
+    try {
+      const tripoResult = await safeGenerate("Tripo3D", generateWithTripo3D, 50000)
+      if (tripoResult?.model_url) {
+        console.log("[3D-Gen] ✅ Tripo3D succeeded with colored model!")
+        return tripoResult
+      }
+    } catch (error: any) {
+      console.log("[3D-Gen] Tripo3D failed, trying free generators...", error.message)
+    }
+  }
+
+  // ============ PRIORITY 2: FREE GENERATORS (FALLBACK) ============
+  console.log("[3D-Gen] 🚀 Trying FREE generators as fallback...")
 
   const fastGenerators = [
-    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 45000 },
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 45000 },
+    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 55000 },
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 55000 },
   ]
 
-  // Race fast generators
   const fastRacePromises = fastGenerators.map(gen => {
     console.log(`[3D-Gen] Starting: ${gen.name}...`)
     return safeGenerate(gen.name, gen.fn, gen.timeout)
@@ -769,11 +887,11 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   try {
     const fastSuccess = await Promise.any(fastRacePromises)
     if (fastSuccess?.model_url) {
-      console.log("[3D-Gen] ✅ Fast generator succeeded!")
+      console.log("[3D-Gen] ✅ Free generator succeeded!")
       return fastSuccess
     }
   } catch (fastError) {
-    console.log("[3D-Gen] Fast generators failed, trying CometAPI...")
+    console.log("[3D-Gen] Free generators failed, trying slower options...")
   }
 
   // ============ PRIORITY 2: COMETAPI HUNYUAN3D-2 (60s timeout) ============
