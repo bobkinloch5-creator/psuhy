@@ -344,11 +344,11 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
                 "\n\nAttached files:\n" + files.map((f: any) => `- ${f.name} (${f.type})`).join("\n")
         }
 
-        // Add conversation history for context - EXTENDED FOR MULTI-STEP BUILDING
+        // Add conversation history for context - FULL MEMORY MODE
         let fullPrompt = messageWithContext
         if (history && history.length > 1) {
-            // Get last 20 messages (10 exchanges) for better context memory
-            const recentHistory = history.slice(-20)
+            // Get ALL history (up to 100 messages) for full conversation memory
+            const recentHistory = history.slice(-100)
 
             // Build a project context summary from what was created
             const createdItems: string[] = []
