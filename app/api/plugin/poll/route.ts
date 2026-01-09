@@ -21,31 +21,36 @@ export async function GET(request: Request) {
     let pluginUserId = searchParams.get("userId")
     const pairingCode = searchParams.get("code")
 
-    // If using pairing code, look up the paired user ID
+    // Use service client for plugin (no cookie auth)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // If using pairing code, look up the paired user ID from database
     if (pairingCode && !pluginUserId) {
       try {
-        // Import the pairing codes map from register endpoint
-        const { pairingCodes } = await import("../register/route")
-        const codeData = pairingCodes.get(pairingCode)
-        if (codeData?.user_id) {
+        const { data: codeData } = await supabase
+          .from("plugin_connections")
+          .select("user_id, status")
+          .eq("pairing_code", pairingCode)
+          .single()
+
+        if (codeData?.user_id && codeData.status === "connected") {
           pluginUserId = codeData.user_id
           console.log(`[Poll] Code ${pairingCode} mapped to user ${pluginUserId}`)
         } else {
-          // Code exists but not yet paired - return empty but register it
+          // Code exists but not yet paired - return empty
           console.log(`[Poll] Code ${pairingCode} not yet paired`)
           return NextResponse.json([], { headers: corsHeaders })
         }
-      } catch (importErr) {
-        console.log("[Poll] Could not import pairing codes:", importErr)
+      } catch (dbErr: any) {
+        console.log("[Poll] DB lookup failed:", dbErr.message)
+        // Return empty if lookup fails
+        return NextResponse.json([], { headers: corsHeaders })
       }
     }
 
     if (!pluginUserId) {
       return NextResponse.json({ error: "userId or code required" }, { status: 400, headers: corsHeaders })
     }
-
-    // Use service client for plugin (no cookie auth)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Find the user's Supabase auth ID from their discord_id
     // The pluginUserId could be the discord_id OR the auth user id
