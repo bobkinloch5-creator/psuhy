@@ -28,6 +28,12 @@ const CATEGORIES = [
     { id: "sword", name: "Classic", assetId: 12221695, color: "from-yellow-500 to-orange-500", thumbnail: "/images/categories/classic.png" },
     { id: "effect", name: "Effects", assetId: 83353855, color: "from-cyan-400 to-blue-500", thumbnail: "/images/categories/effects.png" },
     { id: "treasure", name: "Items", assetId: 255893032, color: "from-yellow-400 to-amber-500", thumbnail: "/images/categories/items.png" },
+    { id: "food", name: "Food", assetId: 0, color: "from-orange-400 to-red-400", thumbnail: "/images/categories/food.png" },
+    { id: "robot", name: "Sci-Fi", assetId: 0, color: "from-blue-400 to-purple-500", thumbnail: "/images/categories/scifi.png" },
+    { id: "medieval", name: "Medieval", assetId: 0, color: "from-stone-500 to-stone-600", thumbnail: "/images/categories/medieval.png" },
+    { id: "sports", name: "Sports", assetId: 0, color: "from-green-400 to-lime-500", thumbnail: "/images/categories/sports.png" },
+    { id: "music", name: "Music", assetId: 0, color: "from-pink-400 to-rose-500", thumbnail: "/images/categories/music.png" },
+    { id: "pet", name: "Pets", assetId: 0, color: "from-amber-300 to-orange-400", thumbnail: "/images/categories/pets.png" },
 ]
 
 // Tab types - Models, Plugins, Audio only
@@ -56,8 +62,12 @@ export default function ToolboxBrowser() {
     const loadTrending = async () => {
         setLoading(true)
         try {
-            // Search for specific high-quality categories instead of generic "model"
-            const categories = ["car", "house", "sword", "tree", "character", "gun", "building"]
+            // Expanded list of search categories for much more variety
+            const categories = [
+                "car", "house", "sword", "tree", "character", "gun", "building",
+                "robot", "castle", "dragon", "spaceship", "boat", "plane", "motorcycle",
+                "chair", "table", "door", "animal", "pet", "monster"
+            ]
             const randomCategory = categories[Math.floor(Math.random() * categories.length)]
 
             // Fetch popular models from a specific category for better quality

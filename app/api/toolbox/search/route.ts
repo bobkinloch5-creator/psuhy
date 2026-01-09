@@ -358,8 +358,12 @@ function parseLibraryHTML(html: string, limit: number): any[] {
 // Get trending free models using Roblox's official endpoints
 async function getTrendingFreeModels(limit: number, offset: number): Promise<{ assets: any[], total: number }> {
     try {
-        // Search for trending free models
-        const trendingQueries = ["car", "house", "sword", "tree", "character", "weapon", "building", "furniture"]
+        // Expanded trending queries for more variety
+        const trendingQueries = [
+            "car", "house", "sword", "tree", "character", "weapon", "building", "furniture",
+            "robot", "castle", "dragon", "spaceship", "boat", "plane", "motorcycle",
+            "chair", "table", "door", "animal", "pet", "monster", "gun", "armor"
+        ]
         const randomQuery = trendingQueries[Math.floor(Math.random() * trendingQueries.length)]
 
         const assets = await searchCatalogJSON(randomQuery, limit, offset)
