@@ -20,9 +20,9 @@ export const MODELS = {
   },
   // ForgeMind Lite - Free tier
   free: {
-    script: "grok-3", // Free Grok
-    world: "grok-3",
-    system: "grok-3",
+    script: "gemini-3-flash", // Gemini 3 Flash - Free and fast
+    world: "gemini-3-flash",
+    system: "gemini-3-flash",
   },
 } as const
 
