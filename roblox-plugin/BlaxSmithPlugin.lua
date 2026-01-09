@@ -451,12 +451,12 @@ end
 local function executeCommand(cmd)
 	print("[BlaxSmith] ⚡ Executing:", cmd.type or "unknown")
 	
-	-- MODEL INSERTION
-	if cmd.type == "INSERT_MODEL" and cmd.data then
+	-- MODEL INSERTION (from Toolbox with assetId)
+	if cmd.type == "INSERT_MODEL" and cmd.data and cmd.data.assetId then
 		local assetId = tonumber(cmd.data.assetId)
 		if not assetId then return end
 		
-		print("[BlaxSmith] 📦 Inserting model:", cmd.data.name or assetId)
+		print("[BlaxSmith] 📦 Inserting model from toolbox:", cmd.data.name or assetId)
 		
 		local success, model = pcall(function()
 			return InsertService:LoadAsset(assetId)
@@ -481,6 +481,25 @@ local function executeCommand(cmd)
 			warn("[BlaxSmith] ❌ Failed to insert:", assetId)
 		end
 	
+	-- MODEL CREATION (from AI code - multi-part models)
+	elseif cmd.type == "INSERT_MODEL" and cmd.code then
+		print("[BlaxSmith] 🏗️ Building AI Model:", cmd.data and cmd.data.name or "AIModel")
+		
+		-- Execute the Lua code to create the model
+		local func, loadErr = loadstring(cmd.code)
+		if func then
+			local execSuccess, execErr = pcall(func)
+			if execSuccess then
+				updateStats()
+				print("[BlaxSmith] ✅ Model built:", cmd.data and cmd.data.name or "AIModel")
+				ChangeHistoryService:SetWaypoint("BlaxSmith: " .. (cmd.data and cmd.data.name or "Model"))
+			else
+				warn("[BlaxSmith] ❌ Model execution error:", execErr)
+			end
+		else
+			warn("[BlaxSmith] ❌ Model code error:", loadErr)
+		end
+	
 	-- WORLD CODE EXECUTION
 	elseif cmd.type == "EXECUTE_WORLD" and cmd.code then
 		print("[BlaxSmith] 🌍 Executing world generation...")
@@ -498,7 +517,7 @@ local function executeCommand(cmd)
 			warn("[BlaxSmith] ❌ Code error:", loadErr)
 		end
 	
-	-- SCRIPT INJECTION
+	-- SCRIPT INJECTION (legacy)
 	elseif cmd.type == "INJECT_SCRIPT" and cmd.data and cmd.data.code then
 		print("[BlaxSmith] 📜 Injecting script:", cmd.data.name or "Script")
 		
@@ -519,6 +538,97 @@ local function executeCommand(cmd)
 		addToHistory({ name = newScript.Name, instance = newScript, type = "script" })
 		print("[BlaxSmith] ✅ Script created:", newScript.Name)
 		ChangeHistoryService:SetWaypoint("BlaxSmith: Created " .. newScript.Name)
+	
+	-- INSERT_SCRIPT (Server Script from AI Chat)
+	elseif cmd.type == "INSERT_SCRIPT" and cmd.code then
+		print("[BlaxSmith] 📜 Creating Server Script:", cmd.data and cmd.data.name or "AIScript")
+		
+		local folder = ensureFolder(ServerScriptService, "BlaxSmith_Scripts")
+		local newScript = Instance.new("Script")
+		newScript.Name = cmd.data and cmd.data.name or "AIScript"
+		newScript.Source = cmd.code
+		newScript.Parent = folder
+		
+		selectAndFocus(newScript)
+		addToHistory({ name = newScript.Name, instance = newScript, type = "script" })
+		updateStats()
+		print("[BlaxSmith] ✅ Server Script created:", newScript.Name)
+		ChangeHistoryService:SetWaypoint("BlaxSmith: " .. newScript.Name)
+	
+	-- INSERT_LOCALSCRIPT (Client Script from AI Chat)
+	elseif cmd.type == "INSERT_LOCALSCRIPT" and cmd.code then
+		print("[BlaxSmith] 📱 Creating LocalScript:", cmd.data and cmd.data.name or "AILocalScript")
+		
+		local newScript = Instance.new("LocalScript")
+		newScript.Name = cmd.data and cmd.data.name or "AILocalScript"
+		newScript.Source = cmd.code
+		newScript.Parent = StarterPlayer.StarterPlayerScripts
+		
+		selectAndFocus(newScript)
+		addToHistory({ name = newScript.Name, instance = newScript, type = "localscript" })
+		updateStats()
+		print("[BlaxSmith] ✅ LocalScript created:", newScript.Name)
+		ChangeHistoryService:SetWaypoint("BlaxSmith: " .. newScript.Name)
+	
+	-- INSERT_GUI (GUI with LocalScript from AI Chat)
+	elseif cmd.type == "INSERT_GUI" and cmd.code then
+		print("[BlaxSmith] 🖼️ Creating GUI:", cmd.data and cmd.data.name or "AIGUI")
+		
+		local StarterGui = game:GetService("StarterGui")
+		local guiName = cmd.data and cmd.data.name or "AIGUI"
+		
+		-- Create the GUI container
+		local screenGui = Instance.new("ScreenGui")
+		screenGui.Name = guiName
+		screenGui.ResetOnSpawn = false
+		
+		-- Create LocalScript inside to build the GUI
+		local guiScript = Instance.new("LocalScript")
+		guiScript.Name = guiName .. "_Script"
+		guiScript.Source = cmd.code
+		guiScript.Parent = screenGui
+		
+		screenGui.Parent = StarterGui
+		
+		selectAndFocus(screenGui)
+		addToHistory({ name = screenGui.Name, instance = screenGui, type = "gui" })
+		updateStats()
+		print("[BlaxSmith] ✅ GUI created:", screenGui.Name)
+		ChangeHistoryService:SetWaypoint("BlaxSmith: " .. screenGui.Name)
+	
+	-- INSERT_MODULE (ModuleScript from AI Chat)
+	elseif cmd.type == "INSERT_MODULE" and cmd.code then
+		print("[BlaxSmith] 📦 Creating ModuleScript:", cmd.data and cmd.data.name or "AIModule")
+		
+		local newModule = Instance.new("ModuleScript")
+		newModule.Name = cmd.data and cmd.data.name or "AIModule"
+		newModule.Source = cmd.code
+		newModule.Parent = ReplicatedStorage
+		
+		selectAndFocus(newModule)
+		addToHistory({ name = newModule.Name, instance = newModule, type = "module" })
+		updateStats()
+		print("[BlaxSmith] ✅ ModuleScript created:", newModule.Name)
+		ChangeHistoryService:SetWaypoint("BlaxSmith: " .. newModule.Name)
+	
+	-- INSERT_PART (Create 3D parts from AI Chat)
+	elseif cmd.type == "INSERT_PART" and cmd.code then
+		print("[BlaxSmith] 🧱 Creating Part:", cmd.data and cmd.data.name or "AIPart")
+		
+		-- Execute the Lua code to create the part
+		local func, loadErr = loadstring(cmd.code)
+		if func then
+			local execSuccess, execErr = pcall(func)
+			if execSuccess then
+				updateStats()
+				print("[BlaxSmith] ✅ Part created:", cmd.data and cmd.data.name or "AIPart")
+				ChangeHistoryService:SetWaypoint("BlaxSmith: " .. (cmd.data and cmd.data.name or "Part"))
+			else
+				warn("[BlaxSmith] ❌ Part execution error:", execErr)
+			end
+		else
+			warn("[BlaxSmith] ❌ Part code error:", loadErr)
+		end
 	end
 end
 
