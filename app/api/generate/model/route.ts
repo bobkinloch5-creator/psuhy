@@ -19,22 +19,29 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
   try {
     const { Client } = await import("@gradio/client")
 
-    // Connect to the official Tencent Hunyuan3D-2 space
-    const client = await Client.connect("tencent/Hunyuan3D-2")
+    // Connect to the official Tencent Hunyuan3D-2 space with timeout
+    const client = await Promise.race([
+      Client.connect("tencent/Hunyuan3D-2"),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
+    ]) as any
 
     console.log("[Hunyuan3D-2] Connected to Hugging Face space")
 
-    // The space supports text-to-3D generation
-    // Try the generation endpoint
-    const result = await client.predict("/generation", {
-      caption: prompt,
-      image: null, // No input image for text-to-3D
-      steps: 25,
-      guidance_scale: 7.5,
-      seed: Math.floor(Math.random() * 999999),
-      octree_resolution: 256,
-      remove_bg: true,
-    })
+    // Try to get API info first
+    let result: any
+    try {
+      // Try the main predict endpoint with index 0
+      result = await Promise.race([
+        client.predict(0, [prompt]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+      ])
+    } catch {
+      // Fallback: try with named endpoint
+      result = await Promise.race([
+        client.predict("/run", { text: prompt }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+      ])
+    }
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
 
@@ -98,14 +105,21 @@ async function generateWithCube3D(prompt: string): Promise<ModelResult> {
 
   try {
     const { Client } = await import("@gradio/client")
-    const client = await Client.connect("Roblox/cube3d-interactive")
 
-    const result = await client.predict("/predict", [
-      prompt,
-      1.0,
-      1.0,
-      1.0,
-    ])
+    const client = await Promise.race([
+      Client.connect("Roblox/cube3d-interactive"),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
+    ]) as any
+
+    const result = await Promise.race([
+      client.predict("/predict", [
+        prompt,
+        1.0,
+        1.0,
+        1.0,
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+    ]) as any
 
     const resultData = result.data as any[]
 
@@ -140,14 +154,21 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
 
   try {
     const { Client } = await import("@gradio/client")
-    const client = await Client.connect("hysts/Shap-E")
 
-    const result = await client.predict("text-to-3d", [
-      prompt,
-      0,        // seed
-      15.0,     // guidance_scale
-      64,       // num_steps
-    ])
+    const client = await Promise.race([
+      Client.connect("hysts/Shap-E"),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
+    ]) as any
+
+    const result = await Promise.race([
+      client.predict("text-to-3d", [
+        prompt,
+        0,        // seed
+        15.0,     // guidance_scale
+        64,       // num_steps
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+    ]) as any
 
     const resultData = result.data as any[]
 
