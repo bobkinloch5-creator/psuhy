@@ -13715,7 +13715,7 @@ spawn(function()
         end
         
         local success, response = pcall(function()
-            return HttpService:GetAsync(CONFIG.APP_URL .. "/plugin/poll", true)
+            return HttpService:GetAsync(CONFIG.APP_URL .. "/api/plugin/poll", true)
         end)
         
         if success then
