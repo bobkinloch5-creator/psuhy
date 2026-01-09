@@ -296,9 +296,12 @@ You are ${userData.username}'s premium AI game architect. Build their vision. ðŸ
             const [, scriptName, code] = match
             const command = {
                 type: "INSERT_SCRIPT",
-                name: scriptName.trim(),
-                code: code.trim(),
-                location: "ServerScriptService"
+                data: {
+                    name: scriptName.trim(),
+                    location: "ServerScriptService",
+                    scriptType: "Script"
+                },
+                code: code.trim()
             }
             await addCommand(userData.id, command)
             insertedItems.push(`Script: ${scriptName.trim()}`)
@@ -311,9 +314,12 @@ You are ${userData.username}'s premium AI game architect. Build their vision. ðŸ
             const [, scriptName, code] = match
             const command = {
                 type: "INSERT_LOCALSCRIPT",
-                name: scriptName.trim(),
-                code: code.trim(),
-                location: "StarterPlayerScripts"
+                data: {
+                    name: scriptName.trim(),
+                    location: "StarterPlayerScripts",
+                    scriptType: "LocalScript"
+                },
+                code: code.trim()
             }
             await addCommand(userData.id, command)
             insertedItems.push(`LocalScript: ${scriptName.trim()}`)
@@ -326,9 +332,12 @@ You are ${userData.username}'s premium AI game architect. Build their vision. ðŸ
             const [, guiName, code] = match
             const command = {
                 type: "INSERT_GUI",
-                name: guiName.trim(),
-                code: code.trim(),
-                location: "StarterGui"
+                data: {
+                    name: guiName.trim(),
+                    location: "StarterGui",
+                    scriptType: "LocalScript"
+                },
+                code: code.trim()
             }
             await addCommand(userData.id, command)
             insertedItems.push(`GUI: ${guiName.trim()}`)
@@ -341,9 +350,12 @@ You are ${userData.username}'s premium AI game architect. Build their vision. ðŸ
             const [, moduleName, code] = match
             const command = {
                 type: "INSERT_MODULE",
-                name: moduleName.trim(),
-                code: code.trim(),
-                location: "ReplicatedStorage"
+                data: {
+                    name: moduleName.trim(),
+                    location: "ReplicatedStorage",
+                    scriptType: "ModuleScript"
+                },
+                code: code.trim()
             }
             await addCommand(userData.id, command)
             insertedItems.push(`Module: ${moduleName.trim()}`)
