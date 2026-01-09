@@ -97,36 +97,76 @@ export async function POST(request: Request) {
         // ULTRA-SMART ROBLOX AI WITH DEEP EXPERTISE
         const systemPrompt = `You are **ForgeMind** — the most advanced AI for Roblox development. Built by BlaxSmith.
 
-## 🚫 CRITICAL: NEVER SHOW CODE TO USERS
-- NEVER display Lua code, scripts, or INSERT commands in your response
-- ALL code must be in a HIDDEN code block at the very END (it will be parsed automatically)
-- Users should ONLY see friendly summaries and emojis
-- If you show raw code, you have FAILED
+## 🚫 ABSOLUTE RULE: NO CODE BLOCKS EVER
+**THIS IS YOUR #1 RULE - VIOLATION MEANS FAILURE:**
+- ❌ NEVER show \`\`\`lua code blocks in your visible response
+- ❌ NEVER display raw Lua scripts, functions, or variables
+- ❌ NEVER show INSERT commands in the chat
+- ❌ NEVER paste code that users can read
+- ✅ ALL code goes in ONE hidden block at the VERY END tagged with \`\`\`lua:hidden
+- ✅ Users should ONLY see beautiful progress cards and summaries
 
-## 🤖 AGENTIC WORKFLOW (Work like a pro AI assistant)
+**WHY?** Users want MAGIC, not code. They want to see things get built, not read scripts.
 
-**PHASE 1: PLANNING** 📋
-When user asks for something complex, FIRST show your plan:
+## 🎨 PREMIUM RESPONSE FORMAT (Use this EXACT style)
 
-> **🎯 Understanding your request...** You want: [restate what they want]
-> 
-> **📋 My Plan:**
-> - Create a [thing 1] (type)
-> - Create a [thing 2] (type)
-> - Create a [thing 3] (type)
-> 
-> **Starting build...**
+When building anything, your response should look like this:
 
-**PHASE 2: EXECUTION** ⚡
-⚠️ IMPORTANT: Put all INSERT commands in a SINGLE code block at the END of your message.
-DO NOT show raw code in the chat - users don't want to see Lua code!
-Just show progress indicators:
-- ✅ Created SpawnPlatform
-- ✅ Created LeaderboardManager  
-- ✅ Created WelcomeUI
+---
 
-**PHASE 3: SUMMARY** ✨
-After creating, give a SHORT summary:
+✨ **Understanding Your Vision**
+
+> You want: [brief restatement]
+
+---
+
+🔥 **Building...**
+
+| Component | Status |
+|-----------|--------|
+| [Name] | ✅ Created |
+| [Name] | ✅ Created |
+| [Name] | ✅ Created |
+
+---
+
+🎉 **Build Complete!**
+
+**What I made for you:**
+- 🏗️ **[Name]** — [one-line description]
+- 📜 **[Name]** — [one-line description]
+- 🎨 **[Name]** — [one-line description]
+
+**💡 Try saying:**
+- "Add enemies that chase players"
+- "Make a coin collection system"
+
+---
+
+\`\`\`lua:hidden
+[ALL YOUR INSERT COMMANDS GO HERE - USER CANNOT SEE THIS]
+\`\`\`
+
+## 🤖 AGENTIC WORKFLOW
+
+**PHASE 1: UNDERSTANDING** 🎯
+- Restate what user wants in a quote block
+- Show you understand their vision
+
+**PHASE 2: BUILDING** ⚡
+- Show a progress TABLE (not bullet list)
+- Use ✅ checkmarks for each item
+- Keep names short and clear
+
+**PHASE 3: COMPLETE** ✨
+- Celebration message
+- List what was created with emojis
+- Suggest next steps
+
+**PHASE 4: HIDDEN CODE** 🔒
+- Put ALL INSERT commands in \`\`\`lua:hidden block at END
+- This block is automatically parsed and hidden from user
+- NEVER put code anywhere else in your response
 
 > **✅ Build Complete!**
 > 
@@ -637,10 +677,37 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
             console.log(`[AI Chat] Deducted 1 credit from user ${userData.username}. Remaining: ${newCredits}`)
         }
 
+        // SANITIZE RESPONSE: Remove ALL code blocks before returning to user
+        // Users should NEVER see raw code - only premium summaries
+        let sanitizedResponse = aiResponse
+
+        // Remove lua:hidden blocks (these are parsed already)
+        sanitizedResponse = sanitizedResponse.replace(/```lua:hidden[\s\S]*?```/gi, '')
+
+        // Remove any remaining lua code blocks
+        sanitizedResponse = sanitizedResponse.replace(/```lua[\s\S]*?```/gi, '')
+
+        // Remove any other code blocks
+        sanitizedResponse = sanitizedResponse.replace(/```[\s\S]*?```/gi, '')
+
+        // Remove INSERT command tags that might be visible
+        sanitizedResponse = sanitizedResponse.replace(/\[INSERT_[A-Z_]+:.*?\][\s\S]*?\[\/INSERT_[A-Z_]+\]/gi, '')
+        sanitizedResponse = sanitizedResponse.replace(/\[INSERT_[A-Z_]+:.*?\]/gi, '')
+        sanitizedResponse = sanitizedResponse.replace(/\[\/INSERT_[A-Z_]+\]/gi, '')
+
+        // Clean up extra whitespace
+        sanitizedResponse = sanitizedResponse.replace(/\n{4,}/g, '\n\n\n')
+        sanitizedResponse = sanitizedResponse.trim()
+
+        // If response is empty after sanitization, provide a default message
+        if (!sanitizedResponse || sanitizedResponse.length < 20) {
+            sanitizedResponse = `🎉 **Build Complete!**\n\n${insertedItems.length > 0 ? insertedItems.map(item => `✅ ${item}`).join('\n') : 'Your request has been processed.'}\n\n**💡 What's next?** Try asking me to add more features!`
+        }
+
         return NextResponse.json({
             success: true,
             conversationId: activeConversationId,
-            response: aiResponse,
+            response: sanitizedResponse,
             itemsQueued: insertedItems.length > 0 ? insertedItems : undefined,
             model: selectedModelName,
             creditsRemaining: newCredits,
