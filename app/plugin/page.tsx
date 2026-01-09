@@ -73,10 +73,9 @@ export default async function PluginPage() {
               </p>
             </div>
 
-            {/* Pairing code input for logged in users */}
-            {authUser && (
-              <PluginPairInput />
-            )}
+
+            {/* Pairing code input - always visible */}
+            <PluginPairInput />
 
             {/* Token Display for logged in users */}
             {pluginToken && (
