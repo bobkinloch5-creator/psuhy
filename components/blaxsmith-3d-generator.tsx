@@ -31,6 +31,10 @@ const STYLE_OPTIONS = [
     { id: "stylized", name: "Stylized", icon: "🎨", image: "/images/styles/stylized.png" },
     { id: "lowpoly", name: "Low Poly", icon: "💎", image: "/images/styles/lowpoly.png" },
     { id: "cartoon", name: "Cartoon", icon: "🎪", image: "/images/styles/cartoon.png" },
+    { id: "voxel", name: "Voxel", icon: "🧱", image: "/images/styles/voxel.png" },
+    { id: "scifi", name: "Sci-Fi", icon: "🚀", image: "/images/styles/scifi.png" },
+    { id: "fantasy", name: "Fantasy", icon: "🏰", image: "/images/styles/fantasy.png" },
+    { id: "anime", name: "Anime", icon: "✨", image: "/images/styles/anime.png" },
 ]
 
 // Load model-viewer script dynamically
@@ -309,7 +313,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
                     </div>
                     <div>
                         <h4 className="text-white font-semibold text-sm">Text-to-3D</h4>
-                        <p className="text-white/50 text-xs">Powered by Shap-E AI</p>
+                        <p className="text-white/50 text-xs">Powered by 6 AI Engines</p>
                     </div>
                 </div>
             </div>
@@ -423,7 +427,7 @@ export function BlaxSmith3DGenerator({ modelCredits, onCreditsUpdate }: BlaxSmit
 
                     {/* Progress Percentage */}
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/50">Powered by Shap-E</span>
+                        <span className="text-xs text-white/50">Multi-Engine AI</span>
                         <span className="text-sm font-bold text-white/80">{Math.round(progress)}%</span>
                     </div>
                 </div>

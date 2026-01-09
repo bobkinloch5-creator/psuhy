@@ -406,10 +406,14 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 // ============ MAIN GENERATION (PRIORITIZE TEXTURED) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
   // Try textured model generators first, then fall back to untextured
+  // Expanded variety of generators for more reliable 3D model generation
   const generators = [
-    { name: "TripoSR", fn: generateWithTripoSR },
-    { name: "LGM", fn: generateWithLGM },
-    { name: "Shap-E", fn: generateWithShapE },  // Fallback untextured
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },  // Tencent - high quality
+    { name: "TripoSR", fn: generateWithTripoSR },        // Stability AI - textured
+    { name: "InstantMesh", fn: generateWithInstantMesh }, // TencentARC - textured
+    { name: "LGM", fn: generateWithLGM },                 // Large Gaussian Model
+    { name: "Cube3D", fn: generateWithCube3D },           // Roblox optimized
+    { name: "Shap-E", fn: generateWithShapE },            // OpenAI - fallback
   ]
 
   for (const gen of generators) {
