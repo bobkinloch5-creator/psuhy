@@ -7691,75 +7691,518 @@ print("[BlaxSmith]  Health Bar GUI loaded!")
                 if isShopScript and not isFlyingScript and not isSpeedScript and not isHealthScript then
                     print("[BlaxSmith]  Shop GUI detected - using guaranteed working version!")
                     finalCode = [[
--- BlaxSmith Shop GUI
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED SHOP SYSTEM v2.0                                          ║
+-- ║  Premium In-Game Shop with Multi-Currency, Categories & Animations            ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BlaxSmith_ShopGUI"
-screenGui.Parent = player.PlayerGui
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 400)
-frame.Position = UDim2.new(0.5, -150, 0.5, -200)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-frame.Visible = false
-frame.Parent = screenGui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 50)
-title.BackgroundTransparency = 1
-title.Text = " SHOP"
-title.TextColor3 = Color3.fromRGB(255, 215, 0)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 28
-title.Parent = frame
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 40, 0, 40)
-closeBtn.Position = UDim2.new(1, -45, 0, 5)
-closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.new(1,1,1)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Parent = frame
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
-
-local items = {
-    {name = "Speed Boost", price = 100, emoji = ""},
-    {name = "Super Jump", price = 150, emoji = ""},
-    {name = "Shield", price = 200, emoji = ""},
-    {name = "Sword", price = 500, emoji = ""},
+-- ========================= CONFIGURATION =========================
+local CONFIG = {
+    CATEGORIES = {"All", "Weapons", "Skins", "Boosts", "Pets", "VIP"},
+    CURRENCIES = {
+        {name = "Coins", icon = "💰", color = Color3.fromRGB(255, 215, 0)},
+        {name = "Gems", icon = "💎", color = Color3.fromRGB(0, 200, 255)},
+        {name = "Robux", icon = "🅁", color = Color3.fromRGB(0, 255, 127)}
+    },
+    SHOP_ITEMS = {
+        -- Weapons
+        {id = 1, name = "Starter Sword", category = "Weapons", price = 100, currency = "Coins", icon = "⚔️", rarity = "common", description = "A basic sword for beginners"},
+        {id = 2, name = "Fire Blade", category = "Weapons", price = 500, currency = "Coins", icon = "🔥", rarity = "rare", description = "Burns enemies on hit"},
+        {id = 3, name = "Legendary Katana", category = "Weapons", price = 50, currency = "Gems", icon = "🗡️", rarity = "legendary", description = "The ultimate weapon"},
+        -- Skins
+        {id = 4, name = "Neon Skin", category = "Skins", price = 200, currency = "Coins", icon = "🌈", rarity = "uncommon", description = "Glow in the dark!"},
+        {id = 5, name = "Galaxy Skin", category = "Skins", price = 100, currency = "Gems", icon = "🌌", rarity = "epic", description = "Stars follow you"},
+        {id = 6, name = "Diamond Skin", category = "Skins", price = 99, currency = "Robux", icon = "💠", rarity = "legendary", description = "Exclusive premium skin"},
+        -- Boosts
+        {id = 7, name = "2x Speed (1hr)", category = "Boosts", price = 50, currency = "Coins", icon = "⚡", rarity = "common", description = "Double speed for 1 hour"},
+        {id = 8, name = "2x Coins (1hr)", category = "Boosts", price = 25, currency = "Gems", icon = "💵", rarity = "rare", description = "Double coin earnings"},
+        {id = 9, name = "VIP Boost Pack", category = "Boosts", price = 199, currency = "Robux", icon = "👑", rarity = "legendary", description = "All boosts for 24 hours"},
+        -- Pets
+        {id = 10, name = "Baby Dragon", category = "Pets", price = 1000, currency = "Coins", icon = "🐉", rarity = "epic", description = "Follows you around"},
+        {id = 11, name = "Golden Cat", category = "Pets", price = 75, currency = "Gems", icon = "🐱", rarity = "rare", description = "Collects coins for you"},
+        {id = 12, name = "Mythic Phoenix", category = "Pets", price = 499, currency = "Robux", icon = "🔥", rarity = "legendary", description = "Revive once per game"},
+        -- VIP
+        {id = 13, name = "VIP Pass", category = "VIP", price = 799, currency = "Robux", icon = "⭐", rarity = "legendary", description = "Unlock all VIP areas"},
+        {id = 14, name = "Daily Bonus x3", category = "VIP", price = 299, currency = "Robux", icon = "🎁", rarity = "epic", description = "Triple daily rewards"},
+    },
+    RARITY_COLORS = {
+        common = Color3.fromRGB(180, 180, 180),
+        uncommon = Color3.fromRGB(30, 255, 0),
+        rare = Color3.fromRGB(0, 112, 221),
+        epic = Color3.fromRGB(163, 53, 238),
+        legendary = Color3.fromRGB(255, 128, 0)
+    },
+    SOUNDS = {
+        open = "rbxassetid://6042053626",
+        close = "rbxassetid://6042053626",
+        hover = "rbxassetid://6042053626",
+        purchase = "rbxassetid://5273966429",
+        error = "rbxassetid://4590657391"
+    }
 }
 
-for i, item in ipairs(items) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 60)
-    btn.Position = UDim2.new(0.05, 0, 0, 50 + (i * 70))
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    btn.Text = item.emoji .. " " .. item.name .. " - $" .. item.price
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 16
-    btn.Parent = frame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+-- ========================= CREATE MAIN GUI =========================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_AdvancedShop"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = player.PlayerGui
+
+-- Blur Background
+local blur = Instance.new("Frame")
+blur.Name = "Blur"
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+blur.BackgroundTransparency = 1
+blur.Visible = false
+blur.Parent = screenGui
+
+-- Main Shop Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainShop"
+mainFrame.Size = UDim2.new(0, 700, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 20)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(100, 100, 150)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+-- Gradient Background
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
+})
+gradient.Rotation = 45
+gradient.Parent = mainFrame
+
+-- ========================= HEADER =========================
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 60)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+header.BorderSizePixel = 0
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 20)
+headerCorner.Parent = header
+
+-- Fix bottom corners
+local headerFix = Instance.new("Frame")
+headerFix.Size = UDim2.new(1, 0, 0, 20)
+headerFix.Position = UDim2.new(0, 0, 1, -20)
+headerFix.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+headerFix.BorderSizePixel = 0
+headerFix.Parent = header
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(0, 200, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🛒 PREMIUM SHOP"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 24
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+-- Currency Display
+local currencyFrame = Instance.new("Frame")
+currencyFrame.Name = "Currencies"
+currencyFrame.Size = UDim2.new(0, 350, 0, 40)
+currencyFrame.Position = UDim2.new(1, -420, 0.5, -20)
+currencyFrame.BackgroundTransparency = 1
+currencyFrame.Parent = header
+
+local currencyLayout = Instance.new("UIListLayout")
+currencyLayout.FillDirection = Enum.FillDirection.Horizontal
+currencyLayout.Padding = UDim.new(0, 10)
+currencyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+currencyLayout.Parent = currencyFrame
+
+-- Create currency displays
+local currencyLabels = {}
+for _, curr in ipairs(CONFIG.CURRENCIES) do
+    local currBox = Instance.new("Frame")
+    currBox.Name = curr.name
+    currBox.Size = UDim2.new(0, 100, 1, 0)
+    currBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    currBox.Parent = currencyFrame
+    Instance.new("UICorner", currBox).CornerRadius = UDim.new(0, 8)
+    
+    local currLabel = Instance.new("TextLabel")
+    currLabel.Size = UDim2.new(1, 0, 1, 0)
+    currLabel.BackgroundTransparency = 1
+    currLabel.Text = curr.icon .. " 0"
+    currLabel.TextColor3 = curr.color
+    currLabel.Font = Enum.Font.GothamBold
+    currLabel.TextSize = 16
+    currLabel.Parent = currBox
+    currencyLabels[curr.name] = currLabel
 end
 
+-- Close Button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "Close"
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -50, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- ========================= CATEGORY TABS =========================
+local tabFrame = Instance.new("Frame")
+tabFrame.Name = "Tabs"
+tabFrame.Size = UDim2.new(1, -40, 0, 45)
+tabFrame.Position = UDim2.new(0, 20, 0, 70)
+tabFrame.BackgroundTransparency = 1
+tabFrame.Parent = mainFrame
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 8)
+tabLayout.Parent = tabFrame
+
+local categoryTabs = {}
+local selectedCategory = "All"
+
+for i, cat in ipairs(CONFIG.CATEGORIES) do
+    local tab = Instance.new("TextButton")
+    tab.Name = cat
+    tab.Size = UDim2.new(0, 100, 1, 0)
+    tab.BackgroundColor3 = i == 1 and Color3.fromRGB(80, 60, 180) or Color3.fromRGB(40, 40, 60)
+    tab.Text = cat
+    tab.TextColor3 = Color3.new(1, 1, 1)
+    tab.Font = Enum.Font.GothamBold
+    tab.TextSize = 14
+    tab.AutoButtonColor = false
+    tab.Parent = tabFrame
+    Instance.new("UICorner", tab).CornerRadius = UDim.new(0, 10)
+    categoryTabs[cat] = tab
+end
+
+-- ========================= ITEM GRID =========================
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "Items"
+scrollFrame.Size = UDim2.new(1, -40, 1, -130)
+scrollFrame.Position = UDim2.new(0, 20, 0, 120)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 150)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.Parent = mainFrame
+
+local gridLayout = Instance.new("UIGridLayout")
+gridLayout.CellSize = UDim2.new(0, 200, 0, 220)
+gridLayout.CellPadding = UDim2.new(0, 15, 0, 15)
+gridLayout.Parent = scrollFrame
+
+-- ========================= ITEM CARD TEMPLATE =========================
+local function createItemCard(item)
+    local card = Instance.new("Frame")
+    card.Name = "Item_" .. item.id
+    card.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+    card.BorderSizePixel = 0
+    
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 16)
+    cardCorner.Parent = card
+    
+    -- Rarity glow
+    local rarityGlow = Instance.new("UIStroke")
+    rarityGlow.Color = CONFIG.RARITY_COLORS[item.rarity]
+    rarityGlow.Thickness = 2
+    rarityGlow.Transparency = 0.5
+    rarityGlow.Parent = card
+    
+    -- Icon
+    local icon = Instance.new("TextLabel")
+    icon.Name = "Icon"
+    icon.Size = UDim2.new(1, 0, 0, 80)
+    icon.Position = UDim2.new(0, 0, 0, 10)
+    icon.BackgroundTransparency = 1
+    icon.Text = item.icon
+    icon.TextSize = 50
+    icon.Parent = card
+    
+    -- Rarity Badge
+    local badge = Instance.new("TextLabel")
+    badge.Name = "Rarity"
+    badge.Size = UDim2.new(0, 70, 0, 20)
+    badge.Position = UDim2.new(0.5, -35, 0, 85)
+    badge.BackgroundColor3 = CONFIG.RARITY_COLORS[item.rarity]
+    badge.Text = item.rarity:upper()
+    badge.TextColor3 = Color3.new(1, 1, 1)
+    badge.Font = Enum.Font.GothamBold
+    badge.TextSize = 10
+    badge.Parent = card
+    Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 6)
+    
+    -- Name
+    local name = Instance.new("TextLabel")
+    name.Name = "Name"
+    name.Size = UDim2.new(1, -20, 0, 25)
+    name.Position = UDim2.new(0, 10, 0, 110)
+    name.BackgroundTransparency = 1
+    name.Text = item.name
+    name.TextColor3 = Color3.new(1, 1, 1)
+    name.Font = Enum.Font.GothamBold
+    name.TextSize = 14
+    name.TextTruncate = Enum.TextTruncate.AtEnd
+    name.Parent = card
+    
+    -- Description
+    local desc = Instance.new("TextLabel")
+    desc.Name = "Desc"
+    desc.Size = UDim2.new(1, -20, 0, 30)
+    desc.Position = UDim2.new(0, 10, 0, 130)
+    desc.BackgroundTransparency = 1
+    desc.Text = item.description
+    desc.TextColor3 = Color3.fromRGB(150, 150, 170)
+    desc.Font = Enum.Font.Gotham
+    desc.TextSize = 11
+    desc.TextWrapped = true
+    desc.TextTruncate = Enum.TextTruncate.AtEnd
+    desc.Parent = card
+    
+    -- Buy Button
+    local currInfo = nil
+    for _, c in ipairs(CONFIG.CURRENCIES) do
+        if c.name == item.currency then currInfo = c break end
+    end
+    
+    local buyBtn = Instance.new("TextButton")
+    buyBtn.Name = "Buy"
+    buyBtn.Size = UDim2.new(1, -20, 0, 40)
+    buyBtn.Position = UDim2.new(0, 10, 1, -50)
+    buyBtn.BackgroundColor3 = currInfo and currInfo.color or Color3.fromRGB(100, 200, 100)
+    buyBtn.Text = currInfo.icon .. " " .. item.price
+    buyBtn.TextColor3 = Color3.fromRGB(20, 20, 30)
+    buyBtn.Font = Enum.Font.GothamBlack
+    buyBtn.TextSize = 16
+    buyBtn.AutoButtonColor = false
+    buyBtn.Parent = card
+    Instance.new("UICorner", buyBtn).CornerRadius = UDim.new(0, 10)
+    
+    -- Hover Effects
+    card.MouseEnter:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 75)}):Play()
+        TweenService:Create(rarityGlow, TweenInfo.new(0.2), {Transparency = 0}):Play()
+    end)
+    
+    card.MouseLeave:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 55)}):Play()
+        TweenService:Create(rarityGlow, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+    end)
+    
+    -- Buy Button Hover
+    buyBtn.MouseEnter:Connect(function()
+        TweenService:Create(buyBtn, TweenInfo.new(0.15), {Size = UDim2.new(1, -10, 0, 44)}):Play()
+    end)
+    
+    buyBtn.MouseLeave:Connect(function()
+        TweenService:Create(buyBtn, TweenInfo.new(0.15), {Size = UDim2.new(1, -20, 0, 40)}):Play()
+    end)
+    
+    -- Purchase Handler
+    buyBtn.MouseButton1Click:Connect(function()
+        -- Flash animation
+        local flash = Instance.new("Frame")
+        flash.Size = UDim2.new(1, 0, 1, 0)
+        flash.BackgroundColor3 = Color3.new(1, 1, 1)
+        flash.BackgroundTransparency = 0.7
+        flash.Parent = card
+        Instance.new("UICorner", flash).CornerRadius = UDim.new(0, 16)
+        
+        TweenService:Create(flash, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+        task.delay(0.3, function() flash:Destroy() end)
+        
+        -- TODO: Implement actual purchase via RemoteEvent
+        print("[BlaxSmith Shop] Purchase requested: " .. item.name .. " for " .. item.price .. " " .. item.currency)
+        
+        -- Show purchase notification
+        local notif = Instance.new("TextLabel")
+        notif.Size = UDim2.new(0, 250, 0, 50)
+        notif.Position = UDim2.new(0.5, -125, 1, 0)
+        notif.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        notif.Text = "✅ Purchased " .. item.name .. "!"
+        notif.TextColor3 = Color3.new(1, 1, 1)
+        notif.Font = Enum.Font.GothamBold
+        notif.TextSize = 16
+        notif.Parent = screenGui
+        Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 12)
+        
+        TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -125, 1, -70)}):Play()
+        task.delay(2, function()
+            TweenService:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -125, 1, 0)}):Play()
+            task.delay(0.3, function() notif:Destroy() end)
+        end)
+    end)
+    
+    return card
+end
+
+-- ========================= POPULATE ITEMS =========================
+local function refreshItems(category)
+    -- Clear existing
+    for _, child in ipairs(scrollFrame:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    -- Add filtered items
+    local count = 0
+    for _, item in ipairs(CONFIG.SHOP_ITEMS) do
+        if category == "All" or item.category == category then
+            local card = createItemCard(item)
+            card.Parent = scrollFrame
+            count = count + 1
+        end
+    end
+    
+    -- Update canvas size
+    local rows = math.ceil(count / 3)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, rows * 235)
+end
+
+-- ========================= TAB SWITCHING =========================
+for cat, tab in pairs(categoryTabs) do
+    tab.MouseButton1Click:Connect(function()
+        selectedCategory = cat
+        for c, t in pairs(categoryTabs) do
+            local targetColor = c == cat and Color3.fromRGB(80, 60, 180) or Color3.fromRGB(40, 40, 60)
+            TweenService:Create(t, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+        end
+        refreshItems(cat)
+    end)
+end
+
+-- ========================= OPEN/CLOSE SHOP =========================
+local shopOpen = false
+
+local function openShop()
+    if shopOpen then return end
+    shopOpen = true
+    blur.Visible = true
+    mainFrame.Visible = true
+    mainFrame.Size = UDim2.new(0, 0, 0, 0)
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(blur, TweenInfo.new(0.3), {BackgroundTransparency = 0.5}):Play()
+    TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 700, 0, 500),
+        Position = UDim2.new(0.5, -350, 0.5, -250)
+    }):Play()
+    
+    refreshItems("All")
+end
+
+local function closeShop()
+    if not shopOpen then return end
+    shopOpen = false
+    
+    TweenService:Create(blur, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    
+    task.delay(0.3, function()
+        blur.Visible = false
+        mainFrame.Visible = false
+    end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeShop)
+blur.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        closeShop()
+    end
+end)
+
+-- ========================= OPEN BUTTON =========================
 local openBtn = Instance.new("TextButton")
-openBtn.Size = UDim2.new(0, 100, 0, 40)
-openBtn.Position = UDim2.new(1, -120, 0.5, -20)
-openBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
-openBtn.Text = " Shop"
-openBtn.TextColor3 = Color3.fromRGB(30, 30, 30)
-openBtn.Font = Enum.Font.GothamBold
+openBtn.Name = "OpenShop"
+openBtn.Size = UDim2.new(0, 120, 0, 50)
+openBtn.Position = UDim2.new(1, -140, 0.5, -25)
+openBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+openBtn.Text = "🛒 SHOP"
+openBtn.TextColor3 = Color3.fromRGB(30, 30, 40)
+openBtn.Font = Enum.Font.GothamBlack
+openBtn.TextSize = 18
 openBtn.Parent = screenGui
-Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 14)
 
-openBtn.MouseButton1Click:Connect(function() frame.Visible = true end)
-closeBtn.MouseButton1Click:Connect(function() frame.Visible = false end)
+local openStroke = Instance.new("UIStroke")
+openStroke.Color = Color3.fromRGB(255, 220, 100)
+openStroke.Thickness = 2
+openStroke.Parent = openBtn
 
-print("[BlaxSmith]  Shop GUI loaded!")
+-- Pulsing animation for open button
+task.spawn(function()
+    while true do
+        TweenService:Create(openBtn, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Size = UDim2.new(0, 125, 0, 52)
+        }):Play()
+        task.wait(0.8)
+        TweenService:Create(openBtn, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            Size = UDim2.new(0, 120, 0, 50)
+        }):Play()
+        task.wait(0.8)
+    end
+end)
+
+openBtn.MouseButton1Click:Connect(openShop)
+
+-- ========================= CURRENCY SYNC =========================
+-- Connect to leaderstats if available
+local function updateCurrencies()
+    local ls = player:FindFirstChild("leaderstats")
+    if ls then
+        for _, curr in ipairs(CONFIG.CURRENCIES) do
+            local val = ls:FindFirstChild(curr.name)
+            if val and currencyLabels[curr.name] then
+                currencyLabels[curr.name].Text = curr.icon .. " " .. tostring(val.Value)
+            end
+        end
+    end
+end
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    updateCurrencies()
+end)
+task.spawn(function()
+    while true do
+        updateCurrencies()
+        task.wait(1)
+    end
+end)
+
+print("[BlaxSmith] ✅ ADVANCED SHOP SYSTEM loaded!")
+print("[BlaxSmith] 🛒 " .. #CONFIG.SHOP_ITEMS .. " items | " .. #CONFIG.CATEGORIES .. " categories")
 ]]
                 end
                 
@@ -8258,64 +8701,390 @@ end)
                 if isInventoryScript then
                     print("[BlaxSmith]  Inventory GUI detected!")
                     finalCode = [[
--- BlaxSmith Inventory GUI
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED INVENTORY SYSTEM v2.0                                     ║
+-- ║  Premium Inventory with Slots, Rarity, Tooltips & Animations                  ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
+-- ========================= CONFIGURATION =========================
+local CONFIG = {
+    MAX_SLOTS = 30,
+    SLOT_SIZE = 65,
+    SLOT_PADDING = 8,
+    SLOTS_PER_ROW = 6,
+    RARITY_COLORS = {
+        common = Color3.fromRGB(180, 180, 180),
+        uncommon = Color3.fromRGB(30, 255, 0),
+        rare = Color3.fromRGB(0, 112, 221),
+        epic = Color3.fromRGB(163, 53, 238),
+        legendary = Color3.fromRGB(255, 128, 0),
+        mythic = Color3.fromRGB(255, 0, 100)
+    },
+    ITEM_TYPES = {"Weapon", "Armor", "Consumable", "Material", "Pet", "Special"}
+}
+
+-- Sample inventory items (in real game, sync from server)
+local inventoryData = {
+    {id = 1, name = "Blazing Sword", type = "Weapon", rarity = "legendary", icon = "⚔️", stats = {damage = 50, speed = 1.2}},
+    {id = 2, name = "Health Potion", type = "Consumable", rarity = "common", icon = "🧪", stats = {heal = 50}, stackable = true, count = 5},
+    {id = 3, name = "Diamond Shield", type = "Armor", rarity = "epic", icon = "🛡️", stats = {defense = 35}},
+    {id = 4, name = "Fire Crystal", type = "Material", rarity = "rare", icon = "💎", stackable = true, count = 12},
+    {id = 5, name = "Baby Dragon", type = "Pet", rarity = "legendary", icon = "🐉", stats = {bonus = "+10% coins"}},
+    {id = 6, name = "Speed Boots", type = "Armor", rarity = "uncommon", icon = "👟", stats = {speed = 1.5}},
+}
+
+-- ========================= CREATE MAIN GUI =========================
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BlaxSmith_InventoryGUI"
+screenGui.Name = "BlaxSmith_AdvancedInventory"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = player.PlayerGui
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 400, 0, 300)
-frame.Position = UDim2.new(0.5, -200, 0.5, -150)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-frame.Visible = false
-frame.Parent = screenGui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+-- Blur Background
+local blur = Instance.new("Frame")
+blur.Name = "Blur"
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+blur.BackgroundTransparency = 1
+blur.Visible = false
+blur.ZIndex = 10
+blur.Parent = screenGui
+
+-- Main Inventory Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainInventory"
+mainFrame.Size = UDim2.new(0, 500, 0, 450)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 32)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.ZIndex = 11
+mainFrame.Parent = screenGui
+
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(80, 80, 120)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+-- ========================= HEADER =========================
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 48)
+header.BorderSizePixel = 0
+header.ZIndex = 12
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 18)
+
+local headerFix = Instance.new("Frame")
+headerFix.Size = UDim2.new(1, 0, 0, 18)
+headerFix.Position = UDim2.new(0, 0, 1, -18)
+headerFix.BackgroundColor3 = Color3.fromRGB(30, 30, 48)
+headerFix.BorderSizePixel = 0
+headerFix.ZIndex = 12
+headerFix.Parent = header
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = " INVENTORY"
+title.Text = "🎒 INVENTORY"
 title.TextColor3 = Color3.fromRGB(255, 200, 100)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 24
-title.Parent = frame
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 13
+title.Parent = header
 
-local grid = Instance.new("Frame")
-grid.Size = UDim2.new(1, -20, 1, -60)
-grid.Position = UDim2.new(0, 10, 0, 50)
-grid.BackgroundTransparency = 1
-grid.Parent = frame
+local slotCounter = Instance.new("TextLabel")
+slotCounter.Size = UDim2.new(0, 120, 0, 30)
+slotCounter.Position = UDim2.new(1, -180, 0.5, -15)
+slotCounter.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+slotCounter.Text = "6/30 Items"
+slotCounter.TextColor3 = Color3.fromRGB(200, 200, 220)
+slotCounter.Font = Enum.Font.GothamBold
+slotCounter.TextSize = 13
+slotCounter.ZIndex = 13
+slotCounter.Parent = header
+Instance.new("UICorner", slotCounter).CornerRadius = UDim.new(0, 8)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -50, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.ZIndex = 13
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- ========================= ITEM GRID =========================
+local gridScroll = Instance.new("ScrollingFrame")
+gridScroll.Size = UDim2.new(1, -30, 1, -120)
+gridScroll.Position = UDim2.new(0, 15, 0, 60)
+gridScroll.BackgroundTransparency = 1
+gridScroll.ScrollBarThickness = 5
+gridScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 140)
+gridScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+gridScroll.ZIndex = 12
+gridScroll.Parent = mainFrame
 
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize = UDim2.new(0, 70, 0, 70)
-gridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
-gridLayout.Parent = grid
+gridLayout.CellSize = UDim2.new(0, CONFIG.SLOT_SIZE, 0, CONFIG.SLOT_SIZE)
+gridLayout.CellPadding = UDim2.new(0, CONFIG.SLOT_PADDING, 0, CONFIG.SLOT_PADDING)
+gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+gridLayout.Parent = gridScroll
 
-for i = 1, 20 do
+-- ========================= TOOLTIP =========================
+local tooltip = Instance.new("Frame")
+tooltip.Name = "Tooltip"
+tooltip.Size = UDim2.new(0, 180, 0, 120)
+tooltip.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+tooltip.BorderSizePixel = 0
+tooltip.Visible = false
+tooltip.ZIndex = 50
+tooltip.Parent = screenGui
+Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 10)
+
+local tooltipStroke = Instance.new("UIStroke")
+tooltipStroke.Thickness = 2
+tooltipStroke.Parent = tooltip
+
+local tooltipName = Instance.new("TextLabel")
+tooltipName.Size = UDim2.new(1, -16, 0, 25)
+tooltipName.Position = UDim2.new(0, 8, 0, 8)
+tooltipName.BackgroundTransparency = 1
+tooltipName.Font = Enum.Font.GothamBold
+tooltipName.TextSize = 14
+tooltipName.TextXAlignment = Enum.TextXAlignment.Left
+tooltipName.ZIndex = 51
+tooltipName.Parent = tooltip
+
+local tooltipType = Instance.new("TextLabel")
+tooltipType.Size = UDim2.new(1, -16, 0, 18)
+tooltipType.Position = UDim2.new(0, 8, 0, 30)
+tooltipType.BackgroundTransparency = 1
+tooltipType.TextColor3 = Color3.fromRGB(150, 150, 180)
+tooltipType.Font = Enum.Font.Gotham
+tooltipType.TextSize = 11
+tooltipType.TextXAlignment = Enum.TextXAlignment.Left
+tooltipType.ZIndex = 51
+tooltipType.Parent = tooltip
+
+local tooltipStats = Instance.new("TextLabel")
+tooltipStats.Size = UDim2.new(1, -16, 0, 50)
+tooltipStats.Position = UDim2.new(0, 8, 0, 55)
+tooltipStats.BackgroundTransparency = 1
+tooltipStats.TextColor3 = Color3.fromRGB(180, 220, 180)
+tooltipStats.Font = Enum.Font.GothamBold
+tooltipStats.TextSize = 12
+tooltipStats.TextXAlignment = Enum.TextXAlignment.Left
+tooltipStats.TextYAlignment = Enum.TextYAlignment.Top
+tooltipStats.TextWrapped = true
+tooltipStats.ZIndex = 51
+tooltipStats.Parent = tooltip
+
+-- ========================= CREATE ITEM SLOT =========================
+local function createItemSlot(item, slotIndex)
     local slot = Instance.new("Frame")
-    slot.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-    slot.Parent = grid
-    Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 8)
+    slot.Name = "Slot_" .. slotIndex
+    slot.BackgroundColor3 = item and Color3.fromRGB(40, 40, 55) or Color3.fromRGB(30, 30, 42)
+    slot.BorderSizePixel = 0
+    slot.ZIndex = 13
+    slot.LayoutOrder = slotIndex
+    
+    Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 10)
+    
+    if item then
+        -- Rarity border
+        local rarityGlow = Instance.new("UIStroke")
+        rarityGlow.Color = CONFIG.RARITY_COLORS[item.rarity] or CONFIG.RARITY_COLORS.common
+        rarityGlow.Thickness = 2
+        rarityGlow.Transparency = 0.3
+        rarityGlow.Parent = slot
+        
+        -- Item icon
+        local icon = Instance.new("TextLabel")
+        icon.Size = UDim2.new(1, 0, 1, item.count and -18 or 0)
+        icon.BackgroundTransparency = 1
+        icon.Text = item.icon or "?"
+        icon.TextSize = 32
+        icon.ZIndex = 14
+        icon.Parent = slot
+        
+        -- Stack count
+        if item.stackable and item.count then
+            local countLabel = Instance.new("TextLabel")
+            countLabel.Size = UDim2.new(0, 25, 0, 16)
+            countLabel.Position = UDim2.new(1, -28, 1, -19)
+            countLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            countLabel.BackgroundTransparency = 0.3
+            countLabel.Text = "x" .. item.count
+            countLabel.TextColor3 = Color3.new(1, 1, 1)
+            countLabel.Font = Enum.Font.GothamBold
+            countLabel.TextSize = 10
+            countLabel.ZIndex = 15
+            countLabel.Parent = slot
+            Instance.new("UICorner", countLabel).CornerRadius = UDim.new(0, 4)
+        end
+        
+        -- Hover effects
+        slot.MouseEnter:Connect(function()
+            TweenService:Create(slot, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(55, 55, 75)}):Play()
+            TweenService:Create(rarityGlow, TweenInfo.new(0.15), {Transparency = 0}):Play()
+            
+            -- Show tooltip
+            tooltipName.Text = item.name
+            tooltipName.TextColor3 = CONFIG.RARITY_COLORS[item.rarity]
+            tooltipType.Text = item.type .. " • " .. item.rarity:upper()
+            tooltipStroke.Color = CONFIG.RARITY_COLORS[item.rarity]
+            
+            local statsText = ""
+            if item.stats then
+                for k, v in pairs(item.stats) do
+                    statsText = statsText .. "+" .. tostring(v) .. " " .. k:upper() .. "\n"
+                end
+            end
+            tooltipStats.Text = statsText
+            tooltip.Visible = true
+        end)
+        
+        slot.MouseLeave:Connect(function()
+            TweenService:Create(slot, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 55)}):Play()
+            TweenService:Create(rarityGlow, TweenInfo.new(0.15), {Transparency = 0.3}):Play()
+            tooltip.Visible = false
+        end)
+        
+        slot.MouseMoved:Connect(function(x, y)
+            tooltip.Position = UDim2.new(0, x + 15, 0, y + 15)
+        end)
+        
+        -- Click to use/equip
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, 0, 1, 0)
+        clickBtn.BackgroundTransparency = 1
+        clickBtn.Text = ""
+        clickBtn.ZIndex = 16
+        clickBtn.Parent = slot
+        
+        clickBtn.MouseButton1Click:Connect(function()
+            local flash = Instance.new("Frame")
+            flash.Size = UDim2.new(1, 0, 1, 0)
+            flash.BackgroundColor3 = Color3.new(1, 1, 1)
+            flash.BackgroundTransparency = 0.5
+            flash.ZIndex = 17
+            flash.Parent = slot
+            Instance.new("UICorner", flash).CornerRadius = UDim.new(0, 10)
+            
+            TweenService:Create(flash, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+            task.delay(0.3, function() flash:Destroy() end)
+            
+            print("[Inventory] Used/Equipped: " .. item.name)
+        end)
+    end
+    
+    return slot
 end
 
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 80, 0, 40)
-toggleBtn.Position = UDim2.new(0, 20, 1, -60)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
-toggleBtn.Text = " Inv"
-toggleBtn.TextColor3 = Color3.new(1,1,1)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.Parent = screenGui
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
+-- ========================= POPULATE INVENTORY =========================
+local function refreshInventory()
+    for _, child in ipairs(gridScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    for i = 1, CONFIG.MAX_SLOTS do
+        local item = inventoryData[i]
+        local slot = createItemSlot(item, i)
+        slot.Parent = gridScroll
+    end
+    
+    slotCounter.Text = #inventoryData .. "/" .. CONFIG.MAX_SLOTS .. " Items"
+    
+    local rows = math.ceil(CONFIG.MAX_SLOTS / CONFIG.SLOTS_PER_ROW)
+    gridScroll.CanvasSize = UDim2.new(0, 0, 0, rows * (CONFIG.SLOT_SIZE + CONFIG.SLOT_PADDING))
+end
 
-toggleBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
+-- ========================= OPEN/CLOSE =========================
+local isOpen = false
+
+local function openInventory()
+    if isOpen then return end
+    isOpen = true
+    blur.Visible = true
+    mainFrame.Visible = true
+    mainFrame.Size = UDim2.new(0, 0, 0, 0)
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(blur, TweenInfo.new(0.25), {BackgroundTransparency = 0.5}):Play()
+    TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 500, 0, 450),
+        Position = UDim2.new(0.5, -250, 0.5, -225)
+    }):Play()
+    
+    refreshInventory()
+end
+
+local function closeInventory()
+    if not isOpen then return end
+    isOpen = false
+    tooltip.Visible = false
+    
+    TweenService:Create(blur, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    
+    task.delay(0.25, function()
+        blur.Visible = false
+        mainFrame.Visible = false
+    end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeInventory)
+blur.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        closeInventory()
+    end
 end)
 
-print("[BlaxSmith]  Inventory GUI loaded! Press the button to open.")
+-- ========================= TOGGLE BUTTON =========================
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 20, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 50, 100)
+toggleBtn.Text = "🎒"
+toggleBtn.TextSize = 32
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(100, 80, 160)
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleBtn
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeInventory() else openInventory() end
+end)
+
+-- Keyboard shortcut (Tab or I)
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Tab or input.KeyCode == Enum.KeyCode.I then
+        if isOpen then closeInventory() else openInventory() end
+    end
+end)
+
+print("[BlaxSmith] ✅ ADVANCED INVENTORY SYSTEM loaded!")
+print("[BlaxSmith] 🎒 " .. CONFIG.MAX_SLOTS .. " slots | Tab/I to toggle")
 ]]
                 end
                 
@@ -8324,34 +9093,330 @@ print("[BlaxSmith]  Inventory GUI loaded! Press the button to open.")
                 if isPetScript then
                     print("[BlaxSmith]  Pet Follow script detected!")
                     finalCode = [[
--- BlaxSmith Pet Follow Script
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED PET SYSTEM v2.0                                           ║
+-- ║  Premium Pets with Rarity, Abilities, Effects & Pet Manager                   ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- Create pet
-local pet = Instance.new("Part")
-pet.Name = "BlaxSmith_Pet"
-pet.Size = Vector3.new(2, 2, 2)
-pet.Shape = Enum.PartType.Ball
-pet.BrickColor = BrickColor.Random()
-pet.Material = Enum.Material.Neon
-pet.CanCollide = false
-pet.Anchored = true
-pet.Parent = workspace
+-- ========================= CONFIGURATION =========================
+local CONFIG = {
+    MAX_EQUIPPED = 3,
+    RARITY_COLORS = {
+        common = Color3.fromRGB(180, 180, 180),
+        uncommon = Color3.fromRGB(30, 255, 0),
+        rare = Color3.fromRGB(0, 112, 221),
+        epic = Color3.fromRGB(163, 53, 238),
+        legendary = Color3.fromRGB(255, 128, 0),
+        mythic = Color3.fromRGB(255, 0, 100)
+    },
+    RARITY_SIZES = {
+        common = Vector3.new(1.5, 1.5, 1.5),
+        uncommon = Vector3.new(1.7, 1.7, 1.7),
+        rare = Vector3.new(2, 2, 2),
+        epic = Vector3.new(2.2, 2.2, 2.2),
+        legendary = Vector3.new(2.5, 2.5, 2.5),
+        mythic = Vector3.new(3, 3, 3)
+    }
+}
 
-local offset = Vector3.new(3, 2, -2)
+-- Pet Collection (in real game, sync from server)
+local petCollection = {
+    {id = 1, name = "Blob", rarity = "common", icon = "🟢", equipped = true, ability = "None", damage = 1, coinBonus = 0},
+    {id = 2, name = "Fire Spirit", rarity = "rare", icon = "🔥", equipped = true, ability = "+10% Speed", damage = 5, coinBonus = 5},
+    {id = 3, name = "Storm Dragon", rarity = "legendary", icon = "🐉", equipped = false, ability = "+25% Coins", damage = 15, coinBonus = 25},
+    {id = 4, name = "Shadow Cat", rarity = "epic", icon = "🐱", equipped = false, ability = "Stealth", damage = 10, coinBonus = 15},
+    {id = 5, name = "Phoenix", rarity = "mythic", icon = "🦅", equipped = false, ability = "Auto Revive", damage = 30, coinBonus = 50},
+}
 
-RunService.Heartbeat:Connect(function()
-    if rootPart and pet then
-        local targetPos = rootPart.Position + offset
-        pet.Position = pet.Position:Lerp(targetPos, 0.1)
+local activePets = {}
+
+-- ========================= CREATE PET VISUAL =========================
+local function createPetVisual(petData, index)
+    local pet = Instance.new("Part")
+    pet.Name = "Pet_" .. petData.name
+    pet.Size = CONFIG.RARITY_SIZES[petData.rarity] or CONFIG.RARITY_SIZES.common
+    pet.Shape = Enum.PartType.Ball
+    pet.Color = CONFIG.RARITY_COLORS[petData.rarity]
+    pet.Material = Enum.Material.Neon
+    pet.CanCollide = false
+    pet.Anchored = true
+    pet.CastShadow = false
+    pet.Parent = workspace
+    
+    -- Particle effects for higher rarities
+    if petData.rarity ~= "common" then
+        local particles = Instance.new("ParticleEmitter")
+        particles.Color = ColorSequence.new(CONFIG.RARITY_COLORS[petData.rarity])
+        particles.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.3),
+            NumberSequenceKeypoint.new(1, 0)
+        })
+        particles.Lifetime = NumberRange.new(0.5, 1)
+        particles.Rate = petData.rarity == "mythic" and 30 or (petData.rarity == "legendary" and 20 or 10)
+        particles.Speed = NumberRange.new(1, 2)
+        particles.SpreadAngle = Vector2.new(180, 180)
+        particles.Parent = pet
+    end
+    
+    -- Glow for legendary+
+    if petData.rarity == "legendary" or petData.rarity == "mythic" then
+        local light = Instance.new("PointLight")
+        light.Color = CONFIG.RARITY_COLORS[petData.rarity]
+        light.Brightness = 2
+        light.Range = 8
+        light.Parent = pet
+    end
+    
+    -- Name tag
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 100, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.Adornee = pet
+    billboard.Parent = pet
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = petData.icon .. " " .. petData.name
+    nameLabel.TextColor3 = CONFIG.RARITY_COLORS[petData.rarity]
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 14
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Parent = billboard
+    
+    -- Offset position based on pet index
+    local angle = (index - 1) * (360 / CONFIG.MAX_EQUIPPED)
+    local offset = Vector3.new(
+        math.sin(math.rad(angle)) * 4,
+        2 + (index * 0.3),
+        math.cos(math.rad(angle)) * 4
+    )
+    
+    -- Store pet data
+    activePets[petData.id] = {
+        part = pet,
+        data = petData,
+        offset = offset,
+        bobPhase = math.random() * math.pi * 2
+    }
+    
+    return pet
+end
+
+-- ========================= PET MOVEMENT =========================
+local bobSpeed = 2
+local followSpeed = 0.08
+
+RunService.Heartbeat:Connect(function(dt)
+    for id, petInfo in pairs(activePets) do
+        if petInfo.part and rootPart then
+            petInfo.bobPhase = petInfo.bobPhase + dt * bobSpeed
+            local bobOffset = Vector3.new(0, math.sin(petInfo.bobPhase) * 0.5, 0)
+            
+            local targetPos = rootPart.Position + petInfo.offset + bobOffset
+            petInfo.part.Position = petInfo.part.Position:Lerp(targetPos, followSpeed)
+            
+            -- Rotate to face player
+            local lookDir = (rootPart.Position - petInfo.part.Position)
+            if lookDir.Magnitude > 0.1 then
+                petInfo.part.CFrame = CFrame.new(petInfo.part.Position, rootPart.Position)
+            end
+        end
     end
 end)
 
-print("[BlaxSmith]  Pet spawned and following player!")
+-- ========================= SPAWN EQUIPPED PETS =========================
+local function spawnEquippedPets()
+    -- Clear existing
+    for id, petInfo in pairs(activePets) do
+        if petInfo.part then petInfo.part:Destroy() end
+    end
+    activePets = {}
+    
+    -- Spawn equipped pets
+    local index = 1
+    for _, pet in ipairs(petCollection) do
+        if pet.equipped and index <= CONFIG.MAX_EQUIPPED then
+            createPetVisual(pet, index)
+            index = index + 1
+        end
+    end
+    
+    print("[Pet System] Spawned " .. (index - 1) .. " pets")
+end
+
+-- ========================= PET MANAGER GUI =========================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_PetManager"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+local managerFrame = Instance.new("Frame")
+managerFrame.Name = "Manager"
+managerFrame.Size = UDim2.new(0, 350, 0, 400)
+managerFrame.Position = UDim2.new(0.5, -175, 0.5, -200)
+managerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+managerFrame.Visible = false
+managerFrame.Parent = screenGui
+Instance.new("UICorner", managerFrame).CornerRadius = UDim.new(0, 16)
+
+local managerStroke = Instance.new("UIStroke")
+managerStroke.Color = Color3.fromRGB(100, 80, 160)
+managerStroke.Thickness = 2
+managerStroke.Parent = managerFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 45)
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+title.Text = "🐾 PET MANAGER"
+title.TextColor3 = Color3.fromRGB(255, 200, 120)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 20
+title.Parent = managerFrame
+Instance.new("UICorner", title).CornerRadius = UDim.new(0, 16)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 35, 0, 35)
+closeBtn.Position = UDim2.new(1, -42, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = managerFrame
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
+
+local petList = Instance.new("ScrollingFrame")
+petList.Size = UDim2.new(1, -20, 1, -60)
+petList.Position = UDim2.new(0, 10, 0, 50)
+petList.BackgroundTransparency = 1
+petList.ScrollBarThickness = 5
+petList.Parent = managerFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 8)
+listLayout.Parent = petList
+
+-- Create pet entries
+for _, pet in ipairs(petCollection) do
+    local entry = Instance.new("Frame")
+    entry.Size = UDim2.new(1, -10, 0, 60)
+    entry.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+    entry.Parent = petList
+    Instance.new("UICorner", entry).CornerRadius = UDim.new(0, 10)
+    
+    local entryStroke = Instance.new("UIStroke")
+    entryStroke.Color = CONFIG.RARITY_COLORS[pet.rarity]
+    entryStroke.Thickness = 2
+    entryStroke.Transparency = 0.5
+    entryStroke.Parent = entry
+    
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 50, 0, 50)
+    icon.Position = UDim2.new(0, 5, 0.5, -25)
+    icon.BackgroundTransparency = 1
+    icon.Text = pet.icon
+    icon.TextSize = 32
+    icon.Parent = entry
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0, 120, 0, 20)
+    nameLabel.Position = UDim2.new(0, 55, 0, 8)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = pet.name
+    nameLabel.TextColor3 = CONFIG.RARITY_COLORS[pet.rarity]
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 14
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = entry
+    
+    local abilityLabel = Instance.new("TextLabel")
+    abilityLabel.Size = UDim2.new(0, 150, 0, 15)
+    abilityLabel.Position = UDim2.new(0, 55, 0, 28)
+    abilityLabel.BackgroundTransparency = 1
+    abilityLabel.Text = "⚡ " .. pet.ability
+    abilityLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
+    abilityLabel.Font = Enum.Font.Gotham
+    abilityLabel.TextSize = 11
+    abilityLabel.TextXAlignment = Enum.TextXAlignment.Left
+    abilityLabel.Parent = entry
+    
+    local statsLabel = Instance.new("TextLabel")
+    statsLabel.Size = UDim2.new(0, 150, 0, 15)
+    statsLabel.Position = UDim2.new(0, 55, 0, 42)
+    statsLabel.BackgroundTransparency = 1
+    statsLabel.Text = "💥 " .. pet.damage .. " DMG | 💰 +" .. pet.coinBonus .. "%"
+    statsLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+    statsLabel.Font = Enum.Font.Gotham
+    statsLabel.TextSize = 10
+    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.Parent = entry
+    
+    local equipBtn = Instance.new("TextButton")
+    equipBtn.Size = UDim2.new(0, 70, 0, 30)
+    equipBtn.Position = UDim2.new(1, -80, 0.5, -15)
+    equipBtn.BackgroundColor3 = pet.equipped and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(60, 60, 90)
+    equipBtn.Text = pet.equipped and "EQUIPPED" or "EQUIP"
+    equipBtn.TextColor3 = Color3.new(1, 1, 1)
+    equipBtn.Font = Enum.Font.GothamBold
+    equipBtn.TextSize = 11
+    equipBtn.Parent = entry
+    Instance.new("UICorner", equipBtn).CornerRadius = UDim.new(0, 6)
+    
+    equipBtn.MouseButton1Click:Connect(function()
+        pet.equipped = not pet.equipped
+        equipBtn.BackgroundColor3 = pet.equipped and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(60, 60, 90)
+        equipBtn.Text = pet.equipped and "EQUIPPED" or "EQUIP"
+        spawnEquippedPets()
+    end)
+end
+
+petList.CanvasSize = UDim2.new(0, 0, 0, #petCollection * 68)
+
+-- Toggle button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 100, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 60, 120)
+toggleBtn.Text = "🐾"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(150, 100, 180)
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleBtn
+
+toggleBtn.MouseButton1Click:Connect(function()
+    managerFrame.Visible = not managerFrame.Visible
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    managerFrame.Visible = false
+end)
+
+-- Handle respawn
+player.CharacterAdded:Connect(function(char)
+    character = char
+    rootPart = char:WaitForChild("HumanoidRootPart")
+    task.wait(0.5)
+    spawnEquippedPets()
+end)
+
+-- Initial spawn
+spawnEquippedPets()
+
+print("[BlaxSmith] ✅ ADVANCED PET SYSTEM loaded!")
+print("[BlaxSmith] 🐾 " .. #petCollection .. " pets | " .. CONFIG.MAX_EQUIPPED .. " max equipped")
 ]]
                 end
                 
