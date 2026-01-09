@@ -723,8 +723,9 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 
 // ============ MAIN GENERATION (TEXTURED MODELS ONLY - COLORED OUTPUT) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // ONLY TEXTURED GENERATORS - so models come with colors/textures built-in
-  console.log("[3D-Gen] Generating TEXTURED model (with colors)...")
+  // ALWAYS TRY COMETAPI FIRST - it generates TEXTURED, COLORED models
+  console.log("[3D-Gen] Generating TEXTURED model with COLORS...")
+  console.log("[3D-Gen] Priority: CometAPI Hunyuan3D-2 (Textured) → Free Generators (Fallback)")
 
   // Helper to safely wrap generator calls and prevent unhandled rejections
   const safeGenerate = async (name: string, fn: (p: string) => Promise<ModelResult>, timeout: number): Promise<ModelResult> => {
@@ -750,90 +751,82 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // ============ 100% FREE GENERATORS ONLY ============
-  // Cube3D is Roblox's official model generator - most reliable
-  console.log("[3D-Gen] Trying Cube3D (Roblox Official - FREE + Reliable)...")
+  // ============ PRIORITY 1: COMETAPI HUNYUAN3D-2 (TEXTURED + COLORED) ============
+  // This ALWAYS produces colored, textured models using DALL-E 3 → Hunyuan3D-2 pipeline
+  console.log("[3D-Gen] 🎨 Trying CometAPI Hunyuan3D-2 (TEXTURED + COLORED)...")
 
   try {
-    const cube3dResult = await safeGenerate("Cube3D", generateWithCube3D, 60000) // 60s max
-    if (cube3dResult?.model_url) {
-      console.log("[3D-Gen] ✅ Cube3D (Roblox Official) succeeded!")
-      cube3dResult.source = "Cube3D (Roblox Official - Free)"
-      return cube3dResult
+    const cometResult = await safeGenerate("CometAPI-Hunyuan3D", generateWithCometAPI, 120000) // 2 min timeout
+    if (cometResult?.model_url) {
+      console.log("[3D-Gen] ✅ CometAPI succeeded with TEXTURED COLORED model!")
+      return cometResult
     }
   } catch (error: any) {
-    console.log("[3D-Gen] Cube3D failed, trying other free generators...", error.message)
+    console.log("[3D-Gen] ⚠️ CometAPI failed, trying free textured generators...", error.message)
   }
 
-  // ============ OTHER FREE GENERATORS ============
-  console.log("[3D-Gen] Trying other FREE text-to-3D generators...")
+  // ============ PRIORITY 2: FREE TEXTURED GENERATORS ============
+  console.log("[3D-Gen] Trying FREE textured generators (text-to-3D)...")
 
   const freeTexturedGenerators = [
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 45000 },  // 45s max
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 45000 },        // 45s max
-    { name: "LGM", fn: generateWithLGM, timeout: 45000 },                 // 45s max
+    { name: "Hunyuan3D-2-Free", fn: generateWithHunyuan3D, timeout: 60000 },
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 60000 },
+    { name: "TripoSR", fn: generateWithTripoSR, timeout: 90000 },
+    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 90000 },
   ]
 
-  // Race all free generators - return first success
+  // Race all free textured generators - return first success
   const freeRacePromises = freeTexturedGenerators.map(gen => {
-    console.log(`[3D-Gen] Starting FREE: ${gen.name}...`)
+    console.log(`[3D-Gen] Starting: ${gen.name}...`)
     return safeGenerate(gen.name, gen.fn, gen.timeout)
   })
 
   try {
     const freeSuccess = await Promise.any(freeRacePromises)
     if (freeSuccess?.model_url) {
-      console.log("[3D-Gen] ✅ FREE generator succeeded!")
+      console.log("[3D-Gen] ✅ FREE textured generator succeeded!")
       return freeSuccess
     }
   } catch (freeError) {
-    console.log("[3D-Gen] Free textured generators failed...", freeError)
+    console.log("[3D-Gen] All free textured generators failed...", freeError)
   }
 
-  // ============ SECONDARY FREE FALLBACKS ============
-  const secondaryGenerators = [
-    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 60000 },  // 60s
-    { name: "TripoSR", fn: generateWithTripoSR, timeout: 60000 },          // 60s
-  ]
-
-  const secondaryPromises = secondaryGenerators.map(gen => {
-    console.log(`[3D-Gen] Trying secondary: ${gen.name}...`)
-    return safeGenerate(gen.name, gen.fn, gen.timeout)
-  })
+  // ============ PRIORITY 3: CUBE3D WITH TEXTURE OVERLAY ============
+  console.log("[3D-Gen] Trying Cube3D + AI Texture...")
 
   try {
-    const secondarySuccess = await Promise.any(secondaryPromises)
-    if (secondarySuccess?.model_url) return secondarySuccess
-  } catch (aggregateError) {
-    console.log("[3D-Gen] Secondary generators all failed:", aggregateError)
-  }
-
-  // Final fallbacks - try Cube3D with AI textures for better quality
-  try {
-    console.log("[3D-Gen] Trying Cube3D+Texture (Roblox Official + AI Texture)...")
-    const cube3dResult = await safeGenerate("Cube3D+Tex", generateWithCube3DTextured, 90000)
-    if (cube3dResult?.model_url) return cube3dResult
+    const cube3dResult = await safeGenerate("Cube3D+Tex", generateWithCube3DTextured, 120000)
+    if (cube3dResult?.model_url) {
+      return cube3dResult
+    }
   } catch (error: any) {
     console.log("[3D-Gen] Cube3D+Tex failed:", error.message)
   }
 
-  // Final fallbacks
-  const fallbackGenerators = [
-    { name: "Shap-E", fn: generateWithShapE, timeout: 90000 },
-  ]
+  // ============ LAST RESORT: GEOMETRY-ONLY (NOT PREFERRED) ============
+  // Only use if ALL textured generators fail - user will need to color in Roblox
+  console.log("[3D-Gen] ⚠️ All textured generators failed. Trying geometry-only as last resort...")
 
-  for (const gen of fallbackGenerators) {
-    console.log(`[3D-Gen] Trying fallback: ${gen.name}...`)
-    try {
-      const result = await safeGenerate(gen.name, gen.fn, gen.timeout)
-      if (result?.model_url) {
-        // Mark as needing color so UI can show warning
-        result.source = `${gen.name} (Add color in Roblox Studio)`
-        return result
-      }
-    } catch (error: any) {
-      console.log(`[3D-Gen] Fallback ${gen.name} failed:`, error.message)
+  try {
+    const cube3dPlain = await safeGenerate("Cube3D", generateWithCube3D, 60000)
+    if (cube3dPlain?.model_url) {
+      cube3dPlain.source = "Cube3D (Geometry Only - Add color in Roblox Studio)"
+      console.log("[3D-Gen] ⚠️ Returning UNTEXTURED model - user needs to add color")
+      return cube3dPlain
     }
+  } catch (e) {
+    console.log("[3D-Gen] Cube3D geometry-only also failed")
+  }
+
+  // ============ ABSOLUTE LAST FALLBACK ============
+  try {
+    const shapE = await safeGenerate("Shap-E", generateWithShapE, 90000)
+    if (shapE?.model_url) {
+      shapE.source = "Shap-E (Untextured - Add color in Roblox Studio)"
+      return shapE
+    }
+  } catch (e) {
+    console.log("[3D-Gen] Shap-E also failed")
   }
 
   return {
