@@ -4,6 +4,7 @@ import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import PremiumOnboarding from "@/components/premium-onboarding"
 import { IdleTimerProvider } from "@/components/idle-timer-provider"
+import { ViewModeProvider, ViewModeToggle } from "@/components/view-mode-toggle"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -48,14 +49,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+      </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <PremiumOnboarding />
-        <IdleTimerProvider>
-          {children}
-        </IdleTimerProvider>
+        <ViewModeProvider>
+          <PremiumOnboarding />
+          <IdleTimerProvider>
+            {children}
+          </IdleTimerProvider>
+          <ViewModeToggle />
+        </ViewModeProvider>
         <Analytics />
       </body>
     </html>
   )
 }
+
 
