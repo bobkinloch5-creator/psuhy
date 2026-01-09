@@ -23,16 +23,25 @@ interface AdminPanelProps {
         activeToday: number
         totalCreations: number
         suspiciousCount: number
+        bannedUsers?: number
+        bannedIPs?: number
     }
     users: any[]
     transactions: any[]
     suspiciousActivity: any[]
+    generations?: any[]
+    securityLogs?: any[]
+    generationStats?: {
+        models: number
+        scripts: number
+        chats: number
+    }
 }
 
 type ActiveTab = "dashboard" | "users" | "generations" | "analytics" | "promo" | "bulk" | "logs" | "plugin" | "settings"
 
 
-export function AdminPanel({ adminUser, stats, users, transactions, suspiciousActivity }: AdminPanelProps) {
+export function AdminPanel({ adminUser, stats, users, transactions, suspiciousActivity, generations = [], securityLogs = [], generationStats = { models: 0, scripts: 0, chats: 0 } }: AdminPanelProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard")
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedUser, setSelectedUser] = useState<any>(null)
@@ -490,33 +499,87 @@ export function AdminPanel({ adminUser, stats, users, transactions, suspiciousAc
                     {/* Generations Tab */}
                     {activeTab === "generations" && (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
                                     <div className="flex items-center gap-3 mb-4">
                                         <Box className="w-8 h-8 text-orange-400" />
-                                        <h3 className="text-lg font-bold text-white">Total Generations</h3>
+                                        <h3 className="text-lg font-bold text-white">Total</h3>
                                     </div>
                                     <p className="text-4xl font-bold text-white">{stats.totalCreations.toLocaleString()}</p>
                                 </div>
                                 <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <Activity className="w-8 h-8 text-green-400" />
-                                        <h3 className="text-lg font-bold text-white">Success Rate</h3>
+                                        <Box className="w-8 h-8 text-purple-400" />
+                                        <h3 className="text-lg font-bold text-white">3D Models</h3>
                                     </div>
-                                    <p className="text-4xl font-bold text-green-400">98.5%</p>
+                                    <p className="text-4xl font-bold text-purple-400">{generationStats.models}</p>
                                 </div>
                                 <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <Zap className="w-8 h-8 text-yellow-400" />
-                                        <h3 className="text-lg font-bold text-white">Avg. Time</h3>
+                                        <FileText className="w-8 h-8 text-blue-400" />
+                                        <h3 className="text-lg font-bold text-white">Scripts</h3>
                                     </div>
-                                    <p className="text-4xl font-bold text-white">45s</p>
+                                    <p className="text-4xl font-bold text-blue-400">{generationStats.scripts}</p>
+                                </div>
+                                <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <Activity className="w-8 h-8 text-green-400" />
+                                        <h3 className="text-lg font-bold text-white">Chat</h3>
+                                    </div>
+                                    <p className="text-4xl font-bold text-green-400">{generationStats.chats}</p>
                                 </div>
                             </div>
 
-                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-white mb-4">Generation Pipeline</h3>
-                                <p className="text-zinc-400">Generation queue monitoring coming soon...</p>
+                            {/* Recent Generations Table */}
+                            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
+                                <div className="p-6 border-b border-white/10">
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <Zap className="w-5 h-5 text-yellow-400" />
+                                        Recent Generations
+                                    </h3>
+                                </div>
+                                <div className="overflow-x-auto max-h-96">
+                                    <table className="w-full">
+                                        <thead className="bg-zinc-800/50">
+                                            <tr>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">User</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Type</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Prompt</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Status</th>
+                                                <th className="text-left p-4 text-xs font-medium text-zinc-400 uppercase">Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {generations.length > 0 ? generations.map((gen: any) => (
+                                                <tr key={gen.id} className="hover:bg-white/5">
+                                                    <td className="p-4 text-sm text-white">{gen.users?.username || "Unknown"}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${gen.type === "3d_model" ? "bg-purple-500/20 text-purple-400" :
+                                                                gen.type === "script" ? "bg-blue-500/20 text-blue-400" :
+                                                                    "bg-green-500/20 text-green-400"
+                                                            }`}>
+                                                            {gen.type || "chat"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-sm text-zinc-400 max-w-xs truncate">{gen.prompt?.slice(0, 50) || "N/A"}...</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${gen.status === "completed" ? "bg-green-500/20 text-green-400" :
+                                                                gen.status === "failed" ? "bg-red-500/20 text-red-400" :
+                                                                    "bg-yellow-500/20 text-yellow-400"
+                                                            }`}>
+                                                            {gen.status || "completed"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-xs text-zinc-500">{new Date(gen.created_at).toLocaleString()}</td>
+                                                </tr>
+                                            )) : (
+                                                <tr>
+                                                    <td colSpan={5} className="p-8 text-center text-zinc-500">No generations yet</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}

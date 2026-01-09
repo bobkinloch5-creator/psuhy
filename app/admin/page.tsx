@@ -69,6 +69,59 @@ export default async function AdminPage() {
     .order("created_at", { ascending: false })
     .limit(10)
 
+  // Get recent creations/generations for pipeline
+  const { data: recentCreations } = await serviceClient
+    .from("creations")
+    .select("id, prompt, type, status, created_at, user_id, users(username)")
+    .order("created_at", { ascending: false })
+    .limit(20)
+
+  // Get generation stats by type
+  const { data: modelCreations } = await serviceClient
+    .from("creations")
+    .select("*", { count: "exact", head: true })
+    .eq("type", "3d_model")
+
+  const { data: scriptCreations } = await serviceClient
+    .from("creations")
+    .select("*", { count: "exact", head: true })
+    .eq("type", "script")
+
+  const { data: chatCreations } = await serviceClient
+    .from("creations")
+    .select("*", { count: "exact", head: true })
+    .eq("type", "chat")
+
+  // Get security logs (if table exists)
+  let securityLogs: any[] = []
+  try {
+    const { data: logs } = await serviceClient
+      .from("security_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(20)
+    securityLogs = logs || []
+  } catch (e) {
+    // Table might not exist yet
+  }
+
+  // Get banned users count
+  const { count: bannedCount } = await serviceClient
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .eq("is_banned", true)
+
+  // Get banned IPs count (if table exists)
+  let bannedIPsCount = 0
+  try {
+    const { count } = await serviceClient
+      .from("banned_ips")
+      .select("*", { count: "exact", head: true })
+    bannedIPsCount = count || 0
+  } catch (e) {
+    // Table might not exist yet
+  }
+
   return (
     <AdminPanel
       adminUser={{
@@ -79,11 +132,20 @@ export default async function AdminPage() {
         totalUsers: totalUsers || 0,
         activeToday: activeToday || 0,
         totalCreations: totalCreations || 0,
-        suspiciousCount: suspiciousCount || 0
+        suspiciousCount: suspiciousCount || 0,
+        bannedUsers: bannedCount || 0,
+        bannedIPs: bannedIPsCount || 0
       }}
       users={allUsers || []}
       transactions={recentTransactions || []}
       suspiciousActivity={suspiciousActivity || []}
+      generations={recentCreations || []}
+      securityLogs={securityLogs}
+      generationStats={{
+        models: (modelCreations as any)?.count || 0,
+        scripts: (scriptCreations as any)?.count || 0,
+        chats: (chatCreations as any)?.count || 0
+      }}
     />
   )
 }
