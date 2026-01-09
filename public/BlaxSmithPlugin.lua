@@ -5528,6 +5528,693 @@ print("[BlaxSmith] ✅ Trading System loaded! Send trade requests with /trade [p
     print("[BlaxSmith] 🤝 Advanced Trading System created!")
 end
 
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED LEADERBOARD SYSTEM v2.0                                   ║
+-- ║  Premium Leaderboards with Categories, Badges & Real-time Updates             ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+function GameGenerator.createLeaderboardSystem()
+    print("[BlaxSmith] 🏆 Creating Advanced Leaderboard System...")
+    
+    local leaderboardScript = Instance.new("LocalScript")
+    leaderboardScript.Name = "LeaderboardUI"
+    leaderboardScript.Source = [[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+local CATEGORIES = {
+    {name = "Coins", icon = "💰", stat = "Coins"},
+    {name = "Wins", icon = "🏆", stat = "Wins"},
+    {name = "Kills", icon = "⚔️", stat = "Kills"},
+    {name = "Level", icon = "⬆️", stat = "Level"},
+    {name = "Time", icon = "⏱️", stat = "PlayTime"},
+}
+
+local RANK_COLORS = {
+    Color3.fromRGB(255, 215, 0),   -- 1st Gold
+    Color3.fromRGB(192, 192, 192), -- 2nd Silver
+    Color3.fromRGB(205, 127, 50),  -- 3rd Bronze
+}
+
+-- Sample data
+local leaderboardData = {
+    {name = "ProGamer123", value = 50000, rank = 1},
+    {name = "xX_Champion_Xx", value = 45000, rank = 2},
+    {name = "RobloxMaster", value = 42000, rank = 3},
+    {name = "CoolPlayer99", value = 38000, rank = 4},
+    {name = "GameLegend", value = 35000, rank = 5},
+    {name = "You", value = 28000, rank = 8, isLocal = true},
+}
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_Leaderboard"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 28)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(255, 200, 50)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 18)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🏆 LEADERBOARDS"
+title.TextColor3 = Color3.fromRGB(255, 215, 0)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -48, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- Category tabs
+local tabFrame = Instance.new("Frame")
+tabFrame.Size = UDim2.new(1, -20, 0, 40)
+tabFrame.Position = UDim2.new(0, 10, 0, 60)
+tabFrame.BackgroundTransparency = 1
+tabFrame.Parent = mainFrame
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 5)
+tabLayout.Parent = tabFrame
+
+local selectedCat = "Coins"
+local catTabs = {}
+
+for _, cat in ipairs(CATEGORIES) do
+    local tab = Instance.new("TextButton")
+    tab.Size = UDim2.new(0, 70, 1, 0)
+    tab.BackgroundColor3 = cat.name == selectedCat and Color3.fromRGB(255, 180, 50) or Color3.fromRGB(40, 40, 60)
+    tab.Text = cat.icon
+    tab.TextSize = 22
+    tab.Parent = tabFrame
+    Instance.new("UICorner", tab).CornerRadius = UDim.new(0, 8)
+    catTabs[cat.name] = tab
+end
+
+-- Leaderboard list
+local listScroll = Instance.new("ScrollingFrame")
+listScroll.Size = UDim2.new(1, -20, 1, -170)
+listScroll.Position = UDim2.new(0, 10, 0, 105)
+listScroll.BackgroundTransparency = 1
+listScroll.ScrollBarThickness = 5
+listScroll.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 6)
+listLayout.Parent = listScroll
+
+local function refreshLeaderboard()
+    for _, child in ipairs(listScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    for _, entry in ipairs(leaderboardData) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, -5, 0, 50)
+        row.BackgroundColor3 = entry.isLocal and Color3.fromRGB(50, 60, 80) or Color3.fromRGB(30, 30, 48)
+        row.Parent = listScroll
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+        
+        if entry.rank <= 3 then
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = RANK_COLORS[entry.rank]
+            stroke.Thickness = 2
+            stroke.Parent = row
+        end
+        
+        local rankLabel = Instance.new("TextLabel")
+        rankLabel.Size = UDim2.new(0, 40, 1, 0)
+        rankLabel.Position = UDim2.new(0, 10, 0, 0)
+        rankLabel.BackgroundTransparency = 1
+        rankLabel.Text = "#" .. entry.rank
+        rankLabel.TextColor3 = RANK_COLORS[entry.rank] or Color3.fromRGB(180, 180, 200)
+        rankLabel.Font = Enum.Font.GothamBlack
+        rankLabel.TextSize = 16
+        rankLabel.Parent = row
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(0, 180, 1, 0)
+        nameLabel.Position = UDim2.new(0, 55, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = entry.name
+        nameLabel.TextColor3 = entry.isLocal and Color3.fromRGB(100, 200, 255) or Color3.new(1, 1, 1)
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextSize = 14
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Parent = row
+        
+        local valueLabel = Instance.new("TextLabel")
+        valueLabel.Size = UDim2.new(0, 100, 1, 0)
+        valueLabel.Position = UDim2.new(1, -110, 0, 0)
+        valueLabel.BackgroundTransparency = 1
+        valueLabel.Text = tostring(entry.value)
+        valueLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+        valueLabel.Font = Enum.Font.GothamBlack
+        valueLabel.TextSize = 16
+        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valueLabel.Parent = row
+    end
+    
+    listScroll.CanvasSize = UDim2.new(0, 0, 0, #leaderboardData * 56)
+end
+
+-- Your rank display
+local yourRank = Instance.new("Frame")
+yourRank.Size = UDim2.new(1, -20, 0, 50)
+yourRank.Position = UDim2.new(0, 10, 1, -60)
+yourRank.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+yourRank.Parent = mainFrame
+Instance.new("UICorner", yourRank).CornerRadius = UDim.new(0, 10)
+
+local yourRankLabel = Instance.new("TextLabel")
+yourRankLabel.Size = UDim2.new(1, -20, 1, 0)
+yourRankLabel.Position = UDim2.new(0, 10, 0, 0)
+yourRankLabel.BackgroundTransparency = 1
+yourRankLabel.Text = "📍 Your Rank: #8 • 28,000 Coins"
+yourRankLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+yourRankLabel.Font = Enum.Font.GothamBold
+yourRankLabel.TextSize = 14
+yourRankLabel.TextXAlignment = Enum.TextXAlignment.Left
+yourRankLabel.Parent = yourRank
+
+local isOpen = false
+local function openLeaderboard()
+    if isOpen then return end
+    isOpen = true
+    mainFrame.Visible = true
+    TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 400, 0, 500),
+        Position = UDim2.new(0.5, -200, 0.5, -250)
+    }):Play()
+    refreshLeaderboard()
+end
+
+local function closeLeaderboard()
+    if not isOpen then return end
+    isOpen = false
+    TweenService:Create(mainFrame, TweenInfo.new(0.25), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.delay(0.25, function() mainFrame.Visible = false end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeLeaderboard)
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 420, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 140, 40)
+toggleBtn.Text = "🏆"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeLeaderboard() else openLeaderboard() end
+end)
+
+print("[BlaxSmith] ✅ Leaderboard System loaded!")
+]]
+    leaderboardScript.Parent = game:GetService("StarterPlayer").StarterPlayerScripts
+    print("[BlaxSmith] 🏆 Advanced Leaderboard System created!")
+end
+
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED SETTINGS SYSTEM v2.0                                      ║
+-- ║  Premium Settings with Graphics, Audio, Controls & Accessibility              ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+function GameGenerator.createSettingsSystem()
+    print("[BlaxSmith] ⚙️ Creating Advanced Settings System...")
+    
+    local settingsScript = Instance.new("LocalScript")
+    settingsScript.Name = "SettingsUI"
+    settingsScript.Source = [[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local player = Players.LocalPlayer
+
+local settings = {
+    graphics = {quality = "High", shadows = true, particles = true},
+    audio = {master = 100, music = 80, sfx = 100},
+    controls = {sensitivity = 50, invertY = false},
+    gameplay = {showDamage = true, screenShake = true, notifications = true}
+}
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_Settings"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 500, 0, 450)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(100, 100, 150)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(28, 28, 45)
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 18)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "⚙️ SETTINGS"
+title.TextColor3 = Color3.fromRGB(200, 200, 220)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -48, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+local function createSlider(parent, name, yPos, value, onChange)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -30, 0, 50)
+    container.Position = UDim2.new(0, 15, 0, yPos)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 150, 0, 25)
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(200, 200, 220)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+    
+    local sliderBg = Instance.new("Frame")
+    sliderBg.Size = UDim2.new(0, 200, 0, 12)
+    sliderBg.Position = UDim2.new(0, 160, 0, 7)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    sliderBg.Parent = container
+    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0, 6)
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new(value/100, 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(80, 150, 255)
+    sliderFill.Parent = sliderBg
+    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(0, 6)
+    
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0, 50, 0, 25)
+    valueLabel.Position = UDim2.new(0, 370, 0, 0)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = value .. "%"
+    valueLabel.TextColor3 = Color3.fromRGB(150, 200, 255)
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextSize = 14
+    valueLabel.Parent = container
+    
+    return container
+end
+
+local function createToggle(parent, name, yPos, enabled, onChange)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -30, 0, 40)
+    container.Position = UDim2.new(0, 15, 0, yPos)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 250, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(200, 200, 220)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+    
+    local toggleBg = Instance.new("Frame")
+    toggleBg.Size = UDim2.new(0, 50, 0, 26)
+    toggleBg.Position = UDim2.new(1, -65, 0.5, -13)
+    toggleBg.BackgroundColor3 = enabled and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(60, 60, 80)
+    toggleBg.Parent = container
+    Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(0, 13)
+    
+    local toggleKnob = Instance.new("Frame")
+    toggleKnob.Size = UDim2.new(0, 22, 0, 22)
+    toggleKnob.Position = enabled and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+    toggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+    toggleKnob.Parent = toggleBg
+    Instance.new("UICorner", toggleKnob).CornerRadius = UDim.new(1, 0)
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text = ""
+    btn.Parent = toggleBg
+    
+    btn.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        TweenService:Create(toggleBg, TweenInfo.new(0.2), {
+            BackgroundColor3 = enabled and Color3.fromRGB(80, 180, 80) or Color3.fromRGB(60, 60, 80)
+        }):Play()
+        TweenService:Create(toggleKnob, TweenInfo.new(0.2), {
+            Position = enabled and UDim2.new(1, -24, 0.5, -11) or UDim2.new(0, 2, 0.5, -11)
+        }):Play()
+        if onChange then onChange(enabled) end
+    end)
+    
+    return container
+end
+
+-- Settings sections
+local sectionLabel = Instance.new("TextLabel")
+sectionLabel.Size = UDim2.new(1, -30, 0, 30)
+sectionLabel.Position = UDim2.new(0, 15, 0, 65)
+sectionLabel.BackgroundTransparency = 1
+sectionLabel.Text = "🔊 AUDIO"
+sectionLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+sectionLabel.Font = Enum.Font.GothamBlack
+sectionLabel.TextSize = 16
+sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+sectionLabel.Parent = mainFrame
+
+createSlider(mainFrame, "Master Volume", 95, settings.audio.master)
+createSlider(mainFrame, "Music Volume", 145, settings.audio.music)
+createSlider(mainFrame, "SFX Volume", 195, settings.audio.sfx)
+
+local graphicsLabel = Instance.new("TextLabel")
+graphicsLabel.Size = UDim2.new(1, -30, 0, 30)
+graphicsLabel.Position = UDim2.new(0, 15, 0, 250)
+graphicsLabel.BackgroundTransparency = 1
+graphicsLabel.Text = "🎮 GAMEPLAY"
+graphicsLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+graphicsLabel.Font = Enum.Font.GothamBlack
+graphicsLabel.TextSize = 16
+graphicsLabel.TextXAlignment = Enum.TextXAlignment.Left
+graphicsLabel.Parent = mainFrame
+
+createToggle(mainFrame, "Show Damage Numbers", 280, settings.gameplay.showDamage)
+createToggle(mainFrame, "Screen Shake", 320, settings.gameplay.screenShake)
+createToggle(mainFrame, "Notifications", 360, settings.gameplay.notifications)
+
+local isOpen = false
+local function openSettings()
+    if isOpen then return end
+    isOpen = true
+    mainFrame.Visible = true
+    TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 500, 0, 450),
+        Position = UDim2.new(0.5, -250, 0.5, -225)
+    }):Play()
+end
+
+local function closeSettings()
+    if not isOpen then return end
+    isOpen = false
+    TweenService:Create(mainFrame, TweenInfo.new(0.25), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.delay(0.25, function() mainFrame.Visible = false end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeSettings)
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 500, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 120)
+toggleBtn.Text = "⚙️"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeSettings() else openSettings() end
+end)
+
+print("[BlaxSmith] ✅ Settings System loaded!")
+]]
+    settingsScript.Parent = game:GetService("StarterPlayer").StarterPlayerScripts
+    print("[BlaxSmith] ⚙️ Advanced Settings System created!")
+end
+
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED ACHIEVEMENT SYSTEM v2.0                                   ║
+-- ║  Premium Achievements with Badges, Progress Bars & Notifications              ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+function GameGenerator.createAchievementSystem()
+    print("[BlaxSmith] 🏅 Creating Advanced Achievement System...")
+    
+    local achievementScript = Instance.new("LocalScript")
+    achievementScript.Name = "AchievementUI"
+    achievementScript.Source = [[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+local ACHIEVEMENTS = {
+    {id = 1, name = "First Steps", desc = "Join the game", icon = "👣", unlocked = true, rarity = "common"},
+    {id = 2, name = "Coin Collector", desc = "Collect 1,000 coins", icon = "💰", progress = 850, goal = 1000, rarity = "common"},
+    {id = 3, name = "Pet Lover", desc = "Own 10 pets", icon = "🐾", progress = 7, goal = 10, rarity = "uncommon"},
+    {id = 4, name = "Champion", desc = "Win 50 matches", icon = "🏆", progress = 23, goal = 50, rarity = "rare"},
+    {id = 5, name = "Legend", desc = "Reach max level", icon = "⭐", progress = 45, goal = 100, rarity = "legendary"},
+    {id = 6, name = "Millionaire", desc = "Earn 1M coins total", icon = "💎", progress = 250000, goal = 1000000, rarity = "mythic"},
+}
+
+local RARITY_COLORS = {
+    common = Color3.fromRGB(180, 180, 180),
+    uncommon = Color3.fromRGB(30, 255, 0),
+    rare = Color3.fromRGB(0, 112, 221),
+    legendary = Color3.fromRGB(255, 128, 0),
+    mythic = Color3.fromRGB(255, 0, 100),
+}
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_Achievements"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 450, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(200, 150, 50)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 18)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.6, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🏅 ACHIEVEMENTS"
+title.TextColor3 = Color3.fromRGB(255, 200, 100)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local progressLabel = Instance.new("TextLabel")
+progressLabel.Size = UDim2.new(0, 100, 0, 30)
+progressLabel.Position = UDim2.new(1, -160, 0.5, -15)
+progressLabel.BackgroundColor3 = Color3.fromRGB(40, 50, 60)
+progressLabel.Text = "1/6"
+progressLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+progressLabel.Font = Enum.Font.GothamBold
+progressLabel.TextSize = 14
+progressLabel.Parent = header
+Instance.new("UICorner", progressLabel).CornerRadius = UDim.new(0, 8)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -48, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+local listScroll = Instance.new("ScrollingFrame")
+listScroll.Size = UDim2.new(1, -20, 1, -70)
+listScroll.Position = UDim2.new(0, 10, 0, 60)
+listScroll.BackgroundTransparency = 1
+listScroll.ScrollBarThickness = 5
+listScroll.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 8)
+listLayout.Parent = listScroll
+
+for _, ach in ipairs(ACHIEVEMENTS) do
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -10, 0, 70)
+    card.BackgroundColor3 = ach.unlocked and Color3.fromRGB(40, 50, 40) or Color3.fromRGB(30, 30, 45)
+    card.Parent = listScroll
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = RARITY_COLORS[ach.rarity]
+    stroke.Thickness = ach.unlocked and 2 or 1
+    stroke.Transparency = ach.unlocked and 0 or 0.5
+    stroke.Parent = card
+    
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 50, 0, 50)
+    icon.Position = UDim2.new(0, 10, 0.5, -25)
+    icon.BackgroundTransparency = 1
+    icon.Text = ach.unlocked and ach.icon or "🔒"
+    icon.TextSize = 30
+    icon.Parent = card
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0, 200, 0, 22)
+    nameLabel.Position = UDim2.new(0, 65, 0, 10)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = ach.name
+    nameLabel.TextColor3 = RARITY_COLORS[ach.rarity]
+    nameLabel.Font = Enum.Font.GothamBlack
+    nameLabel.TextSize = 14
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = card
+    
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(0, 250, 0, 18)
+    descLabel.Position = UDim2.new(0, 65, 0, 30)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = ach.desc
+    descLabel.TextColor3 = Color3.fromRGB(150, 150, 180)
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextSize = 11
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.Parent = card
+    
+    if not ach.unlocked and ach.progress then
+        local progressBg = Instance.new("Frame")
+        progressBg.Size = UDim2.new(0, 150, 0, 10)
+        progressBg.Position = UDim2.new(0, 65, 0, 52)
+        progressBg.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        progressBg.Parent = card
+        Instance.new("UICorner", progressBg).CornerRadius = UDim.new(0, 5)
+        
+        local progressFill = Instance.new("Frame")
+        progressFill.Size = UDim2.new(ach.progress / ach.goal, 0, 1, 0)
+        progressFill.BackgroundColor3 = RARITY_COLORS[ach.rarity]
+        progressFill.Parent = progressBg
+        Instance.new("UICorner", progressFill).CornerRadius = UDim.new(0, 5)
+        
+        local progressText = Instance.new("TextLabel")
+        progressText.Size = UDim2.new(0, 80, 0, 18)
+        progressText.Position = UDim2.new(0, 220, 0, 48)
+        progressText.BackgroundTransparency = 1
+        progressText.Text = ach.progress .. "/" .. ach.goal
+        progressText.TextColor3 = Color3.fromRGB(180, 180, 200)
+        progressText.Font = Enum.Font.GothamBold
+        progressText.TextSize = 11
+        progressText.TextXAlignment = Enum.TextXAlignment.Left
+        progressText.Parent = card
+    elseif ach.unlocked then
+        local checkmark = Instance.new("TextLabel")
+        checkmark.Size = UDim2.new(0, 40, 0, 40)
+        checkmark.Position = UDim2.new(1, -50, 0.5, -20)
+        checkmark.BackgroundTransparency = 1
+        checkmark.Text = "✓"
+        checkmark.TextColor3 = Color3.fromRGB(100, 255, 100)
+        checkmark.Font = Enum.Font.GothamBlack
+        checkmark.TextSize = 28
+        checkmark.Parent = card
+    end
+end
+
+listScroll.CanvasSize = UDim2.new(0, 0, 0, #ACHIEVEMENTS * 78)
+
+local isOpen = false
+local function openAchievements()
+    if isOpen then return end
+    isOpen = true
+    mainFrame.Visible = true
+    TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 450, 0, 500),
+        Position = UDim2.new(0.5, -225, 0.5, -250)
+    }):Play()
+end
+
+local function closeAchievements()
+    if not isOpen then return end
+    isOpen = false
+    TweenService:Create(mainFrame, TweenInfo.new(0.25), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.delay(0.25, function() mainFrame.Visible = false end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeAchievements)
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 580, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 50)
+toggleBtn.Text = "🏅"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeAchievements() else openAchievements() end
+end)
+
+print("[BlaxSmith] ✅ Achievement System loaded!")
+]]
+    achievementScript.Parent = game:GetService("StarterPlayer").StarterPlayerScripts
+    print("[BlaxSmith] 🏅 Advanced Achievement System created!")
+end
+
 -- AUTOMATED UI SYSTEM (Lemonade-style)
 function GameGenerator.createUISystem()
     print("[BlaxSmith]  Generating Automated UI...")
