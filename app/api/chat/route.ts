@@ -97,6 +97,21 @@ export async function POST(request: Request) {
         // ULTRA-SMART ROBLOX AI WITH DEEP EXPERTISE
         const systemPrompt = `You are **ForgeMind** — the most advanced AI for Roblox development. Built by BlaxSmith.
 
+## 🧠 THINKING APPROACH
+Before responding, THINK DEEPLY about:
+1. What is the user REALLY trying to build?
+2. What components are needed (scripts, parts, UI, etc)?
+3. How do they connect together?
+4. What's the best order to create them?
+5. What already exists in the project context?
+
+## 🔄 INCREMENTAL BUILDING
+You have MEMORY of the conversation. Use it to:
+- Build on previously created elements
+- Reference existing scripts/parts by name
+- Avoid recreating what already exists
+- Suggest next steps after each creation
+
 **YOUR MISSION**: Help users build ANYTHING in Roblox. You can create scripts, parts, models, UI, animations, sounds, particles, terrain, and more. USE INSERT COMMANDS TO CREATE THINGS DIRECTLY!
 
 ## ⚡ WHAT YOU CAN BUILD
@@ -302,14 +317,43 @@ Help **${userData.username}** build incredible Roblox games. You're the smartest
                 "\n\nAttached files:\n" + files.map((f: any) => `- ${f.name} (${f.type})`).join("\n")
         }
 
-        // Add conversation history for context
+        // Add conversation history for context - EXTENDED FOR MULTI-STEP BUILDING
         let fullPrompt = messageWithContext
         if (history && history.length > 1) {
-            const recentHistory = history.slice(-6) // Last 3 exchanges
+            // Get last 20 messages (10 exchanges) for better context memory
+            const recentHistory = history.slice(-20)
+
+            // Build a project context summary from what was created
+            const createdItems: string[] = []
+            for (const msg of recentHistory) {
+                if (msg.role === "assistant") {
+                    // Extract what was created
+                    const scripts = msg.content.match(/\[INSERT_SCRIPT:\s*([^\]]+)\]/g)
+                    const parts = msg.content.match(/\[INSERT_PART:\s*([^\]]+)\]/g)
+                    const guis = msg.content.match(/\[INSERT_GUI:\s*([^\]]+)\]/g)
+                    const models = msg.content.match(/\[INSERT_MODEL:\s*([^\]]+)\]/g)
+                    const assets = msg.content.match(/\[INSERT_ASSET:\s*([^\]]+)\]/g)
+
+                    if (scripts) createdItems.push(...scripts.map((s: string) => s.replace(/\[INSERT_SCRIPT:\s*|\]/g, '')))
+                    if (parts) createdItems.push(...parts.map((s: string) => s.replace(/\[INSERT_PART:\s*|\]/g, '')))
+                    if (guis) createdItems.push(...guis.map((s: string) => s.replace(/\[INSERT_GUI:\s*|\]/g, '')))
+                    if (models) createdItems.push(...models.map((s: string) => s.replace(/\[INSERT_MODEL:\s*|\]/g, '')))
+                    if (assets) createdItems.push(...assets.map((s: string) => s.replace(/\[INSERT_ASSET:\s*|\]/g, '')))
+                }
+            }
+
+            // Build context string
             const contextStr = recentHistory
-                .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content.substring(0, 500)}`)
+                .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content.substring(0, 800)}`)
                 .join("\n\n")
-            fullPrompt = `Previous conversation:\n${contextStr}\n\nCurrent message: ${messageWithContext}`
+
+            // Add project context if items were created
+            let projectContext = ""
+            if (createdItems.length > 0) {
+                projectContext = `\n\n📦 PROJECT CONTEXT - Already created in this session:\n${[...new Set(createdItems)].join(", ")}\n\nBuild on top of these existing elements when appropriate.`
+            }
+
+            fullPrompt = `CONVERSATION HISTORY (remember this context for incremental building):\n${contextStr}${projectContext}\n\n---\nCURRENT REQUEST: ${messageWithContext}`
         }
 
         const aiResponse = await generateWithCometAPI(selectedModelName, fullPrompt, systemPrompt)
