@@ -369,13 +369,24 @@ export function AIChatFullPage({ user: initialUser }: { user: User }) {
             setMessages([])
         }
 
-        // Delete from database
+        // Delete from database via API (server-side to bypass RLS)
         try {
-            const { error: msgError } = await supabase.from("chat_messages").delete().eq("conversation_id", id)
-            if (msgError) console.error("Error deleting messages:", msgError)
+            const response = await fetch("/api/chat/delete", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ conversationId: id })
+            })
 
-            const { error: convError } = await supabase.from("conversations").delete().eq("id", id)
-            if (convError) console.error("Error deleting conversation:", convError)
+            if (!response.ok) {
+                const data = await response.json()
+                console.error("Error deleting conversation:", data.error)
+                // Re-fetch conversations to restore if delete failed
+                const { data: convs } = await supabase
+                    .from("conversations")
+                    .select("*")
+                    .order("updated_at", { ascending: false })
+                if (convs) setConversations(convs)
+            }
         } catch (err) {
             console.error("Delete error:", err)
         }
