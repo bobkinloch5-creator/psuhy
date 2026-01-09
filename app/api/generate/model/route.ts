@@ -36,7 +36,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
       body: JSON.stringify({
         model: "gpt-image-1",  // DALL-E 3 via CometAPI
         prompt: imagePrompt,
-        quality: "hd",
+        quality: "high",  // Fixed: was "hd" which is invalid
         size: "1024x1024",
         n: 1,
       }),
