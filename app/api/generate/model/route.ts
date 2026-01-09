@@ -781,39 +781,7 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
   console.log("[3D-Gen] Starting 3D generation pipeline...")
   console.log("[3D-Gen] Prompt:", prompt)
 
-  // ========== PRIORITY 1: TRIPO3D (COLORED + FAST + RELIABLE) ==========
-  const tripoKey = process.env.TRIPO_API_KEY
-  if (tripoKey) {
-    try {
-      console.log("[3D-Gen] Trying Tripo3D (primary - colored models)...")
-      const tripoResult = await generateWithTripo3D(prompt)
-      if (tripoResult?.model_url) {
-        console.log("[3D-Gen] ✅ Tripo3D SUCCESS - colored model!")
-
-        // Run GLB validation
-        try {
-          const validation = await validateGLB(tripoResult.model_url)
-          logQualityReport(validation, tripoResult.source)
-          const quality = assessModelQuality(validation)
-          const qualityLabel = quality === 'premium' ? '🌟 Premium' : quality === 'standard' ? '✓ Standard' : '○ Basic'
-
-          return {
-            ...tripoResult,
-            source: `${tripoResult.source} | ${qualityLabel}`,
-            validation,
-          }
-        } catch (e) {
-          return tripoResult // Return even if validation fails
-        }
-      }
-    } catch (error: any) {
-      console.error("[3D-Gen] Tripo3D failed:", error.message)
-    }
-  } else {
-    console.log("[3D-Gen] No TRIPO_API_KEY - skipping Tripo3D")
-  }
-
-  // ========== PRIORITY 2: COMETAPI (HUNYUAN3D-2) ==========
+  // ========== PRIORITY 1: COMETAPI HUNYUAN3D-2 (COLORED + TEXTURED) ==========
   const cometKey = process.env.COMETAPI_KEY || process.env.OPENAI_API_KEY
   if (cometKey) {
     try {
@@ -857,8 +825,8 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] No COMETAPI_KEY - skipping CometAPI")
   }
 
-  // ========== PRIORITY 3: ROBLOX CUBE3D + AI TEXTURES (FREE - COLORED) ==========
-  console.log("[3D-Gen] Trying Roblox Cube3D with AI textures (free fallback)...")
+  // ========== PRIORITY 2: ROBLOX CUBE3D + AI TEXTURES (FREE - COLORED) ==========
+  console.log("[3D-Gen] Trying Roblox Cube3D with AI textures...")
   try {
     const cube3dResult = await generateWithCube3DTextured(prompt)
     if (cube3dResult?.model_url) {
@@ -869,8 +837,8 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.error("[3D-Gen] Cube3D Textured failed:", error.message)
   }
 
-  // ========== PRIORITY 4: HUNYUAN3D GRADIO (FREE - TENCENT) ==========
-  console.log("[3D-Gen] Trying Hunyuan3D Gradio (free fallback)...")
+  // ========== PRIORITY 3: HUNYUAN3D GRADIO (FREE - TENCENT COLORED) ==========
+  console.log("[3D-Gen] Trying Hunyuan3D Gradio...")
   try {
     const hunyuanResult = await generateWithHunyuan3D(prompt)
     if (hunyuanResult?.model_url) {
@@ -881,8 +849,8 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.error("[3D-Gen] Hunyuan3D Gradio failed:", error.message)
   }
 
-  // ========== PRIORITY 5: TRELLIS (FREE - MICROSOFT) ==========
-  console.log("[3D-Gen] Trying TRELLIS (free fallback)...")
+  // ========== PRIORITY 4: TRELLIS (FREE - MICROSOFT TEXTURED) ==========
+  console.log("[3D-Gen] Trying TRELLIS...")
   try {
     const trellisResult = await generateWithTrellis(prompt)
     if (trellisResult?.model_url) {
