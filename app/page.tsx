@@ -184,6 +184,79 @@ export default async function HomePage() {
               </div>
             </div>
 
+            {/* How It Works Section */}
+            <div className="mt-24 max-w-5xl mx-auto">
+              <h2 className="text-3xl font-black text-center text-white mb-4">How It Works</h2>
+              <p className="text-zinc-400 text-center mb-12">From idea to in-game in seconds</p>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {/* Step 1 */}
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-2xl flex items-center justify-center border border-orange-500/30">
+                    <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </div>
+                  <div className="text-orange-400 text-sm font-semibold mb-1">Step 1</div>
+                  <h3 className="text-white font-bold mb-1">Install Plugin</h3>
+                  <p className="text-zinc-500 text-sm">Add BlaxSmith to Roblox Studio</p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-500/20 to-orange-600/20 rounded-2xl flex items-center justify-center border border-yellow-500/30">
+                    <Zap className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div className="text-orange-400 text-sm font-semibold mb-1">Step 2</div>
+                  <h3 className="text-white font-bold mb-1">Connect Account</h3>
+                  <p className="text-zinc-500 text-sm">Link your Discord ID</p>
+                </div>
+
+                {/* Step 3 */}
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-red-500/20 to-orange-600/20 rounded-2xl flex items-center justify-center border border-red-500/30">
+                    <Sparkles className="w-8 h-8 text-red-400" />
+                  </div>
+                  <div className="text-orange-400 text-sm font-semibold mb-1">Step 3</div>
+                  <h3 className="text-white font-bold mb-1">Describe Asset</h3>
+                  <p className="text-zinc-500 text-sm">Tell AI what you want</p>
+                </div>
+
+                {/* Step 4 */}
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500/20 to-emerald-600/20 rounded-2xl flex items-center justify-center border border-green-500/30">
+                    <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="text-orange-400 text-sm font-semibold mb-1">Step 4</div>
+                  <h3 className="text-white font-bold mb-1">Auto-Insert</h3>
+                  <p className="text-zinc-500 text-sm">Assets appear in Studio</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Created with BlaxSmith Gallery */}
+            <div className="mt-24 max-w-5xl mx-auto">
+              <h2 className="text-3xl font-black text-center text-white mb-4">Created with BlaxSmith</h2>
+              <p className="text-zinc-400 text-center mb-12">See what our community has built</p>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="relative aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl overflow-hidden border border-white/10 hover:border-orange-500/50 transition-all hover:scale-105">
+                  <Image src="/gallery-sword.png" alt="Sword" fill className="object-cover" />
+                </div>
+                <div className="relative aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl overflow-hidden border border-white/10 hover:border-orange-500/50 transition-all hover:scale-105">
+                  <Image src="/gallery-robot.png" alt="Robot Character" fill className="object-cover" />
+                </div>
+                <div className="relative aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl overflow-hidden border border-white/10 hover:border-orange-500/50 transition-all hover:scale-105">
+                  <Image src="/gallery-chest.png" alt="Treasure Chest" fill className="object-cover" />
+                </div>
+                <div className="relative aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl overflow-hidden border border-white/10 hover:border-orange-500/50 transition-all hover:scale-105">
+                  <Image src="/gallery-car.png" alt="Sports Car" fill className="object-cover" />
+                </div>
+              </div>
+            </div>
+
             {/* Pricing Section */}
             <div id="pricing" className="mt-24 max-w-4xl mx-auto">
               <h2 className="text-3xl font-black text-center text-white mb-4">Simple Pricing</h2>
