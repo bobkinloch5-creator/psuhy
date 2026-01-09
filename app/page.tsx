@@ -275,6 +275,14 @@ export default async function HomePage() {
                 >
                   Discord
                 </a>
+                <a
+                  href="https://www.youtube.com/@Blaxsmith-studio"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-red-400 transition-colors font-semibold"
+                >
+                  YouTube
+                </a>
                 <a href="/docs" className="hover:text-white transition-colors">
                   Docs
                 </a>
