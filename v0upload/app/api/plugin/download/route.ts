@@ -1,0 +1,645 @@
+import { NextResponse } from "next/server"
+
+// The BlaxSmith plugin code - Token-based authentication (no API keys for users)
+const PLUGIN_CODE = `--[[
+    BlaxSmith AI - Studio Plugin v8.0.0
+    Token-Based Authentication Edition
+    
+    Features:
+    - Secure token authentication (no API keys needed)
+    - Magic Sync - assets appear instantly
+    - Auto-insert models, scripts, GUIs
+    - Real-time command polling
+    - Undo support with waypoints
+]]
+
+print(">>> BLAXSMITH AI PLUGIN v8.0.0 LOADED <<<")
+
+local HttpService = game:GetService("HttpService")
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local Selection = game:GetService("Selection")
+local InsertService = game:GetService("InsertService")
+local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local StarterPlayer = game:GetService("StarterPlayer")
+
+-- ============================================
+-- CONFIGURATION
+-- ============================================
+local CONFIG = {
+    API_URL = "https://www.blaxsmith.dev/api/plugin",
+    PLUGIN_VERSION = "8.0.0",
+    POLL_INTERVAL = 2,
+    HEARTBEAT_INTERVAL = 20,
+}
+
+-- Secure token from plugin settings
+local AUTH_TOKEN = plugin:GetSetting("BlaxSmithToken") or ""
+local isConnected = false
+local userName = "Creator"
+
+-- ============================================
+-- HELPER FUNCTIONS
+-- ============================================
+local function ensureFolder(parent, name)
+    local f = parent:FindFirstChild(name)
+    if not f then
+        f = Instance.new("Folder")
+        f.Name = name
+        f.Parent = parent
+    end
+    return f
+end
+
+local function selectAndFocus(object)
+    if not object then return end
+    Selection:Set({object})
+    
+    spawn(function()
+        local camera = workspace.CurrentCamera
+        if not camera then return end
+        
+        local targetPos = Vector3.new(0, 10, 0)
+        local objectSize = Vector3.new(5, 5, 5)
+        
+        if object:IsA("Model") then
+            local success, cf, size = pcall(function()
+                return object:GetBoundingBox()
+            end)
+            if success then
+                targetPos = cf.Position
+                objectSize = size
+            end
+        elseif object:IsA("BasePart") then
+            targetPos = object.Position
+            objectSize = object.Size
+        end
+        
+        local maxDim = math.max(objectSize.X, objectSize.Y, objectSize.Z)
+        local distance = maxDim * 2 + 15
+        local offset = Vector3.new(distance, distance * 0.6, distance)
+        
+        camera.CameraType = Enum.CameraType.Scriptable
+        camera.CFrame = CFrame.new(targetPos + offset, targetPos)
+        
+        wait(0.5)
+        camera.CameraType = Enum.CameraType.Custom
+    end)
+end
+
+local function notifyComplete(commandId, success, errorMsg)
+    if not commandId then return end
+    pcall(function()
+        HttpService:PostAsync(
+            CONFIG.API_URL .. "/command-complete",
+            HttpService:JSONEncode({
+                token = AUTH_TOKEN,
+                commandId = commandId,
+                success = success,
+                error = errorMsg
+            }),
+            Enum.HttpContentType.ApplicationJson
+        )
+    end)
+end
+
+-- ============================================
+-- COMMAND HANDLERS
+-- ============================================
+local function handleInsertAsset(data, commandId)
+    if not data or not data.assetId then return end
+    
+    print("[BlaxSmith] Inserting asset:", data.assetId)
+    
+    local success, result = pcall(function()
+        local model = InsertService:LoadAsset(tonumber(data.assetId))
+        if model then
+            local actualModel = model:GetChildren()[1] or model
+            actualModel.Name = data.name or "BlaxSmith_Asset"
+            actualModel.Parent = workspace
+            
+            if actualModel:IsA("Model") and actualModel.PrimaryPart then
+                actualModel:SetPrimaryPartCFrame(CFrame.new(0, 5, 0))
+            elseif actualModel:IsA("BasePart") then
+                actualModel.Position = Vector3.new(0, 5, 0)
+                actualModel.Anchored = true
+            end
+            
+            selectAndFocus(actualModel)
+            ChangeHistoryService:SetWaypoint("BlaxSmith: Inserted " .. actualModel.Name)
+            return actualModel
+        end
+    end)
+    
+    notifyComplete(commandId, success, not success and tostring(result) or nil)
+    
+    if success then
+        print("[BlaxSmith] Asset inserted successfully!")
+    else
+        warn("[BlaxSmith] Failed to insert asset:", result)
+    end
+end
+
+local function handleInsertScript(data, commandId)
+    local scriptName = data.name or "AIScript"
+    local code = data.code or "-- Generated by BlaxSmith AI"
+    local scriptType = data.scriptType or "Script"
+    
+    print("[BlaxSmith] Creating " .. scriptType .. ":", scriptName)
+    
+    local success, result = pcall(function()
+        local parent
+        local newScript
+        
+        if scriptType == "LocalScript" then
+            local starterScripts = StarterPlayer:FindFirstChild("StarterPlayerScripts")
+            parent = ensureFolder(starterScripts, "BlaxSmith_Scripts")
+            newScript = Instance.new("LocalScript")
+        elseif scriptType == "ModuleScript" then
+            parent = ensureFolder(ReplicatedStorage, "BlaxSmith_Modules")
+            newScript = Instance.new("ModuleScript")
+        else
+            parent = ensureFolder(ServerScriptService, "BlaxSmith_Scripts")
+            newScript = Instance.new("Script")
+        end
+        
+        newScript.Name = scriptName
+        newScript.Source = code
+        newScript.Parent = parent
+        
+        Selection:Set({newScript})
+        ChangeHistoryService:SetWaypoint("BlaxSmith: Created " .. scriptName)
+        return newScript
+    end)
+    
+    notifyComplete(commandId, success, not success and tostring(result) or nil)
+    
+    if success then
+        print("[BlaxSmith] Script created:", scriptName)
+    else
+        warn("[BlaxSmith] Failed to create script:", result)
+    end
+end
+
+local function handleInsertGUI(data, commandId)
+    local guiName = data.name or "BlaxSmithGUI"
+    local guiData = data.gui
+    
+    print("[BlaxSmith] Creating GUI:", guiName)
+    
+    local success, result = pcall(function()
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = guiName
+        screenGui.ResetOnSpawn = false
+        
+        -- If GUI data is provided as serialized instances
+        if guiData and type(guiData) == "table" then
+            -- Build GUI from data
+            for _, childData in ipairs(guiData) do
+                local child = Instance.new(childData.ClassName or "Frame")
+                for prop, value in pairs(childData) do
+                    if prop ~= "ClassName" and prop ~= "Children" then
+                        pcall(function() child[prop] = value end)
+                    end
+                end
+                child.Parent = screenGui
+            end
+        end
+        
+        screenGui.Parent = StarterGui
+        Selection:Set({screenGui})
+        ChangeHistoryService:SetWaypoint("BlaxSmith: Created " .. guiName)
+        return screenGui
+    end)
+    
+    notifyComplete(commandId, success, not success and tostring(result) or nil)
+    
+    if success then
+        print("[BlaxSmith] GUI created:", guiName)
+    else
+        warn("[BlaxSmith] Failed to create GUI:", result)
+    end
+end
+
+local function handleExecuteCode(data, commandId)
+    if not data.code then return end
+    
+    local description = data.description or "World Generation"
+    print("[BlaxSmith] Executing:", description)
+    
+    local success, result = pcall(function()
+        local func, loadErr = loadstring(data.code)
+        if func then
+            func()
+            ChangeHistoryService:SetWaypoint("BlaxSmith: " .. description)
+        else
+            error(loadErr)
+        end
+    end)
+    
+    notifyComplete(commandId, success, not success and tostring(result) or nil)
+    
+    if success then
+        print("[BlaxSmith] Code executed successfully!")
+    else
+        warn("[BlaxSmith] Code execution error:", result)
+    end
+end
+
+local function handleNotify(data)
+    print("[BlaxSmith] Notification:", data.message or "New notification")
+end
+
+-- Process incoming command
+local function processCommand(cmd)
+    local cmdType = cmd.type
+    local payload = cmd.payload or {}
+    local commandId = cmd.id
+    
+    if cmdType == "insert_asset" or cmdType == "INSERT_ASSET" then
+        handleInsertAsset(payload, commandId)
+    elseif cmdType == "insert_script" or cmdType == "INSERT_SCRIPT" then
+        handleInsertScript(payload, commandId)
+    elseif cmdType == "insert_gui" or cmdType == "INSERT_GUI" then
+        handleInsertGUI(payload, commandId)
+    elseif cmdType == "execute_code" or cmdType == "execute" then
+        handleExecuteCode(payload, commandId)
+    elseif cmdType == "notify" then
+        handleNotify(payload)
+    else
+        print("[BlaxSmith] Unknown command type:", cmdType)
+    end
+end
+
+-- ============================================
+-- CONNECTION & POLLING
+-- ============================================
+local pollingActive = false
+
+local function connectToServer()
+    if AUTH_TOKEN == "" then
+        return false, "No token set"
+    end
+    
+    local success, response = pcall(function()
+        return HttpService:PostAsync(
+            CONFIG.API_URL .. "/connect",
+            HttpService:JSONEncode({
+                token = AUTH_TOKEN,
+                studioId = HttpService:GenerateGUID(false),
+                pluginVersion = CONFIG.PLUGIN_VERSION,
+                game = game.Name ~= "Game" and game.Name or "Untitled"
+            }),
+            Enum.HttpContentType.ApplicationJson
+        )
+    end)
+    
+    if success and response then
+        local data = HttpService:JSONDecode(response)
+        if data.success then
+            isConnected = true
+            userName = data.user and data.user.username or "Creator"
+            return true, data.message
+        else
+            return false, data.error or "Connection failed"
+        end
+    end
+    
+    return false, "Network error"
+end
+
+local function pollForCommands()
+    if AUTH_TOKEN == "" then return end
+    
+    pcall(function()
+        local response = HttpService:GetAsync(
+            CONFIG.API_URL .. "/poll?token=" .. AUTH_TOKEN
+        )
+        
+        if response and response ~= "" then
+            local data = HttpService:JSONDecode(response)
+            if data.commands and type(data.commands) == "table" then
+                for _, cmd in ipairs(data.commands) do
+                    print("[BlaxSmith] Magic Sync: Received", cmd.type)
+                    processCommand(cmd)
+                end
+            end
+        end
+    end)
+end
+
+local function startPolling()
+    if pollingActive then return end
+    pollingActive = true
+    
+    spawn(function()
+        while pollingActive and isConnected do
+            pollForCommands()
+            wait(CONFIG.POLL_INTERVAL)
+        end
+    end)
+end
+
+local function stopPolling()
+    pollingActive = false
+end
+
+-- Heartbeat to maintain connection
+local function sendHeartbeat()
+    if AUTH_TOKEN == "" then return end
+    
+    pcall(function()
+        local response = HttpService:PostAsync(
+            CONFIG.API_URL .. "/heartbeat",
+            HttpService:JSONEncode({
+                token = AUTH_TOKEN,
+                studioId = game.JobId ~= "" and game.JobId or "studio",
+                game = game.Name
+            }),
+            Enum.HttpContentType.ApplicationJson
+        )
+        
+        local data = HttpService:JSONDecode(response)
+        if data.credits then
+            -- Could update UI with credits here
+        end
+    end)
+end
+
+spawn(function()
+    while true do
+        if isConnected then
+            sendHeartbeat()
+        end
+        wait(CONFIG.HEARTBEAT_INTERVAL)
+    end
+end)
+
+-- ============================================
+-- UI SETUP
+-- ============================================
+local Toolbar = plugin:CreateToolbar("BlaxSmith AI")
+local ToggleButton = Toolbar:CreateButton(
+    "BlaxSmith",
+    "Open BlaxSmith AI Panel",
+    "rbxassetid://4458901886"
+)
+ToggleButton.ClickableWhenViewportHidden = true
+
+local widgetInfo = DockWidgetPluginGuiInfo.new(
+    Enum.InitialDockState.Float,
+    true, false,
+    340, 450,
+    300, 400
+)
+local MainWidget = plugin:CreateDockWidgetPluginGui("BlaxSmithAI", widgetInfo)
+MainWidget.Title = "BlaxSmith AI"
+
+ToggleButton.Click:Connect(function()
+    MainWidget.Enabled = not MainWidget.Enabled
+    ToggleButton:SetActive(MainWidget.Enabled)
+end)
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(1, 0, 1, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = MainWidget
+
+-- Logo
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 50)
+TitleLabel.Position = UDim2.new(0, 0, 0, 25)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "BlaxSmith AI"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 140, 60)
+TitleLabel.TextSize = 26
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Parent = MainFrame
+
+local SubtitleLabel = Instance.new("TextLabel")
+SubtitleLabel.Size = UDim2.new(1, 0, 0, 20)
+SubtitleLabel.Position = UDim2.new(0, 0, 0, 70)
+SubtitleLabel.BackgroundTransparency = 1
+SubtitleLabel.Text = "Magic Sync Enabled"
+SubtitleLabel.TextColor3 = Color3.fromRGB(100, 100, 110)
+SubtitleLabel.TextSize = 12
+SubtitleLabel.Font = Enum.Font.Gotham
+SubtitleLabel.Parent = MainFrame
+
+-- Status Card
+local StatusCard = Instance.new("Frame")
+StatusCard.Size = UDim2.new(0.9, 0, 0, 70)
+StatusCard.Position = UDim2.new(0.05, 0, 0, 105)
+StatusCard.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+StatusCard.BorderSizePixel = 0
+StatusCard.Parent = MainFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 12)
+StatusCorner.Parent = StatusCard
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 14, 0, 14)
+StatusDot.Position = UDim2.new(0, 18, 0, 18)
+StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+StatusDot.BorderSizePixel = 0
+StatusDot.Parent = StatusCard
+
+local StatusDotCorner = Instance.new("UICorner")
+StatusDotCorner.CornerRadius = UDim.new(0.5, 0)
+StatusDotCorner.Parent = StatusDot
+
+local StatusTitle = Instance.new("TextLabel")
+StatusTitle.Size = UDim2.new(1, -50, 0, 20)
+StatusTitle.Position = UDim2.new(0, 42, 0, 15)
+StatusTitle.BackgroundTransparency = 1
+StatusTitle.Text = "Disconnected"
+StatusTitle.TextColor3 = Color3.fromRGB(220, 220, 230)
+StatusTitle.TextSize = 14
+StatusTitle.Font = Enum.Font.GothamBold
+StatusTitle.TextXAlignment = Enum.TextXAlignment.Left
+StatusTitle.Parent = StatusCard
+
+local StatusSubtext = Instance.new("TextLabel")
+StatusSubtext.Size = UDim2.new(1, -50, 0, 16)
+StatusSubtext.Position = UDim2.new(0, 42, 0, 38)
+StatusSubtext.BackgroundTransparency = 1
+StatusSubtext.Text = "Enter your token to connect"
+StatusSubtext.TextColor3 = Color3.fromRGB(100, 100, 110)
+StatusSubtext.TextSize = 11
+StatusSubtext.Font = Enum.Font.Gotham
+StatusSubtext.TextXAlignment = Enum.TextXAlignment.Left
+StatusSubtext.Parent = StatusCard
+
+-- Token Input Section
+local TokenLabel = Instance.new("TextLabel")
+TokenLabel.Size = UDim2.new(0.9, 0, 0, 20)
+TokenLabel.Position = UDim2.new(0.05, 0, 0, 195)
+TokenLabel.BackgroundTransparency = 1
+TokenLabel.Text = "Your Plugin Token"
+TokenLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+TokenLabel.TextSize = 12
+TokenLabel.Font = Enum.Font.GothamBold
+TokenLabel.TextXAlignment = Enum.TextXAlignment.Left
+TokenLabel.Parent = MainFrame
+
+local TokenHint = Instance.new("TextLabel")
+TokenHint.Size = UDim2.new(0.9, 0, 0, 16)
+TokenHint.Position = UDim2.new(0.05, 0, 0, 215)
+TokenHint.BackgroundTransparency = 1
+TokenHint.Text = "Find this in your BlaxSmith dashboard"
+TokenHint.TextColor3 = Color3.fromRGB(90, 90, 100)
+TokenHint.TextSize = 10
+TokenHint.Font = Enum.Font.Gotham
+TokenHint.TextXAlignment = Enum.TextXAlignment.Left
+TokenHint.Parent = MainFrame
+
+local TokenInput = Instance.new("TextBox")
+TokenInput.Size = UDim2.new(0.9, 0, 0, 42)
+TokenInput.Position = UDim2.new(0.05, 0, 0, 238)
+TokenInput.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+TokenInput.BorderSizePixel = 0
+TokenInput.Text = AUTH_TOKEN
+TokenInput.PlaceholderText = "Paste your token here..."
+TokenInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+TokenInput.PlaceholderColor3 = Color3.fromRGB(80, 80, 90)
+TokenInput.TextSize = 12
+TokenInput.Font = Enum.Font.GothamMedium
+TokenInput.ClearTextOnFocus = false
+TokenInput.Parent = MainFrame
+
+local TokenCorner = Instance.new("UICorner")
+TokenCorner.CornerRadius = UDim.new(0, 10)
+TokenCorner.Parent = TokenInput
+
+-- Connect Button
+local ConnectButton = Instance.new("TextButton")
+ConnectButton.Size = UDim2.new(0.9, 0, 0, 48)
+ConnectButton.Position = UDim2.new(0.05, 0, 0, 295)
+ConnectButton.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+ConnectButton.BorderSizePixel = 0
+ConnectButton.Text = "Connect to BlaxSmith"
+ConnectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConnectButton.TextSize = 15
+ConnectButton.Font = Enum.Font.GothamBold
+ConnectButton.Parent = MainFrame
+
+local ConnectCorner = Instance.new("UICorner")
+ConnectCorner.CornerRadius = UDim.new(0, 12)
+ConnectCorner.Parent = ConnectButton
+
+-- Info Text
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Size = UDim2.new(0.9, 0, 0, 50)
+InfoLabel.Position = UDim2.new(0.05, 0, 0, 360)
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Text = "Once connected, assets you generate on blaxsmith.dev will automatically appear in your workspace!"
+InfoLabel.TextColor3 = Color3.fromRGB(100, 100, 110)
+InfoLabel.TextSize = 11
+InfoLabel.Font = Enum.Font.Gotham
+InfoLabel.TextWrapped = true
+InfoLabel.Parent = MainFrame
+
+-- Version
+local VersionLabel = Instance.new("TextLabel")
+VersionLabel.Size = UDim2.new(1, 0, 0, 20)
+VersionLabel.Position = UDim2.new(0, 0, 1, -28)
+VersionLabel.BackgroundTransparency = 1
+VersionLabel.Text = "v" .. CONFIG.PLUGIN_VERSION .. " | blaxsmith.dev"
+VersionLabel.TextColor3 = Color3.fromRGB(60, 60, 70)
+VersionLabel.TextSize = 10
+VersionLabel.Font = Enum.Font.Gotham
+VersionLabel.Parent = MainFrame
+
+-- ============================================
+-- UI INTERACTIONS
+-- ============================================
+local function updateUI(connected, message)
+    if connected then
+        StatusDot.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        StatusTitle.Text = "Connected"
+        StatusSubtext.Text = "Welcome, " .. userName .. "!"
+        ConnectButton.Text = "Reconnect"
+        ConnectButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    else
+        StatusDot.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+        StatusTitle.Text = "Connection Failed"
+        StatusSubtext.Text = message or "Check your token"
+        ConnectButton.Text = "Try Again"
+        ConnectButton.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+    end
+end
+
+ConnectButton.MouseButton1Click:Connect(function()
+    local token = TokenInput.Text:gsub("%s+", "")
+    if token == "" then
+        StatusTitle.Text = "No Token"
+        StatusSubtext.Text = "Please enter your token first"
+        return
+    end
+    
+    -- Save token
+    plugin:SetSetting("BlaxSmithToken", token)
+    AUTH_TOKEN = token
+    
+    StatusTitle.Text = "Connecting..."
+    StatusSubtext.Text = "Please wait..."
+    ConnectButton.Text = "Connecting..."
+    
+    local success, message = connectToServer()
+    updateUI(success, message)
+    
+    if success then
+        startPolling()
+        print("[BlaxSmith] Connected! Magic Sync active.")
+    end
+end)
+
+-- Hover effects
+ConnectButton.MouseEnter:Connect(function()
+    if not isConnected then
+        ConnectButton.BackgroundColor3 = Color3.fromRGB(255, 120, 70)
+    end
+end)
+
+ConnectButton.MouseLeave:Connect(function()
+    if not isConnected then
+        ConnectButton.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+    else
+        ConnectButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    end
+end)
+
+-- ============================================
+-- AUTO-CONNECT ON LOAD
+-- ============================================
+if AUTH_TOKEN ~= "" then
+    spawn(function()
+        wait(1)
+        StatusTitle.Text = "Connecting..."
+        StatusSubtext.Text = "Auto-connecting..."
+        
+        local success, message = connectToServer()
+        updateUI(success, message)
+        
+        if success then
+            startPolling()
+            print("[BlaxSmith] Auto-connected! Magic Sync active.")
+        end
+    end)
+end
+
+print("[BlaxSmith] Plugin ready! Get your token at blaxsmith.dev")
+`
+
+export async function GET() {
+  return new NextResponse(PLUGIN_CODE, {
+    headers: {
+      "Content-Type": "text/plain",
+      "Content-Disposition": "attachment; filename=BlaxSmithPlugin.lua",
+    },
+  })
+}
