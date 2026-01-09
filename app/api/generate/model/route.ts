@@ -29,6 +29,7 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
 
     // Use the correct /generation_all endpoint with 13 parameters:
     // [caption, image, mv_front, mv_back, mv_left, mv_right, steps, guidance_scale, seed, octree_res, rembg, num_chunks, randomize_seed]
+    // OPTIMIZED FOR SPEED: reduced steps (15) and octree_res (64) for faster generation
     const result = await Promise.race([
       client.predict("/generation_all", [
         prompt,     // caption (text prompt)
@@ -37,15 +38,15 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
         null,       // mv_image_back
         null,       // mv_image_left
         null,       // mv_image_right
-        30,         // steps (generation steps)
+        15,         // steps (REDUCED for speed - was 30)
         5,          // guidance_scale
         1234,       // seed
-        128,        // octree_res (lower for speed)
+        64,         // octree_res (REDUCED for speed - was 128)
         true,       // rembg (remove background)
-        8000,       // num_chunks
+        4000,       // num_chunks (REDUCED for speed - was 8000)
         true,       // randomize_seed
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 60000))
     ]) as any
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
@@ -621,10 +622,11 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     })
   }
 
-  // Primary textured generators - race them for speed (removed TripoSR - broken endpoint)
+  // Primary textured generators - race them for speed (FAST TIMEOUTS for quick failover)
   const texturedGenerators = [
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 120000 },   // Tencent - TEXTURED
-    { name: "TRELLIS", fn: generateWithTrellis, timeout: 120000 },         // Microsoft - TEXTURED
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D, timeout: 45000 },   // Tencent - TEXTURED (45s max)
+    { name: "TRELLIS", fn: generateWithTrellis, timeout: 45000 },         // Microsoft - TEXTURED (45s max)
+    { name: "Cube3D", fn: generateWithCube3D, timeout: 30000 },           // Roblox - geometry but FAST (30s)
   ]
 
   // Create racing promises with safe wrappers
@@ -643,11 +645,10 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
 
   console.log("[3D-Gen] Trying backup generators...")
 
-  // Backup textured generators (sequential for reliability)
+  // Backup generators (sequential - only fast ones with 45s timeout)
   const backupGenerators = [
-    { name: "LGM", fn: generateWithLGM, timeout: 120000 },
-    { name: "Cube3D+Texture", fn: generateWithCube3DTextured, timeout: 180000 },
-    { name: "InstantMesh", fn: generateWithInstantMesh, timeout: 180000 },
+    { name: "LGM", fn: generateWithLGM, timeout: 45000 },
+    { name: "Shap-E", fn: generateWithShapE, timeout: 45000 },  // Fast geometry fallback
   ]
 
   for (const gen of backupGenerators) {

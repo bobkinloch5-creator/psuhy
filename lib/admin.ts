@@ -16,8 +16,9 @@ export async function isAdmin(): Promise<boolean> {
             .eq("discord_id", user.id)
             .single()
 
-        // Double check: must be admin flag AND username goldbergjoe100
-        return userData?.is_admin === true && userData?.username?.toLowerCase() === "goldbergjoe100"
+        // Double check: must be admin flag AND username in allowed list
+        const allowedAdmins = ["goldbergjoe100", "lucas200z"]
+        return userData?.is_admin === true && allowedAdmins.includes(userData?.username?.toLowerCase())
     } catch (error) {
         console.error("[Admin Check] Error:", error)
         return false
@@ -38,7 +39,8 @@ export async function getAdminUser() {
         .eq("discord_id", user.id)
         .single()
 
-    if (userData?.is_admin && userData?.username?.toLowerCase() === "goldbergjoe100") {
+    const allowedAdmins = ["goldbergjoe100", "lucas200z"]
+    if (userData?.is_admin && allowedAdmins.includes(userData?.username?.toLowerCase())) {
         return userData
     }
 
