@@ -55,7 +55,9 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
     console.log("[CometAPI-3D] Got reference image:", imageUrl.slice(0, 100))
 
     // Step 2: Generate 3D model using Hunyuan3D-2 via same endpoint (OpenAI-compatible)
-    console.log("[CometAPI-3D] Step 2: Generating 3D model with Hunyuan3D-2...")
+    console.log("[CometAPI-3D] Step 2: Generating HIGH QUALITY 3D model with Hunyuan3D-2...")
+
+    const enhancedPrompt = `${prompt}, highly detailed 3D model, clean topology, sharp edges, professional quality, game-ready asset, 4K textures`
 
     const modelResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
       method: "POST",
@@ -65,8 +67,11 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
       },
       body: JSON.stringify({
         model: "Hunyuan3D-2",  // CometAPI's Hunyuan3D-2 model
-        prompt: prompt,       // Text description for the 3D model
+        prompt: enhancedPrompt, // Enhanced prompt for better quality
         image: imageUrl,      // Reference image URL
+        // Request highest quality settings if supported
+        quality: "hd",
+        size: "1024x1024",
       }),
     })
 
@@ -144,24 +149,25 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
 
     // Use the correct /generation_all endpoint with 13 parameters:
     // [caption, image, mv_front, mv_back, mv_left, mv_right, steps, guidance_scale, seed, octree_res, rembg, num_chunks, randomize_seed]
-    // HIGH QUALITY: maximum settings for sharp, detailed models
+    // ULTRA HIGH QUALITY: absolute maximum settings for best results
+    const enhancedPrompt = `${prompt}, highly detailed 3D model, clean topology, sharp edges, professional quality, game-ready asset`
     const result = await Promise.race([
       client.predict("/generation_all", [
-        prompt,     // caption (text prompt)
+        enhancedPrompt,  // Enhanced caption for better quality
         null,       // image (null for text-to-3D)
         null,       // mv_image_front
         null,       // mv_image_back
         null,       // mv_image_left
         null,       // mv_image_right
-        30,         // steps (MAXIMUM for best quality)
-        7,          // guidance_scale (increased for sharper details)
+        50,         // steps (MAXIMUM 50 for best quality)
+        9.0,        // guidance_scale (higher = more detailed)
         1234,       // seed
-        128,        // octree_res (MAXIMUM for sharp mesh)
+        256,        // octree_res (MAXIMUM 256 for sharp mesh)
         true,       // rembg (remove background)
-        8000,       // num_chunks (MAXIMUM for detail)
+        16000,      // num_chunks (MAXIMUM for high detail)
         true,       // randomize_seed
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 90000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
     ]) as any
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
@@ -390,14 +396,15 @@ async function generateWithShapE(prompt: string): Promise<ModelResult> {
       new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
     ]) as any
 
+    const enhancedPrompt = `${prompt}, detailed 3D model, clean geometry, high quality`
     const result = await Promise.race([
       client.predict("/text-to-3d", [
-        prompt,
+        enhancedPrompt,
         0,        // seed
-        15.0,     // guidance_scale
-        64,       // num_steps
+        20.0,     // guidance_scale (increased for better detail)
+        128,      // num_steps (doubled for higher quality)
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
     ]) as any
 
     const resultData = result.data as any[]
