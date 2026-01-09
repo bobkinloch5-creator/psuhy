@@ -418,15 +418,15 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 
 // ============ MAIN GENERATION (PRIORITIZE TEXTURED) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // Try generators in order of preference for Roblox assets
-  // Cube3D first (official Roblox model), then textured options, then fallbacks
+  // PRIORITY ORDER: Textured models first (full 3D assets with materials/colors)
+  // Cube3D is last because it only generates geometry (no textures yet - upcoming feature)
   const generators = [
-    { name: "Cube3D", fn: generateWithCube3D },           // Roblox's official - best for game assets
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },  // Tencent - high quality with textures
-    { name: "TripoSR", fn: generateWithTripoSR },        // Stability AI - textured
-    { name: "InstantMesh", fn: generateWithInstantMesh }, // TencentARC - textured
-    { name: "LGM", fn: generateWithLGM },                 // Large Gaussian Model - textured
-    { name: "Shap-E", fn: generateWithShapE },            // OpenAI - fallback
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },  // Tencent - high quality with TEXTURES
+    { name: "TripoSR", fn: generateWithTripoSR },        // Stability AI - TEXTURED
+    { name: "InstantMesh", fn: generateWithInstantMesh }, // TencentARC - TEXTURED
+    { name: "LGM", fn: generateWithLGM },                 // Large Gaussian Model - TEXTURED
+    { name: "Cube3D", fn: generateWithCube3D },           // Roblox - geometry only (no textures)
+    { name: "Shap-E", fn: generateWithShapE },            // OpenAI - geometry only fallback
   ]
 
   for (const gen of generators) {
