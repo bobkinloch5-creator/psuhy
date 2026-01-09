@@ -3,6 +3,7 @@ import Image from "next/image"
 import { Download, CheckCircle, ArrowRight, Zap, Shield, RefreshCw, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { PluginTokenDisplay } from "@/components/plugin-token-display"
+import { PluginPairInput } from "@/components/plugin-pair-input"
 
 export default async function PluginPage() {
   const supabase = await createClient()
@@ -71,6 +72,11 @@ export default async function PluginPage() {
                 imports - just magic.
               </p>
             </div>
+
+            {/* Pairing code input for logged in users */}
+            {authUser && (
+              <PluginPairInput />
+            )}
 
             {/* Token Display for logged in users */}
             {pluginToken && (
