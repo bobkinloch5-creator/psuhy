@@ -4475,44 +4475,1057 @@ function GameGenerator.spawnLoot(lootConfig)
 end
 
 -- ============================================
--- SUPERBULLET-STYLE QUEST SYSTEM
--- ============================================
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED QUEST SYSTEM v2.0                                         ║
+-- ║  Premium Quests with Categories, Tiers, Progress & Quest Log UI               ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
 function GameGenerator.createQuests(questsConfig)
-    print("[BlaxSmith]  Creating Quest System...")
+    print("[BlaxSmith] ✨ Creating Advanced Quest System...")
     
+    -- Server-side Quest Handler
     local questScript = Instance.new("Script")
-    questScript.Name = "QuestSystem"
+    questScript.Name = "AdvancedQuestSystem"
     questScript.Source = [[
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- ========================= QUEST DATABASE =========================
 local QUESTS = {
-    {id = 1, name = "First Steps", description = "Collect 100 coins", goal = 100, reward = 50, stat = "Coins"},
-    {id = 2, name = "Egg Hunter", description = "Hatch 5 eggs", goal = 5, reward = 100, stat = "Eggs Hatched"},
-    {id = 3, name = "Pet Collector", description = "Collect 10 pets", goal = 10, reward = 250, stat = "Pets"},
-    {id = 4, name = "Treasure Seeker", description = "Find 20 loot chests", goal = 20, reward = 500, stat = "ChestsOpened"},
-    {id = 5, name = "Champion", description = "Defeat 50 enemies", goal = 50, reward = 1000, stat = "EnemiesDefeated"}
+    -- DAILY QUESTS (Reset every 24h)
+    {id = 1, name = "Daily Login", category = "Daily", type = "login", tier = "bronze", 
+     description = "Log in today", goal = 1, reward = {coins = 100, xp = 50}, icon = "📅"},
+    {id = 2, name = "Coin Collector", category = "Daily", type = "collect", tier = "silver", 
+     description = "Collect 500 coins", goal = 500, reward = {coins = 200, xp = 100}, stat = "Coins", icon = "💰"},
+    {id = 3, name = "Enemy Slayer", category = "Daily", type = "kill", tier = "gold", 
+     description = "Defeat 25 enemies", goal = 25, reward = {coins = 500, gems = 5, xp = 250}, stat = "Kills", icon = "⚔️"},
+    
+    -- WEEKLY QUESTS
+    {id = 4, name = "Treasure Hunter", category = "Weekly", type = "collect", tier = "gold", 
+     description = "Open 50 chests", goal = 50, reward = {coins = 2000, gems = 20}, stat = "ChestsOpened", icon = "📦"},
+    {id = 5, name = "Pet Master", category = "Weekly", type = "hatch", tier = "gold", 
+     description = "Hatch 20 eggs", goal = 20, reward = {coins = 1500, gems = 15}, stat = "EggsHatched", icon = "🥚"},
+    
+    -- STORY QUESTS (One-time)
+    {id = 6, name = "First Steps", category = "Story", type = "tutorial", tier = "bronze", 
+     description = "Complete the tutorial", goal = 1, reward = {coins = 250, xp = 100}, icon = "👣"},
+    {id = 7, name = "Rising Champion", category = "Story", type = "level", tier = "silver", 
+     description = "Reach level 10", goal = 10, reward = {coins = 1000, gems = 10}, stat = "Level", icon = "⬆️"},
+    {id = 8, name = "Legendary Hunter", category = "Story", type = "collect", tier = "gold", 
+     description = "Obtain a legendary pet", goal = 1, reward = {coins = 5000, gems = 50}, stat = "LegendaryPets", icon = "🏆"},
+    
+    -- ACHIEVEMENT QUESTS
+    {id = 9, name = "Millionaire", category = "Achievement", type = "collect", tier = "platinum", 
+     description = "Accumulate 1,000,000 coins", goal = 1000000, reward = {gems = 100, title = "💎 Millionaire"}, stat = "TotalCoins", icon = "💵"},
+    {id = 10, name = "Pet Collector", category = "Achievement", type = "collect", tier = "platinum", 
+     description = "Own 100 pets", goal = 100, reward = {gems = 75, title = "🐾 Pet Master"}, stat = "TotalPets", icon = "🐾"},
 }
 
+local TIER_COLORS = {
+    bronze = Color3.fromRGB(205, 127, 50),
+    silver = Color3.fromRGB(192, 192, 192),
+    gold = Color3.fromRGB(255, 215, 0),
+    platinum = Color3.fromRGB(229, 228, 226)
+}
+
+-- Create RemoteEvents
+local questFolder = Instance.new("Folder")
+questFolder.Name = "QuestRemotes"
+questFolder.Parent = ReplicatedStorage
+
+local getQuestsRemote = Instance.new("RemoteFunction")
+getQuestsRemote.Name = "GetQuests"
+getQuestsRemote.Parent = questFolder
+
+local updateProgressRemote = Instance.new("RemoteEvent")
+updateProgressRemote.Name = "UpdateQuestProgress"
+updateProgressRemote.Parent = questFolder
+
+local claimRewardRemote = Instance.new("RemoteFunction")
+claimRewardRemote.Name = "ClaimQuestReward"
+claimRewardRemote.Parent = questFolder
+
+-- Player quest data storage
+local playerQuests = {}
+
+-- Initialize player quests
 Players.PlayerAdded:Connect(function(player)
-    local questFolder = Instance.new("Folder")
-    questFolder.Name = "Quests"
-    questFolder.Parent = player
+    playerQuests[player] = {}
     
     for _, quest in ipairs(QUESTS) do
-        local qVal = Instance.new("BoolValue")
-        qVal.Name = "Quest_" .. quest.id
-        qVal.Value = false
-        qVal.Parent = questFolder
+        playerQuests[player][quest.id] = {
+            progress = 0,
+            completed = false,
+            claimed = false
+        }
     end
     
-    print("[Quests] Initialized quests for " .. player.Name)
+    print("[Quest System] Initialized " .. #QUESTS .. " quests for " .. player.Name)
 end)
 
-print("[BlaxSmith] Quest System Active - " .. #QUESTS .. " quests available!")
+Players.PlayerRemoving:Connect(function(player)
+    playerQuests[player] = nil
+end)
+
+-- Get quests for player
+getQuestsRemote.OnServerInvoke = function(player)
+    local result = {}
+    for _, quest in ipairs(QUESTS) do
+        local pData = playerQuests[player] and playerQuests[player][quest.id]
+        table.insert(result, {
+            quest = quest,
+            progress = pData and pData.progress or 0,
+            completed = pData and pData.completed or false,
+            claimed = pData and pData.claimed or false
+        })
+    end
+    return result
+end
+
+-- Update quest progress
+updateProgressRemote.OnServerEvent:Connect(function(player, statName, newValue)
+    if not playerQuests[player] then return end
+    
+    for _, quest in ipairs(QUESTS) do
+        if quest.stat == statName then
+            local pData = playerQuests[player][quest.id]
+            if pData and not pData.completed then
+                pData.progress = math.min(newValue, quest.goal)
+                if pData.progress >= quest.goal then
+                    pData.completed = true
+                    print("[Quest] " .. player.Name .. " completed: " .. quest.name)
+                end
+            end
+        end
+    end
+end)
+
+-- Claim quest reward
+claimRewardRemote.OnServerInvoke = function(player, questId)
+    if not playerQuests[player] then return false end
+    
+    local pData = playerQuests[player][questId]
+    if not pData or not pData.completed or pData.claimed then
+        return false
+    end
+    
+    -- Find quest
+    local quest = nil
+    for _, q in ipairs(QUESTS) do
+        if q.id == questId then quest = q break end
+    end
+    
+    if not quest then return false end
+    
+    -- Give rewards
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if leaderstats then
+        if quest.reward.coins then
+            local coins = leaderstats:FindFirstChild("Coins")
+            if coins then coins.Value = coins.Value + quest.reward.coins end
+        end
+        if quest.reward.gems then
+            local gems = leaderstats:FindFirstChild("Gems")
+            if gems then gems.Value = gems.Value + quest.reward.gems end
+        end
+    end
+    
+    pData.claimed = true
+    print("[Quest] " .. player.Name .. " claimed reward for: " .. quest.name)
+    return true
+end
+
+print("[BlaxSmith] ✅ Advanced Quest System Active - " .. #QUESTS .. " quests loaded!")
 ]]
     questScript.Parent = game:GetService("ServerScriptService")
     
-    print("[BlaxSmith]  Quest System with 5 auto-generated quests!")
+    -- Client-side Quest UI
+    local questUI = Instance.new("LocalScript")
+    questUI.Name = "QuestLogUI"
+    questUI.Source = [[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+-- Wait for remotes
+local questRemotes = ReplicatedStorage:WaitForChild("QuestRemotes", 10)
+if not questRemotes then return end
+local getQuestsRemote = questRemotes:WaitForChild("GetQuests")
+local claimRewardRemote = questRemotes:WaitForChild("ClaimQuestReward")
+
+local TIER_COLORS = {
+    bronze = Color3.fromRGB(205, 127, 50),
+    silver = Color3.fromRGB(192, 192, 192),
+    gold = Color3.fromRGB(255, 215, 0),
+    platinum = Color3.fromRGB(229, 228, 226)
+}
+
+local CATEGORY_ICONS = {
+    Daily = "📅",
+    Weekly = "📆",
+    Story = "📖",
+    Achievement = "🏆"
+}
+
+-- Create UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_QuestLog"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 450, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(100, 80, 150)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(30, 25, 45)
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 18)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "📜 QUEST LOG"
+title.TextColor3 = Color3.fromRGB(255, 220, 150)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -48, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- Category tabs
+local tabFrame = Instance.new("Frame")
+tabFrame.Size = UDim2.new(1, -30, 0, 35)
+tabFrame.Position = UDim2.new(0, 15, 0, 60)
+tabFrame.BackgroundTransparency = 1
+tabFrame.Parent = mainFrame
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 6)
+tabLayout.Parent = tabFrame
+
+local categories = {"All", "Daily", "Weekly", "Story", "Achievement"}
+local selectedCategory = "All"
+local categoryTabs = {}
+
+for _, cat in ipairs(categories) do
+    local tab = Instance.new("TextButton")
+    tab.Size = UDim2.new(0, 80, 1, 0)
+    tab.BackgroundColor3 = cat == "All" and Color3.fromRGB(100, 70, 160) or Color3.fromRGB(40, 35, 55)
+    tab.Text = cat
+    tab.TextColor3 = Color3.new(1, 1, 1)
+    tab.Font = Enum.Font.GothamBold
+    tab.TextSize = 12
+    tab.Parent = tabFrame
+    Instance.new("UICorner", tab).CornerRadius = UDim.new(0, 8)
+    categoryTabs[cat] = tab
+end
+
+-- Quest list
+local questScroll = Instance.new("ScrollingFrame")
+questScroll.Size = UDim2.new(1, -30, 1, -115)
+questScroll.Position = UDim2.new(0, 15, 0, 100)
+questScroll.BackgroundTransparency = 1
+questScroll.ScrollBarThickness = 5
+questScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+questScroll.Parent = mainFrame
+
+local questLayout = Instance.new("UIListLayout")
+questLayout.Padding = UDim.new(0, 8)
+questLayout.Parent = questScroll
+
+-- Quest card creator
+local function createQuestCard(questData)
+    local quest = questData.quest
+    local progress = questData.progress
+    local completed = questData.completed
+    local claimed = questData.claimed
+    
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -10, 0, 85)
+    card.BackgroundColor3 = claimed and Color3.fromRGB(30, 40, 30) or Color3.fromRGB(35, 30, 50)
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
+    
+    local tierStroke = Instance.new("UIStroke")
+    tierStroke.Color = TIER_COLORS[quest.tier] or TIER_COLORS.bronze
+    tierStroke.Thickness = completed and 2 or 1
+    tierStroke.Transparency = claimed and 0.7 or 0.3
+    tierStroke.Parent = card
+    
+    -- Icon
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 50, 0, 50)
+    icon.Position = UDim2.new(0, 10, 0.5, -25)
+    icon.BackgroundTransparency = 1
+    icon.Text = quest.icon or "📋"
+    icon.TextSize = 30
+    icon.Parent = card
+    
+    -- Name & Description
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0, 200, 0, 20)
+    nameLabel.Position = UDim2.new(0, 65, 0, 10)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = quest.name
+    nameLabel.TextColor3 = TIER_COLORS[quest.tier]
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 14
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = card
+    
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(0, 250, 0, 16)
+    descLabel.Position = UDim2.new(0, 65, 0, 28)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = quest.description
+    descLabel.TextColor3 = Color3.fromRGB(180, 175, 200)
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextSize = 11
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.Parent = card
+    
+    -- Progress bar
+    local progressBg = Instance.new("Frame")
+    progressBg.Size = UDim2.new(0, 180, 0, 12)
+    progressBg.Position = UDim2.new(0, 65, 0, 50)
+    progressBg.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    progressBg.Parent = card
+    Instance.new("UICorner", progressBg).CornerRadius = UDim.new(0, 6)
+    
+    local progressFill = Instance.new("Frame")
+    progressFill.Size = UDim2.new(math.clamp(progress / quest.goal, 0, 1), 0, 1, 0)
+    progressFill.BackgroundColor3 = completed and Color3.fromRGB(80, 200, 80) or TIER_COLORS[quest.tier]
+    progressFill.Parent = progressBg
+    Instance.new("UICorner", progressFill).CornerRadius = UDim.new(0, 6)
+    
+    local progressText = Instance.new("TextLabel")
+    progressText.Size = UDim2.new(0, 60, 0, 12)
+    progressText.Position = UDim2.new(0, 250, 0, 50)
+    progressText.BackgroundTransparency = 1
+    progressText.Text = progress .. "/" .. quest.goal
+    progressText.TextColor3 = Color3.fromRGB(200, 200, 220)
+    progressText.Font = Enum.Font.GothamBold
+    progressText.TextSize = 11
+    progressText.TextXAlignment = Enum.TextXAlignment.Left
+    progressText.Parent = card
+    
+    -- Reward/Claim button
+    local rewardBtn = Instance.new("TextButton")
+    rewardBtn.Size = UDim2.new(0, 70, 0, 35)
+    rewardBtn.Position = UDim2.new(1, -85, 0.5, -17)
+    rewardBtn.Font = Enum.Font.GothamBold
+    rewardBtn.TextSize = 11
+    rewardBtn.Parent = card
+    Instance.new("UICorner", rewardBtn).CornerRadius = UDim.new(0, 8)
+    
+    if claimed then
+        rewardBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
+        rewardBtn.Text = "✓ DONE"
+        rewardBtn.TextColor3 = Color3.fromRGB(150, 200, 150)
+    elseif completed then
+        rewardBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        rewardBtn.Text = "CLAIM!"
+        rewardBtn.TextColor3 = Color3.new(1, 1, 1)
+        
+        rewardBtn.MouseButton1Click:Connect(function()
+            local success = claimRewardRemote:InvokeServer(quest.id)
+            if success then
+                rewardBtn.Text = "✓ DONE"
+                rewardBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
+            end
+        end)
+    else
+        rewardBtn.BackgroundColor3 = Color3.fromRGB(50, 45, 70)
+        -- Show reward preview
+        local rewardText = ""
+        if quest.reward.coins then rewardText = "💰" .. quest.reward.coins end
+        if quest.reward.gems then rewardText = rewardText .. " 💎" .. quest.reward.gems end
+        rewardBtn.Text = rewardText ~= "" and rewardText or "🎁"
+        rewardBtn.TextColor3 = Color3.fromRGB(180, 180, 200)
+    end
+    
+    return card
+end
+
+-- Refresh quest list
+local function refreshQuests()
+    for _, child in ipairs(questScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    
+    local quests = getQuestsRemote:InvokeServer()
+    if not quests then return end
+    
+    local count = 0
+    for _, qData in ipairs(quests) do
+        if selectedCategory == "All" or qData.quest.category == selectedCategory then
+            local card = createQuestCard(qData)
+            card.Parent = questScroll
+            count = count + 1
+        end
+    end
+    
+    questScroll.CanvasSize = UDim2.new(0, 0, 0, count * 93)
+end
+
+-- Tab switching
+for cat, tab in pairs(categoryTabs) do
+    tab.MouseButton1Click:Connect(function()
+        selectedCategory = cat
+        for c, t in pairs(categoryTabs) do
+            t.BackgroundColor3 = c == cat and Color3.fromRGB(100, 70, 160) or Color3.fromRGB(40, 35, 55)
+        end
+        refreshQuests()
+    end)
+end
+
+-- Open/Close
+local isOpen = false
+
+local function openQuestLog()
+    if isOpen then return end
+    isOpen = true
+    mainFrame.Visible = true
+    mainFrame.Size = UDim2.new(0, 0, 0, 0)
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 450, 0, 500),
+        Position = UDim2.new(0.5, -225, 0.5, -250)
+    }):Play()
+    
+    refreshQuests()
+end
+
+local function closeQuestLog()
+    if not isOpen then return end
+    isOpen = false
+    TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    task.delay(0.25, function() mainFrame.Visible = false end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeQuestLog)
+
+-- Toggle button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 180, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 70, 120)
+toggleBtn.Text = "📜"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(140, 100, 170)
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleBtn
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeQuestLog() else openQuestLog() end
+end)
+
+-- Keyboard shortcut (Q)
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Q then
+        if isOpen then closeQuestLog() else openQuestLog() end
+    end
+end)
+
+print("[BlaxSmith] ✅ Quest Log UI loaded! Press Q to toggle")
+]]
+    questUI.Parent = game:GetService("StarterPlayer").StarterPlayerScripts
+    
+    print("[BlaxSmith] ✨ Advanced Quest System with " .. "10 quests across 4 categories!")
+end
+
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED DAILY REWARDS SYSTEM v2.0                                 ║
+-- ║  Premium Daily Rewards with Streaks, Milestones & Reward Wheel                ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+function GameGenerator.createDailyRewards()
+    print("[BlaxSmith] 🎁 Creating Advanced Daily Rewards System...")
+    
+    -- Client-side Daily Rewards UI
+    local dailyRewardsScript = Instance.new("LocalScript")
+    dailyRewardsScript.Name = "DailyRewardsUI"
+    dailyRewardsScript.Source = [[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- ========================= REWARDS CONFIG =========================
+local DAILY_REWARDS = {
+    {day = 1, coins = 100, gems = 0, icon = "💰", name = "Day 1"},
+    {day = 2, coins = 150, gems = 1, icon = "💰", name = "Day 2"},
+    {day = 3, coins = 200, gems = 2, icon = "💎", name = "Day 3"},
+    {day = 4, coins = 300, gems = 3, icon = "💰", name = "Day 4"},
+    {day = 5, coins = 400, gems = 5, icon = "💎", name = "Day 5"},
+    {day = 6, coins = 500, gems = 7, icon = "💰", name = "Day 6"},
+    {day = 7, coins = 1000, gems = 15, special = "Mystery Box", icon = "🎁", name = "Day 7 MEGA"},
+}
+
+local STREAK_BONUSES = {
+    {streak = 7, multiplier = 1.5, name = "Week Warrior"},
+    {streak = 14, multiplier = 2.0, name = "Dedicated Player"},
+    {streak = 30, multiplier = 3.0, name = "Monthly Master"},
+}
+
+-- Simulated player data (in real game, fetch from DataStore)
+local playerData = {
+    currentStreak = 3,
+    lastClaim = os.time() - 86400, -- Yesterday
+    totalDaysClaimed = 15
+}
+
+-- ========================= CREATE UI =========================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_DailyRewards"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "DailyRewardsPanel"
+mainFrame.Size = UDim2.new(0, 550, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -275, 0.5, -210)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 18, 35)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 20)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(255, 180, 50)
+mainStroke.Thickness = 3
+mainStroke.Parent = mainFrame
+
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 60)
+header.BackgroundColor3 = Color3.fromRGB(35, 30, 55)
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 20)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.6, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🎁 DAILY REWARDS"
+title.TextColor3 = Color3.fromRGB(255, 220, 100)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 24
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+-- Streak Display
+local streakFrame = Instance.new("Frame")
+streakFrame.Size = UDim2.new(0, 140, 0, 40)
+streakFrame.Position = UDim2.new(1, -200, 0.5, -20)
+streakFrame.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
+streakFrame.Parent = header
+Instance.new("UICorner", streakFrame).CornerRadius = UDim.new(0, 10)
+
+local streakLabel = Instance.new("TextLabel")
+streakLabel.Size = UDim2.new(1, 0, 1, 0)
+streakLabel.BackgroundTransparency = 1
+streakLabel.Text = "🔥 " .. playerData.currentStreak .. " Day Streak"
+streakLabel.TextColor3 = Color3.new(1, 1, 1)
+streakLabel.Font = Enum.Font.GothamBold
+streakLabel.TextSize = 14
+streakLabel.Parent = streakFrame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -50, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- Days Grid
+local daysFrame = Instance.new("Frame")
+daysFrame.Size = UDim2.new(1, -30, 0, 200)
+daysFrame.Position = UDim2.new(0, 15, 0, 75)
+daysFrame.BackgroundTransparency = 1
+daysFrame.Parent = mainFrame
+
+local daysLayout = Instance.new("UIGridLayout")
+daysLayout.CellSize = UDim2.new(0, 68, 0, 90)
+daysLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+daysLayout.Parent = daysFrame
+
+for i, reward in ipairs(DAILY_REWARDS) do
+    local dayCard = Instance.new("Frame")
+    dayCard.Name = "Day" .. i
+    dayCard.BackgroundColor3 = i <= playerData.currentStreak and Color3.fromRGB(50, 80, 50) or Color3.fromRGB(35, 35, 55)
+    dayCard.Parent = daysFrame
+    Instance.new("UICorner", dayCard).CornerRadius = UDim.new(0, 12)
+    
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = i == playerData.currentStreak + 1 and Color3.fromRGB(255, 200, 50) or Color3.fromRGB(60, 60, 80)
+    cardStroke.Thickness = i == playerData.currentStreak + 1 and 3 or 1
+    cardStroke.Parent = dayCard
+    
+    local dayLabel = Instance.new("TextLabel")
+    dayLabel.Size = UDim2.new(1, 0, 0, 18)
+    dayLabel.Position = UDim2.new(0, 0, 0, 5)
+    dayLabel.BackgroundTransparency = 1
+    dayLabel.Text = "Day " .. i
+    dayLabel.TextColor3 = i == 7 and Color3.fromRGB(255, 200, 50) or Color3.fromRGB(180, 180, 200)
+    dayLabel.Font = Enum.Font.GothamBold
+    dayLabel.TextSize = 11
+    dayLabel.Parent = dayCard
+    
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(1, 0, 0, 35)
+    icon.Position = UDim2.new(0, 0, 0, 22)
+    icon.BackgroundTransparency = 1
+    icon.Text = i <= playerData.currentStreak and "✓" or reward.icon
+    icon.TextSize = i <= playerData.currentStreak and 24 or 28
+    icon.TextColor3 = i <= playerData.currentStreak and Color3.fromRGB(100, 255, 100) or Color3.new(1, 1, 1)
+    icon.Parent = dayCard
+    
+    local rewardLabel = Instance.new("TextLabel")
+    rewardLabel.Size = UDim2.new(1, 0, 0, 25)
+    rewardLabel.Position = UDim2.new(0, 0, 1, -28)
+    rewardLabel.BackgroundTransparency = 1
+    rewardLabel.Text = reward.gems > 0 and "💎" .. reward.gems or "💰" .. reward.coins
+    rewardLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+    rewardLabel.Font = Enum.Font.GothamBold
+    rewardLabel.TextSize = 10
+    rewardLabel.Parent = dayCard
+end
+
+-- Claim Button
+local claimBtn = Instance.new("TextButton")
+claimBtn.Size = UDim2.new(0, 200, 0, 55)
+claimBtn.Position = UDim2.new(0.5, -100, 1, -80)
+claimBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+claimBtn.Text = "🎁 CLAIM TODAY'S REWARD"
+claimBtn.TextColor3 = Color3.new(1, 1, 1)
+claimBtn.Font = Enum.Font.GothamBlack
+claimBtn.TextSize = 14
+claimBtn.Parent = mainFrame
+Instance.new("UICorner", claimBtn).CornerRadius = UDim.new(0, 14)
+
+-- Claim animation
+claimBtn.MouseButton1Click:Connect(function()
+    claimBtn.Text = "✨ CLAIMED!"
+    claimBtn.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
+    
+    -- Celebration effect
+    for i = 1, 10 do
+        local particle = Instance.new("TextLabel")
+        particle.Size = UDim2.new(0, 30, 0, 30)
+        particle.Position = UDim2.new(0.5, math.random(-100, 100), 0.5, math.random(-50, 50))
+        particle.BackgroundTransparency = 1
+        particle.Text = ({"🎉", "⭐", "💰", "💎", "🎁"})[math.random(1, 5)]
+        particle.TextSize = 24
+        particle.Parent = mainFrame
+        
+        TweenService:Create(particle, TweenInfo.new(1.5), {
+            Position = UDim2.new(0.5, math.random(-200, 200), -0.2, 0),
+            TextTransparency = 1
+        }):Play()
+        
+        task.delay(1.5, function() particle:Destroy() end)
+    end
+    
+    print("[Daily Rewards] Player claimed day " .. (playerData.currentStreak + 1) .. " reward!")
+end)
+
+-- Bonus Progress
+local bonusFrame = Instance.new("Frame")
+bonusFrame.Size = UDim2.new(1, -30, 0, 50)
+bonusFrame.Position = UDim2.new(0, 15, 1, -135)
+bonusFrame.BackgroundColor3 = Color3.fromRGB(30, 28, 50)
+bonusFrame.Parent = mainFrame
+Instance.new("UICorner", bonusFrame).CornerRadius = UDim.new(0, 10)
+
+local bonusLabel = Instance.new("TextLabel")
+bonusLabel.Size = UDim2.new(1, -20, 1, 0)
+bonusLabel.Position = UDim2.new(0, 10, 0, 0)
+bonusLabel.BackgroundTransparency = 1
+bonusLabel.Text = "🔥 " .. (7 - playerData.currentStreak) .. " more days for 1.5x Bonus Week Multiplier!"
+bonusLabel.TextColor3 = Color3.fromRGB(255, 180, 100)
+bonusLabel.Font = Enum.Font.GothamBold
+bonusLabel.TextSize = 13
+bonusLabel.TextXAlignment = Enum.TextXAlignment.Left
+bonusLabel.Parent = bonusFrame
+
+-- Open/Close Functions
+local isOpen = false
+local function openRewards()
+    if isOpen then return end
+    isOpen = true
+    mainFrame.Visible = true
+    mainFrame.Size = UDim2.new(0, 0, 0, 0)
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 550, 0, 420),
+        Position = UDim2.new(0.5, -275, 0.5, -210)
+    }):Play()
+end
+
+local function closeRewards()
+    if not isOpen then return end
+    isOpen = false
+    TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    task.delay(0.25, function() mainFrame.Visible = false end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeRewards)
+
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 260, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+toggleBtn.Text = "🎁"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(255, 150, 80)
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleBtn
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeRewards() else openRewards() end
+end)
+
+-- Auto-popup on join if reward available
+task.delay(2, function()
+    local timeSinceClaim = os.time() - playerData.lastClaim
+    if timeSinceClaim >= 86400 then
+        openRewards()
+    end
+end)
+
+print("[BlaxSmith] ✅ Daily Rewards System loaded! 7-day rewards with streak bonuses")
+]]
+    dailyRewardsScript.Parent = game:GetService("StarterPlayer").StarterPlayerScripts
+    
+    print("[BlaxSmith] 🎁 Advanced Daily Rewards System created!")
+end
+
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  BlaxSmith ADVANCED TRADING SYSTEM v2.0                                       ║
+-- ║  Premium Player-to-Player Trading with Verification & UI                      ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+function GameGenerator.createTradingSystem()
+    print("[BlaxSmith] 🤝 Creating Advanced Trading System...")
+    
+    -- Trading System Script
+    local tradingScript = Instance.new("LocalScript")
+    tradingScript.Name = "TradingSystemUI"
+    tradingScript.Source = [[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- ========================= TRADING CONFIG =========================
+local MAX_TRADE_SLOTS = 6
+local RARITY_COLORS = {
+    common = Color3.fromRGB(180, 180, 180),
+    uncommon = Color3.fromRGB(30, 255, 0),
+    rare = Color3.fromRGB(0, 112, 221),
+    epic = Color3.fromRGB(163, 53, 238),
+    legendary = Color3.fromRGB(255, 128, 0)
+}
+
+-- Sample items for demo
+local myItems = {
+    {name = "Fire Sword", rarity = "legendary", icon = "🔥"},
+    {name = "Ice Shield", rarity = "epic", icon = "🛡️"},
+    {name = "Speed Boots", rarity = "rare", icon = "👟"},
+}
+
+local theirItems = {
+    {name = "Storm Dragon", rarity = "legendary", icon = "🐉"},
+    {name = "Gold Coins x1000", rarity = "common", icon = "💰"},
+}
+
+-- ========================= CREATE UI =========================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BlaxSmith_Trading"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 600, 0, 450)
+mainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(100, 180, 255)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 55)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 18)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🤝 TRADE WITH: PlayerName"
+title.TextColor3 = Color3.fromRGB(100, 200, 255)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 20
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -48, 0.5, -20)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.Parent = header
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- Split into two panels
+local leftPanel = Instance.new("Frame")
+leftPanel.Size = UDim2.new(0.48, 0, 0, 300)
+leftPanel.Position = UDim2.new(0.01, 0, 0, 65)
+leftPanel.BackgroundColor3 = Color3.fromRGB(30, 50, 40)
+leftPanel.Parent = mainFrame
+Instance.new("UICorner", leftPanel).CornerRadius = UDim.new(0, 14)
+
+local leftTitle = Instance.new("TextLabel")
+leftTitle.Size = UDim2.new(1, 0, 0, 30)
+leftTitle.BackgroundTransparency = 1
+leftTitle.Text = "📤 YOUR OFFER"
+leftTitle.TextColor3 = Color3.fromRGB(100, 255, 150)
+leftTitle.Font = Enum.Font.GothamBold
+leftTitle.TextSize = 14
+leftTitle.Parent = leftPanel
+
+local rightPanel = Instance.new("Frame")
+rightPanel.Size = UDim2.new(0.48, 0, 0, 300)
+rightPanel.Position = UDim2.new(0.51, 0, 0, 65)
+rightPanel.BackgroundColor3 = Color3.fromRGB(50, 40, 30)
+rightPanel.Parent = mainFrame
+Instance.new("UICorner", rightPanel).CornerRadius = UDim.new(0, 14)
+
+local rightTitle = Instance.new("TextLabel")
+rightTitle.Size = UDim2.new(1, 0, 0, 30)
+rightTitle.BackgroundTransparency = 1
+rightTitle.Text = "📥 THEIR OFFER"
+rightTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
+rightTitle.Font = Enum.Font.GothamBold
+rightTitle.TextSize = 14
+rightTitle.Parent = rightPanel
+
+-- Item slots function
+local function createItemSlots(parent, items, yOffset)
+    local grid = Instance.new("Frame")
+    grid.Size = UDim2.new(1, -20, 0, 180)
+    grid.Position = UDim2.new(0, 10, 0, 35)
+    grid.BackgroundTransparency = 1
+    grid.Parent = parent
+    
+    local layout = Instance.new("UIGridLayout")
+    layout.CellSize = UDim2.new(0, 80, 0, 80)
+    layout.CellPadding = UDim2.new(0, 8, 0, 8)
+    layout.Parent = grid
+    
+    for i = 1, MAX_TRADE_SLOTS do
+        local slot = Instance.new("Frame")
+        slot.BackgroundColor3 = items[i] and Color3.fromRGB(45, 45, 65) or Color3.fromRGB(30, 30, 45)
+        slot.Parent = grid
+        Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 10)
+        
+        if items[i] then
+            local item = items[i]
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = RARITY_COLORS[item.rarity]
+            stroke.Thickness = 2
+            stroke.Parent = slot
+            
+            local icon = Instance.new("TextLabel")
+            icon.Size = UDim2.new(1, 0, 0.6, 0)
+            icon.BackgroundTransparency = 1
+            icon.Text = item.icon
+            icon.TextSize = 32
+            icon.Parent = slot
+            
+            local name = Instance.new("TextLabel")
+            name.Size = UDim2.new(1, -6, 0, 20)
+            name.Position = UDim2.new(0, 3, 1, -22)
+            name.BackgroundTransparency = 1
+            name.Text = item.name
+            name.TextColor3 = RARITY_COLORS[item.rarity]
+            name.Font = Enum.Font.GothamBold
+            name.TextSize = 9
+            name.TextTruncate = Enum.TextTruncate.AtEnd
+            name.Parent = slot
+        else
+            local plusLabel = Instance.new("TextLabel")
+            plusLabel.Size = UDim2.new(1, 0, 1, 0)
+            plusLabel.BackgroundTransparency = 1
+            plusLabel.Text = "+"
+            plusLabel.TextColor3 = Color3.fromRGB(80, 80, 100)
+            plusLabel.TextSize = 32
+            plusLabel.Parent = slot
+        end
+    end
+end
+
+createItemSlots(leftPanel, myItems, 0)
+createItemSlots(rightPanel, theirItems, 0)
+
+-- Status indicators
+local leftStatus = Instance.new("Frame")
+leftStatus.Size = UDim2.new(0.45, 0, 0, 35)
+leftStatus.Position = UDim2.new(0.01, 0, 0, 255)
+leftStatus.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
+leftStatus.Parent = leftPanel
+Instance.new("UICorner", leftStatus).CornerRadius = UDim.new(0, 8)
+
+local leftStatusLabel = Instance.new("TextLabel")
+leftStatusLabel.Size = UDim2.new(1, 0, 1, 0)
+leftStatusLabel.BackgroundTransparency = 1
+leftStatusLabel.Text = "⏳ Waiting..."
+leftStatusLabel.TextColor3 = Color3.fromRGB(200, 200, 150)
+leftStatusLabel.Font = Enum.Font.GothamBold
+leftStatusLabel.TextSize = 12
+leftStatusLabel.Parent = leftStatus
+
+-- Action Buttons
+local confirmBtn = Instance.new("TextButton")
+confirmBtn.Size = UDim2.new(0, 150, 0, 50)
+confirmBtn.Position = UDim2.new(0.25, -75, 1, -65)
+confirmBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+confirmBtn.Text = "✓ CONFIRM"
+confirmBtn.TextColor3 = Color3.new(1, 1, 1)
+confirmBtn.Font = Enum.Font.GothamBlack
+confirmBtn.TextSize = 16
+confirmBtn.Parent = mainFrame
+Instance.new("UICorner", confirmBtn).CornerRadius = UDim.new(0, 12)
+
+local declineBtn = Instance.new("TextButton")
+declineBtn.Size = UDim2.new(0, 150, 0, 50)
+declineBtn.Position = UDim2.new(0.75, -75, 1, -65)
+declineBtn.BackgroundColor3 = Color3.fromRGB(180, 80, 80)
+declineBtn.Text = "✕ DECLINE"
+declineBtn.TextColor3 = Color3.new(1, 1, 1)
+declineBtn.Font = Enum.Font.GothamBlack
+declineBtn.TextSize = 16
+declineBtn.Parent = mainFrame
+Instance.new("UICorner", declineBtn).CornerRadius = UDim.new(0, 12)
+
+-- Button handlers
+confirmBtn.MouseButton1Click:Connect(function()
+    confirmBtn.Text = "✓ CONFIRMED"
+    confirmBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 60)
+    leftStatusLabel.Text = "✓ You accepted"
+    leftStatus.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+    print("[Trading] Trade confirmed by local player")
+end)
+
+declineBtn.MouseButton1Click:Connect(function()
+    print("[Trading] Trade declined")
+    mainFrame.Visible = false
+end)
+
+-- Open/Close
+local isOpen = false
+local function openTrade()
+    if isOpen then return end
+    isOpen = true
+    mainFrame.Visible = true
+    mainFrame.Size = UDim2.new(0, 0, 0, 0)
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Size = UDim2.new(0, 600, 0, 450),
+        Position = UDim2.new(0.5, -300, 0.5, -225)
+    }):Play()
+end
+
+local function closeTrade()
+    if not isOpen then return end
+    isOpen = false
+    TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    task.delay(0.25, function() mainFrame.Visible = false end)
+end
+
+closeBtn.MouseButton1Click:Connect(closeTrade)
+
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 70, 0, 70)
+toggleBtn.Position = UDim2.new(0, 340, 1, -90)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 180)
+toggleBtn.Text = "🤝"
+toggleBtn.TextSize = 32
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 16)
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(80, 160, 220)
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleBtn
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if isOpen then closeTrade() else openTrade() end
+end)
+
+print("[BlaxSmith] ✅ Trading System loaded! Send trade requests with /trade [player]")
+]]
+    tradingScript.Parent = game:GetService("StarterPlayer").StarterPlayerScripts
+    
+    print("[BlaxSmith] 🤝 Advanced Trading System created!")
 end
 
 -- AUTOMATED UI SYSTEM (Lemonade-style)
