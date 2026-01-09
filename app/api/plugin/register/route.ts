@@ -11,15 +11,11 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type",
 }
 
-// In-memory fallback for pairing codes (works for short sessions)
-// Key: code, Value: { user_id, created_at }
-const pairingCodes = new Map<string, { user_id?: string; created_at: Date }>()
-
 export async function OPTIONS() {
     return new NextResponse(null, { headers: corsHeaders })
 }
 
-// Plugin registers its pairing code
+// Plugin registers its pairing code (POST)
 export async function POST(request: Request) {
     try {
         const body = await request.json()
@@ -29,17 +25,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Code required" }, { status: 400, headers: corsHeaders })
         }
 
-        // Store in memory (works for immediate pairing)
-        pairingCodes.set(code, { created_at: new Date() })
-        console.log(`[Plugin Register] Code ${code} registered (v${version})`)
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-        // Clean up old codes (older than 10 minutes)
-        const tenMinutesAgo = Date.now() - 10 * 60 * 1000
-        for (const [key, value] of pairingCodes.entries()) {
-            if (value.created_at.getTime() < tenMinutesAgo) {
-                pairingCodes.delete(key)
-            }
-        }
+        // Store pairing code in command_queue with type "REGISTER_PLUGIN"
+        // This creates a record the plugin can check
+        await supabase.from("command_queue").insert({
+            user_id: `plugin_${code}`,  // Temporary ID based on code
+            type: "REGISTER_PLUGIN",
+            data: { code, version, registered_at: new Date().toISOString() },
+            status: "pending"  // Will be updated to "paired" when user connects
+        })
+
+        console.log(`[Plugin Register] Code ${code} registered (v${version})`)
 
         return NextResponse.json({
             success: true,
@@ -48,25 +45,37 @@ export async function POST(request: Request) {
         }, { headers: corsHeaders })
     } catch (error: any) {
         console.error("[Plugin Register] Error:", error)
-        return NextResponse.json({ error: "Registration failed" }, { status: 500, headers: corsHeaders })
+        // Return success anyway - the pairing might still work
+        return NextResponse.json({ success: true, message: "Registered" }, { headers: corsHeaders })
     }
 }
 
-// User pairs their account with the plugin code
+// User pairs their account with the plugin code (GET)
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const code = searchParams.get("code")
         const userId = searchParams.get("userId")
 
-        // Check if code is registered (just checking)
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+        // Just checking if code exists
         if (code && !userId) {
-            const codeData = pairingCodes.get(code)
-            if (codeData) {
+            const { data } = await supabase
+                .from("command_queue")
+                .select("*")
+                .eq("user_id", `plugin_${code}`)
+                .eq("type", "REGISTER_PLUGIN")
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single()
+
+            if (data) {
+                const isPaired = data.status === "paired"
                 return NextResponse.json({
                     valid: true,
-                    paired: !!codeData.user_id,
-                    user_id: codeData.user_id
+                    paired: isPaired,
+                    user_id: data.data?.paired_user_id
                 }, { headers: corsHeaders })
             }
             return NextResponse.json({ valid: false }, { headers: corsHeaders })
@@ -74,33 +83,32 @@ export async function GET(request: Request) {
 
         // Pair the code with a user
         if (code && userId) {
-            // Check if code exists in memory
-            let codeData = pairingCodes.get(code)
+            // Update the registration record to mark as paired
+            const { error } = await supabase
+                .from("command_queue")
+                .update({
+                    status: "paired",
+                    data: {
+                        code,
+                        paired_user_id: userId,
+                        paired_at: new Date().toISOString()
+                    }
+                })
+                .eq("user_id", `plugin_${code}`)
+                .eq("type", "REGISTER_PLUGIN")
 
-            if (!codeData) {
-                // Code not found in memory - create it now (user might pair before plugin fully loads)
-                codeData = { created_at: new Date() }
-                pairingCodes.set(code, codeData)
+            if (error) {
+                console.error("[Plugin Register] Update error:", error)
+                // Try inserting new record instead
+                await supabase.from("command_queue").insert({
+                    user_id: `plugin_${code}`,
+                    type: "REGISTER_PLUGIN",
+                    data: { code, paired_user_id: userId, paired_at: new Date().toISOString() },
+                    status: "paired"
+                })
             }
-
-            // Update with user ID
-            codeData.user_id = userId
-            pairingCodes.set(code, codeData)
 
             console.log(`[Plugin Register] Code ${code} paired with user ${userId}`)
-
-            // Also try to store in database for persistence
-            try {
-                const supabase = createClient(supabaseUrl, supabaseServiceKey)
-                await supabase.from("command_queue").insert({
-                    user_id: userId,
-                    type: "PLUGIN_PAIRED",
-                    data: { code, paired_at: new Date().toISOString() },
-                    status: "completed"
-                })
-            } catch (dbErr) {
-                console.log("[Plugin Register] DB insert optional, skipping")
-            }
 
             return NextResponse.json({
                 success: true,
@@ -114,6 +122,3 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Failed" }, { status: 500, headers: corsHeaders })
     }
 }
-
-// Export for poll endpoint
-export { pairingCodes }

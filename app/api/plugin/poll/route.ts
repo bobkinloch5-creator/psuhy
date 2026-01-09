@@ -24,24 +24,31 @@ export async function GET(request: Request) {
     // Use service client for plugin (no cookie auth)
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // If using pairing code, look up the paired user ID from in-memory storage
+    // If using pairing code, look up the paired user ID from database
     if (pairingCode && !pluginUserId) {
       try {
-        // Import pairing codes from register endpoint
-        const { pairingCodes } = await import("../register/route")
-        const codeData = pairingCodes.get(pairingCode)
+        // Look up pairing status in command_queue
+        const { data: pairingData } = await supabase
+          .from("command_queue")
+          .select("*")
+          .eq("user_id", `plugin_${pairingCode}`)
+          .eq("type", "REGISTER_PLUGIN")
+          .eq("status", "paired")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
 
-        if (codeData?.user_id) {
-          pluginUserId = codeData.user_id
+        if (pairingData?.data?.paired_user_id) {
+          pluginUserId = pairingData.data.paired_user_id
           console.log(`[Poll] Code ${pairingCode} mapped to user ${pluginUserId}`)
         } else {
-          // Code exists but not yet paired - return empty array (signals plugin is waiting)
-          console.log(`[Poll] Code ${pairingCode} registered but not yet paired`)
+          // Code not yet paired - return empty array (plugin keeps waiting)
+          console.log(`[Poll] Code ${pairingCode} not yet paired`)
           return NextResponse.json([], { headers: corsHeaders })
         }
-      } catch (importErr: any) {
-        console.log("[Poll] Pairing lookup failed:", importErr.message)
-        // Return empty if lookup fails
+      } catch (err: any) {
+        console.log("[Poll] Pairing lookup:", err.message)
+        // Return empty if lookup fails (plugin keeps polling)
         return NextResponse.json([], { headers: corsHeaders })
       }
     }
