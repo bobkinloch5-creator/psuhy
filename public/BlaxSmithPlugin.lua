@@ -286,8 +286,9 @@ local function startPolling()
                                 warn("[BlaxSmith]  executeCommand not ready yet!")
                             end
                         end
-                    end
-                end
+                        end  -- end if #decoded > 0
+                    end  -- end if type(decoded) == table
+                end  -- end if response
             end)
             wait(1)
         end
