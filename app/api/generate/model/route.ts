@@ -23,7 +23,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
 
   try {
     // Step 1: Generate a reference image from the prompt using CometAPI image generation
-    console.log("[CometAPI-3D] Step 1: Generating reference image...")
+    console.log("[CometAPI-3D] Step 1: Generating HD reference image...")
 
     const imageResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
       method: "POST",
@@ -54,31 +54,19 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
 
     console.log("[CometAPI-3D] Got reference image:", imageUrl.slice(0, 100))
 
-    // Step 2: Convert image to base64 for 3D generation
-    const imageBuffer = await fetch(imageUrl)
-    const imageArrayBuffer = await imageBuffer.arrayBuffer()
-    const base64Image = Buffer.from(imageArrayBuffer).toString('base64')
-
-    // Step 3: Generate 3D model using Hunyuan3D-2 via CometAPI
+    // Step 2: Generate 3D model using Hunyuan3D-2 via same endpoint (OpenAI-compatible)
     console.log("[CometAPI-3D] Step 2: Generating 3D model with Hunyuan3D-2...")
 
-    const modelResponse = await fetch("https://api.cometapi.com/v1/3d/generate", {
+    const modelResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "hunyuan3d-2",
-        image: base64Image,
-        texture: true,           // Enable texture generation
-        seed: 1234,
-        remove_background: true,
-        octree_resolution: 256,  // High quality mesh
-        num_inference_steps: 20,
-        guidance_scale: 7.0,
-        num_chunks: 8000,
-        type: "glb",             // Output format
+        model: "Hunyuan3D-2",  // CometAPI's Hunyuan3D-2 model
+        prompt: prompt,       // Text description for the 3D model
+        image: imageUrl,      // Reference image URL
       }),
     })
 
@@ -91,42 +79,48 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
     const modelData = await modelResponse.json()
     console.log("[CometAPI-3D] Response:", JSON.stringify(modelData).slice(0, 500))
 
-    // Handle different response formats
-    let modelUrl: string | null = null
+    // Handle response - CometAPI returns data array with url or b64_json
+    if (modelData.data && modelData.data.length > 0) {
+      const data = modelData.data[0]
 
-    // Check for direct URL
-    if (modelData.url) {
-      modelUrl = modelData.url
-    } else if (modelData.data?.url) {
-      modelUrl = modelData.data.url
-    } else if (modelData.output?.url) {
-      modelUrl = modelData.output.url
-    } else if (modelData.model_url) {
-      modelUrl = modelData.model_url
-    } else if (modelData.glb_url) {
-      modelUrl = modelData.glb_url
-    } else if (typeof modelData.data === 'string') {
-      // Base64 encoded model - would need to upload to storage
-      console.log("[CometAPI-3D] Got base64 model data, uploading...")
-      // For now, throw to try alternative
-      throw new Error("Base64 response not yet supported")
-    }
+      // Check for direct URL
+      if (data.url) {
+        console.log("[CometAPI-3D] ✅ Got 3D model URL:", data.url)
+        return {
+          model_url: data.url,
+          preview_url: imageUrl,
+          formats: {
+            glb: data.url,
+            obj: null,
+            fbx: null,
+          },
+          source: "CometAPI Hunyuan3D-2 (Premium HD)"
+        }
+      }
 
-    if (modelUrl) {
-      console.log("[CometAPI-3D] ✅ Got 3D model URL:", modelUrl)
-      return {
-        model_url: modelUrl,
-        preview_url: imageUrl,
-        formats: {
-          glb: modelUrl.includes('.glb') ? modelUrl : modelUrl,
-          obj: null,
-          fbx: null,
-        },
-        source: "CometAPI Hunyuan3D-2 (Premium)"
+      // Handle base64 response - upload to Supabase
+      if (data.b64_json) {
+        console.log("[CometAPI-3D] Got base64 data, converting...")
+        // Return with base64 data for the caller to handle storage
+        const modelBuffer = Buffer.from(data.b64_json, 'base64')
+        const blob = new Blob([modelBuffer], { type: 'model/gltf-binary' })
+        // Create a data URL for now - will be stored in Supabase later
+        const dataUrl = `data:model/gltf-binary;base64,${data.b64_json}`
+
+        return {
+          model_url: dataUrl,
+          preview_url: imageUrl,
+          formats: {
+            glb: dataUrl,
+            obj: null,
+            fbx: null,
+          },
+          source: "CometAPI Hunyuan3D-2 (Premium HD)"
+        }
       }
     }
 
-    throw new Error("No model URL in response")
+    throw new Error("No model data in response")
   } catch (error: any) {
     console.error("[CometAPI-3D] Error:", error.message)
     throw error
