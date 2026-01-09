@@ -27,42 +27,26 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
 
     console.log("[Hunyuan3D-2] Connected to Hugging Face space")
 
-    // Try multiple endpoints - the API may have changed
-    let result: any
-    const endpoints = [
-      // Try named endpoints first
-      { endpoint: "/generation", args: { prompt } },
-      { endpoint: "/generate", args: { prompt } },
-      { endpoint: "/text_to_3d", args: { prompt } },
-      { endpoint: "/predict", args: [prompt] },
-      // Try function indices
-      { endpoint: 1, args: [prompt] },
-      { endpoint: 2, args: [prompt] },
-      { endpoint: 3, args: [prompt] },
-    ]
-
-    for (const ep of endpoints) {
-      try {
-        console.log(`[Hunyuan3D-2] Trying endpoint: ${ep.endpoint}`)
-        result = await Promise.race([
-          Array.isArray(ep.args)
-            ? client.predict(ep.endpoint, ep.args)
-            : client.predict(ep.endpoint, ep.args),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Endpoint timeout")), 30000))
-        ])
-        if (result?.data) {
-          console.log("[Hunyuan3D-2] Found working endpoint:", ep.endpoint)
-          break
-        }
-      } catch (e: any) {
-        console.log(`[Hunyuan3D-2] Endpoint ${ep.endpoint} failed:`, e.message?.slice(0, 100))
-        continue
-      }
-    }
-
-    if (!result?.data) {
-      throw new Error("No working endpoint found")
-    }
+    // Use the correct /generation_all endpoint with 13 parameters:
+    // [caption, image, mv_front, mv_back, mv_left, mv_right, steps, guidance_scale, seed, octree_res, rembg, num_chunks, randomize_seed]
+    const result = await Promise.race([
+      client.predict("/generation_all", [
+        prompt,     // caption (text prompt)
+        null,       // image (null for text-to-3D)
+        null,       // mv_image_front
+        null,       // mv_image_back
+        null,       // mv_image_left
+        null,       // mv_image_right
+        30,         // steps (generation steps)
+        5,          // guidance_scale
+        1234,       // seed
+        256,        // octree_res (octree resolution)
+        true,       // rembg (remove background)
+        8000,       // num_chunks
+        true,       // randomize_seed
+      ]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
+    ]) as any
 
     console.log("[Hunyuan3D-2] Raw result:", JSON.stringify(result.data).slice(0, 500))
 
