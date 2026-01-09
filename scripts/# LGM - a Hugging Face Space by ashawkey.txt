@@ -1,0 +1,17 @@
+# LGM - a Hugging Face Space by ashawkey
+
+
+# https://huggingface.co/[Spaces](https://huggingface.co/spaces)https://huggingface.co/[ashawkey](https://huggingface.co/ashawkey) ashawkey / [LGM](https://huggingface.co/spaces/ashawkey/LGM) like 323 Runtime error
+[Spaces](https://huggingface.co/spaces)
+[ashawkey](https://huggingface.co/ashawkey)
+[LGM](https://huggingface.co/spaces/ashawkey/LGM)
+[App](https://huggingface.co/spaces/ashawkey/LGM)
+[Files
+		Files](https://huggingface.co/spaces/ashawkey/LGM/tree/main)
+[Community
+	6](https://huggingface.co/spaces/ashawkey/LGM/discussions)
+
+# runtime error
+
+## Exit code: 1. Reason: model_fp16_fixrot.safetensors: 0%| | 0.00/830M [00:00<?, ?B/s][A model_fp16_fixrot.safetensors: 23%|██▎ | 190M/830M [00:01<00:03, 190MB/s][A model_fp16_fixrot.safetensors: 100%|█████████▉| 830M/830M [00:01<00:00, 572MB/s] Processing ./wheel/diff_gaussian_rasterization-0.0.0-cp310-cp310-linux_x86_64.whl Installing collected packages: diff-gaussian-rasterization Successfully installed diff-gaussian-rasterization-0.0.0 [notice] A new release of pip is available: 25.0.1 -> 25.1.1 [notice] To update, run: pip install --upgrade pip /usr/local/lib/python3.10/site-packages/xformers/ops/fmha/flash.py:211: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch. @torch.library.impl_abstract("xformers_flash::flash_fwd") /usr/local/lib/python3.10/site-packages/xformers/ops/fmha/flash.py:344: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch. @torch.library.impl_abstract("xformers_flash::flash_bwd") /home/user/app/core/attention.py:22: UserWarning: xFormers is available (Attention) warnings.warn("xFormers is available (Attention)") Traceback (most recent call last): File "/home/user/app/app.py", line 29, in <module> from core.models import LGM File "/home/user/app/core/models.py", line 11, in <module> from core.gs import GaussianRenderer File "/home/user/app/core/gs.py", line 7, in <module> from diff_gaussian_rasterization import ( File "/usr/local/lib/python3.10/site-packages/diff_gaussian_rasterization/__init__.py", line 15, in <module> from . import _C ImportError: libcudart.so.11.0: cannot open shared object file: No such file or directory
+Container logs:

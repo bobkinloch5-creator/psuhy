@@ -9,3 +9,4 @@ WHERE username = 'thearchitectofthemultiverse';
 SELECT id, username, is_admin 
 FROM users 
 WHERE username = 'thearchitectofthemultiverse';
+

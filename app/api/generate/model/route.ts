@@ -857,8 +857,44 @@ async function generateModel(prompt: string, style?: string): Promise<ModelResul
     console.log("[3D-Gen] No COMETAPI_KEY - skipping CometAPI")
   }
 
+  // ========== PRIORITY 3: ROBLOX CUBE3D + AI TEXTURES (FREE - COLORED) ==========
+  console.log("[3D-Gen] Trying Roblox Cube3D with AI textures (free fallback)...")
+  try {
+    const cube3dResult = await generateWithCube3DTextured(prompt)
+    if (cube3dResult?.model_url) {
+      console.log("[3D-Gen] ✅ Roblox Cube3D + Textures succeeded!")
+      return cube3dResult
+    }
+  } catch (error: any) {
+    console.error("[3D-Gen] Cube3D Textured failed:", error.message)
+  }
+
+  // ========== PRIORITY 4: HUNYUAN3D GRADIO (FREE - TENCENT) ==========
+  console.log("[3D-Gen] Trying Hunyuan3D Gradio (free fallback)...")
+  try {
+    const hunyuanResult = await generateWithHunyuan3D(prompt)
+    if (hunyuanResult?.model_url) {
+      console.log("[3D-Gen] ✅ Hunyuan3D Gradio succeeded!")
+      return hunyuanResult
+    }
+  } catch (error: any) {
+    console.error("[3D-Gen] Hunyuan3D Gradio failed:", error.message)
+  }
+
+  // ========== PRIORITY 5: TRELLIS (FREE - MICROSOFT) ==========
+  console.log("[3D-Gen] Trying TRELLIS (free fallback)...")
+  try {
+    const trellisResult = await generateWithTrellis(prompt)
+    if (trellisResult?.model_url) {
+      console.log("[3D-Gen] ✅ TRELLIS succeeded!")
+      return trellisResult
+    }
+  } catch (error: any) {
+    console.error("[3D-Gen] TRELLIS failed:", error.message)
+  }
+
   // ========== ALL FAILED ==========
-  throw new Error("All 3D generation services failed. Please check API keys (TRIPO_API_KEY, COMETAPI_KEY).")
+  throw new Error("All 3D generation services failed. Please try again later or check API keys.")
 }
 // ============ STORAGE ============
 async function uploadModelToSupabase(

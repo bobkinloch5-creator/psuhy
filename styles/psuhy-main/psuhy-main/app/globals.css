@@ -1,0 +1,1460 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Enhanced BlaxSmith Premium Roblox Theme with deeper blacks and richer colors */
+  --background: oklch(0.06 0.02 250);
+  --foreground: oklch(0.99 0.005 250);
+  --card: oklch(0.1 0.025 250);
+  --card-foreground: oklch(0.99 0.005 250);
+  --popover: oklch(0.08 0.025 250);
+  --popover-foreground: oklch(0.99 0.005 250);
+  --primary: oklch(0.62 0.26 25);
+  /* Roblox Red - more saturated */
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.16 0.03 250);
+  --secondary-foreground: oklch(0.99 0.005 250);
+  --muted: oklch(0.14 0.025 250);
+  --muted-foreground: oklch(0.58 0.025 250);
+  --accent: oklch(0.68 0.2 55);
+  /* Gold accent - more vibrant */
+  --accent-foreground: oklch(0.08 0.025 250);
+  --destructive: oklch(0.52 0.28 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.2 0.035 250);
+  --input: oklch(0.14 0.03 250);
+  --ring: oklch(0.62 0.26 25);
+  --chart-1: oklch(0.62 0.26 25);
+  --chart-2: oklch(0.68 0.2 55);
+  --chart-3: oklch(0.58 0.22 145);
+  --chart-4: oklch(0.54 0.2 280);
+  --chart-5: oklch(0.48 0.18 200);
+  --radius: 0.875rem;
+  --sidebar: oklch(0.05 0.02 250);
+  --sidebar-foreground: oklch(0.99 0.005 250);
+  --sidebar-primary: oklch(0.62 0.26 25);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.12 0.03 250);
+  --sidebar-accent-foreground: oklch(0.99 0.005 250);
+  --sidebar-border: oklch(0.16 0.025 250);
+  --sidebar-ring: oklch(0.62 0.26 25);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Premium Design System Colors */
+  --electric-blue: #3A7BFF;
+  --neon-mint: #4FF3C0;
+  --soft-purple: #A855F7;
+  --deep-black: #0E0E0F;
+  --graphite: #1A1B1D;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Enhanced Premium Roblox Theme Animations with more dramatic effects */
+@keyframes roblox-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(226, 35, 26, 0.4), 0 0 60px rgba(226, 35, 26, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 50px rgba(226, 35, 26, 0.6), 0 0 100px rgba(226, 35, 26, 0.25);
+  }
+}
+
+@keyframes forge-glow {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(255, 107, 0, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 60px rgba(255, 107, 0, 0.7), 0 0 90px rgba(255, 107, 0, 0.4);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced Roblox-style gradients with more vibrant colors */
+.forge-gradient {
+  background: linear-gradient(135deg,
+      oklch(0.5 0.24 20) 0%,
+      oklch(0.6 0.26 25) 25%,
+      oklch(0.65 0.24 30) 50%,
+      oklch(0.6 0.26 25) 75%,
+      oklch(0.5 0.24 20) 100%);
+  background-size: 300% 300%;
+  animation: forge-glow 8s ease infinite;
+}
+
+.roblox-gradient {
+  background: linear-gradient(135deg, #e23a1a 0%, #ff5530 25%, #ff6b4a 50%, #ff5530 75%, #e23a1a 100%);
+  background-size: 300% 300%;
+  animation: forge-glow 5s ease infinite;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #f7c342 0%, #ffd700 25%, #ffe44d 50%, #ffd700 75%, #f7c342 100%);
+  background-size: 300% 300%;
+  animation: forge-glow 6s ease infinite;
+}
+
+/* Enhanced premium card styles with stronger glassmorphism */
+.premium-card {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.03) 50%,
+      rgba(0, 0, 0, 0.08) 100%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.premium-card:hover {
+  border-color: rgba(226, 35, 26, 0.4);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(226, 35, 26, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Enhanced Roblox button styles with 3D depth */
+.roblox-button {
+  background: linear-gradient(180deg, #e23a1a 0%, #c42e15 100%);
+  box-shadow: 0 6px 0 #8b1e0e, 0 12px 24px rgba(226, 35, 26, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.roblox-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 9px 0 #8b1e0e, 0 18px 36px rgba(226, 35, 26, 0.5);
+}
+
+.roblox-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 #8b1e0e, 0 6px 12px rgba(226, 35, 26, 0.3);
+}
+
+/* Enhanced shine effect with more dramatic lighting */
+.anvil-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.anvil-shine::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 50%, transparent 70%);
+  animation: shine 5s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Enhanced glow effects with more intensity */
+.glow-red {
+  box-shadow: 0 0 30px rgba(226, 35, 26, 0.5), 0 0 60px rgba(226, 35, 26, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.5), 0 0 60px rgba(34, 197, 94, 0.3);
+}
+
+.glow-gold {
+  box-shadow: 0 0 30px rgba(247, 195, 66, 0.5), 0 0 60px rgba(247, 195, 66, 0.3);
+}
+
+/* Text effects */
+.text-glow {
+  text-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
+}
+
+/* Enhanced scrollbar with Roblox theme */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e23a1a, #c42e15);
+  border-radius: 5px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff4a2a, #e23a1a);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(226, 35, 26, 0.4);
+  color: white;
+}
+
+/* Enhanced glassmorphism styles with stronger depth */
+.glassmorphism {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+}
+
+.glassmorphism-dark {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+}
+
+.animated-gradient {
+  background: linear-gradient(135deg,
+      oklch(0.62 0.26 25) 0%,
+      oklch(0.68 0.2 55) 25%,
+      oklch(0.62 0.26 25) 50%,
+      oklch(0.68 0.2 55) 75%,
+      oklch(0.62 0.26 25) 100%);
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Enhanced focus ring with Roblox accent */
+*:focus-visible {
+  outline: 3px solid rgba(226, 35, 26, 0.6);
+  outline-offset: 2px;
+  transition: outline-offset 0.2s ease;
+}
+
+/* ========================================
+   MOBILE-FIRST RESPONSIVE ENHANCEMENTS
+   ======================================== */
+
+/* Mobile adjustments (phones) */
+@media (max-width: 768px) {
+
+  /* Base font size */
+  html {
+    font-size: 14px;
+  }
+
+  /* Full width content on mobile */
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Stack buttons vertically */
+  .flex.gap-2,
+  .flex.gap-3,
+  .flex.gap-4 {
+    flex-direction: column;
+  }
+
+  /* Single column grids */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Smaller text sizes */
+  h1 {
+    font-size: 1.75rem !important;
+  }
+
+  h2 {
+    font-size: 1.5rem !important;
+  }
+
+  h3 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Touch-friendly buttons (44px minimum) */
+  button,
+  .btn,
+  a.btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Responsive tables */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Full screen modals on mobile */
+  [role="dialog"],
+  .modal {
+    max-width: 100vw;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Touch optimization */
+a,
+button,
+input,
+select,
+textarea {
+  /* Highlight tap on mobile */
+  -webkit-tap-highlight-color: rgba(255, 165, 0, 0.2);
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on input focus (iOS fix) */
+@media (max-width: 768px) {
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ========================================
+   PREMIUM VISUAL ENHANCEMENTS
+   ======================================== */
+
+/* Animated gradient border effect */
+@keyframes border-glow {
+
+  0%,
+  100% {
+    border-color: rgba(147, 51, 234, 0.5);
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3), inset 0 0 20px rgba(147, 51, 234, 0.1);
+  }
+
+  25% {
+    border-color: rgba(236, 72, 153, 0.5);
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), inset 0 0 20px rgba(236, 72, 153, 0.1);
+  }
+
+  50% {
+    border-color: rgba(249, 115, 22, 0.5);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3), inset 0 0 20px rgba(249, 115, 22, 0.1);
+  }
+
+  75% {
+    border-color: rgba(6, 182, 212, 0.5);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), inset 0 0 20px rgba(6, 182, 212, 0.1);
+  }
+}
+
+.animated-border {
+  animation: border-glow 6s ease-in-out infinite;
+}
+
+/* Neon glow effects */
+.neon-purple {
+  box-shadow:
+    0 0 5px rgba(147, 51, 234, 0.5),
+    0 0 20px rgba(147, 51, 234, 0.3),
+    0 0 40px rgba(147, 51, 234, 0.2),
+    0 0 60px rgba(147, 51, 234, 0.1);
+}
+
+.neon-orange {
+  box-shadow:
+    0 0 5px rgba(249, 115, 22, 0.5),
+    0 0 20px rgba(249, 115, 22, 0.3),
+    0 0 40px rgba(249, 115, 22, 0.2),
+    0 0 60px rgba(249, 115, 22, 0.1);
+}
+
+.neon-cyan {
+  box-shadow:
+    0 0 5px rgba(6, 182, 212, 0.5),
+    0 0 20px rgba(6, 182, 212, 0.3),
+    0 0 40px rgba(6, 182, 212, 0.2),
+    0 0 60px rgba(6, 182, 212, 0.1);
+}
+
+/* Premium hover lift effect */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* Animated shimmer effect */
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%);
+  animation: shimmer-slide 3s infinite;
+  pointer-events: none;
+}
+
+/* Glassmorphism card with animated border */
+.glass-card-premium {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 50%,
+      rgba(147, 51, 234, 0.05) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.glass-card-premium:hover {
+  border-color: rgba(147, 51, 234, 0.4);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(147, 51, 234, 0.15),
+    0 0 0 1px rgba(147, 51, 234, 0.2) inset;
+  transform: translateY(-2px);
+}
+
+/* Animated background mesh gradient */
+@keyframes mesh-shift {
+
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+
+  25% {
+    background-position: 100% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+.mesh-gradient-bg {
+  background:
+    radial-gradient(at 0% 0%, rgba(147, 51, 234, 0.15) 0%, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(249, 115, 22, 0.1) 0%, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+  background-size: 200% 200%;
+  animation: mesh-shift 15s ease infinite;
+}
+
+/* Premium button with glow on hover */
+.btn-premium {
+  position: relative;
+  background: linear-gradient(135deg, #9333ea 0%, #ec4899 50%, #f97316 100%);
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+  transition: all 0.3s ease;
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #9333ea, #ec4899, #f97316, #06b6d4);
+  background-size: 400% 400%;
+  animation: gradient-shift 3s ease infinite;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  filter: blur(12px);
+}
+
+.btn-premium:hover::before {
+  opacity: 1;
+}
+
+/* Floating animation for accent elements */
+@keyframes float-subtle {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+}
+
+.float-element {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+/* Animated glowing dot */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 4px currentColor, 0 0 8px currentColor;
+    opacity: 1;
+  }
+
+  50% {
+    box-shadow: 0 0 8px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    opacity: 0.8;
+  }
+}
+
+.status-dot-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Text gradient with animation */
+.text-gradient-animated {
+  background: linear-gradient(135deg, #9333ea, #ec4899, #f97316, #06b6d4);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* Enhanced input focus glow */
+.input-glow:focus {
+  box-shadow:
+    0 0 0 2px rgba(147, 51, 234, 0.3),
+    0 0 20px rgba(147, 51, 234, 0.2),
+    0 0 40px rgba(147, 51, 234, 0.1);
+}
+
+/* Style card hover ripple effect */
+@keyframes ripple-out {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.style-card-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  animation: ripple-out 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* ========================================
+   PREMIUM BLAXSMITH DESIGN SYSTEM
+   Electric Blue & Neon Mint Accents
+   ======================================== */
+
+/* Electric Blue glow effects */
+.neon-blue {
+  box-shadow:
+    0 0 5px rgba(58, 123, 255, 0.5),
+    0 0 20px rgba(58, 123, 255, 0.3),
+    0 0 40px rgba(58, 123, 255, 0.2);
+}
+
+.glow-blue {
+  box-shadow: 0 0 30px rgba(58, 123, 255, 0.5), 0 0 60px rgba(58, 123, 255, 0.3);
+}
+
+/* Neon Mint glow effects */
+.neon-mint {
+  box-shadow:
+    0 0 5px rgba(79, 243, 192, 0.5),
+    0 0 20px rgba(79, 243, 192, 0.3),
+    0 0 40px rgba(79, 243, 192, 0.2);
+}
+
+.glow-mint {
+  box-shadow: 0 0 30px rgba(79, 243, 192, 0.5), 0 0 60px rgba(79, 243, 192, 0.3);
+}
+
+/* Premium button with Electric Blue */
+.btn-electric {
+  background: linear-gradient(135deg, #3A7BFF 0%, #2563eb 100%);
+  box-shadow: 0 4px 20px rgba(58, 123, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.btn-electric:hover {
+  box-shadow: 0 8px 40px rgba(58, 123, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Premium card with blue glow on hover */
+.card-premium {
+  background: linear-gradient(135deg, rgba(26, 27, 29, 0.9) 0%, rgba(14, 14, 15, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-premium:hover {
+  border-color: rgba(58, 123, 255, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(58, 123, 255, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Success card with mint accent */
+.card-success {
+  border-color: rgba(79, 243, 192, 0.3);
+}
+
+.card-success:hover {
+  border-color: rgba(79, 243, 192, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(79, 243, 192, 0.15);
+}
+
+/* Magnetic button effect */
+.btn-magnetic {
+  transition: transform 0.2s ease-out;
+}
+
+/* Smooth parallax sections */
+.parallax-section {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Premium input with glow */
+.input-premium {
+  background: rgba(26, 27, 29, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.input-premium:focus {
+  border-color: rgba(58, 123, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(58, 123, 255, 0.2), 0 0 20px rgba(58, 123, 255, 0.1);
+  outline: none;
+}
+
+/* AI energy gradient animation */
+@keyframes ai-energy {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.ai-gradient {
+  background: linear-gradient(135deg, #3A7BFF, #A855F7, #4FF3C0, #3A7BFF);
+  background-size: 300% 300%;
+  animation: ai-energy 6s ease infinite;
+}
+
+/* Text gradient with new colors */
+.text-gradient-premium {
+  background: linear-gradient(135deg, #3A7BFF 0%, #A855F7 50%, #4FF3C0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Hero background with mesh gradient */
+.hero-mesh {
+  background:
+    radial-gradient(at 10% 20%, rgba(58, 123, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(at 90% 80%, rgba(79, 243, 192, 0.1) 0%, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 70%);
+}
+
+/* Section divider gradient */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(58, 123, 255, 0.5), transparent);
+}
+
+/* Premium Animation Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+/* ========================================
+   COMPREHENSIVE MOBILE RESPONSIVENESS
+   BlaxSmith Mobile-First Design
+   ======================================== */
+
+/* Mobile Header Improvements */
+@media (max-width: 768px) {
+
+  /* Compact header on mobile */
+  header,
+  .header,
+  nav {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Make logo smaller on mobile */
+  header img,
+  .header img,
+  nav img {
+    height: 32px !important;
+    width: auto !important;
+  }
+
+  /* Hide clock/time on mobile - too cluttered */
+  .clock-container,
+  [class*="clock"],
+  .time-display {
+    display: none !important;
+  }
+
+  /* Compact credits display on mobile */
+  .credits-display,
+  [class*="credits"] {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* User avatar smaller on mobile */
+  .user-avatar,
+  [class*="avatar"] {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Full-width cards on mobile */
+  .tool-card,
+  .feature-card,
+  [class*="card"] {
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Stack navigation items */
+  .nav-items,
+  .nav-links {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Larger touch targets for buttons */
+  button,
+  .btn,
+  a[role="button"] {
+    min-height: 48px !important;
+    min-width: 48px !important;
+    padding: 0.75rem 1.5rem !important;
+    font-size: 1rem !important;
+  }
+
+  /* Single column grid on mobile */
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Responsive text sizes */
+  .text-4xl {
+    font-size: 1.75rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.5rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.1rem !important;
+  }
+
+  /* Full-width inputs */
+  input,
+  textarea,
+  select {
+    width: 100% !important;
+    min-height: 48px !important;
+    font-size: 16px !important;
+    /* Prevents iOS zoom on focus */
+  }
+
+  /* Responsive padding */
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  .p-8 {
+    padding: 1.25rem !important;
+  }
+
+  .px-6 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .py-8 {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+
+  /* Responsive gaps */
+  .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .gap-8 {
+    gap: 1.25rem !important;
+  }
+
+  /* Welcome text responsiveness */
+  h1,
+  h2,
+  h3 {
+    text-align: center !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Fix horizontal overflow */
+  body,
+  html {
+    overflow-x: hidden !important;
+  }
+
+  /* Mobile modal fullscreen */
+  [role="dialog"],
+  .modal,
+  .popup {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide decorative elements on mobile */
+  .decoration,
+  .accent-orb,
+  .glow-orb {
+    display: none !important;
+  }
+
+  /* Reduce animation complexity on mobile */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.3s !important;
+  }
+
+  /* Stack flex containers vertically on mobile */
+  .flex.items-center.gap-4,
+  .flex.items-center.gap-6 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Keep header row items horizontal */
+  header .flex,
+  .header-inner .flex {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+}
+
+/* Small mobile (phones under 375px) */
+@media (max-width: 375px) {
+  .text-4xl {
+    font-size: 1.5rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.1rem !important;
+  }
+
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+
+  .p-6 {
+    padding: 0.875rem !important;
+  }
+
+  button,
+  .btn {
+    padding: 0.625rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Tablet (768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+
+  /* Disable hover effects on touch devices */
+  .hover-lift:hover {
+    transform: none !important;
+  }
+
+  /* Larger click targets */
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  /* Remove sticky positioning on mobile (causes issues) */
+  .sticky {
+    position: relative !important;
+  }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+
+  header,
+  .header {
+    padding: 0.5rem 1rem !important;
+  }
+
+  h1,
+  h2 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+
+  .glassmorphism,
+  .glass-card-premium {
+    background: rgba(0, 0, 0, 0.9) !important;
+    border: 2px solid white !important;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   VIEW MODE TOGGLE SYSTEM
+   Force Mobile/Desktop layouts
+   ======================================== */
+
+/* Force Mobile Layout (regardless of screen size) */
+body.force-mobile {
+
+  /* Compact header */
+  header,
+  .header,
+  nav {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Hide clock on mobile */
+  .clock-container,
+  [class*="clock"],
+  .time-display {
+    display: none !important;
+  }
+
+  /* Smaller logo */
+  header img,
+  .header img {
+    height: 28px !important;
+    width: auto !important;
+  }
+
+  /* Single column grids */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stack flex containers */
+  .flex.items-center.gap-4,
+  .flex.items-center.gap-6,
+  .flex.gap-4,
+  .flex.gap-6 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Keep header row horizontal */
+  header .flex,
+  nav .flex,
+  .header-row {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  /* Responsive text */
+  .text-4xl {
+    font-size: 1.5rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.1rem !important;
+  }
+
+  /* Full width cards */
+  [class*="card"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Larger touch targets */
+  button,
+  .btn,
+  a[role="button"],
+  input,
+  select,
+  textarea {
+    min-height: 48px !important;
+    font-size: 16px !important;
+  }
+
+  /* Reduce padding */
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  .p-8 {
+    padding: 1.25rem !important;
+  }
+
+  .px-6 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Compact avatar */
+  [class*="avatar"] {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Center headings */
+  h1,
+  h2,
+  h3 {
+    text-align: center !important;
+  }
+}
+
+/* Force Desktop Layout (regardless of screen size) */
+body.force-desktop {
+
+  /* Reset to desktop styles */
+  header,
+  .header,
+  nav {
+    flex-wrap: nowrap !important;
+    gap: 1rem !important;
+    padding: 1rem 2rem !important;
+  }
+
+  /* Show clock */
+  .clock-container,
+  [class*="clock"],
+  .time-display {
+    display: flex !important;
+  }
+
+  /* Multi-column grids */
+  .grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* Horizontal flex */
+  .flex.items-center.gap-4,
+  .flex.items-center.gap-6,
+  .flex.gap-4,
+  .flex.gap-6 {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  /* Standard text sizes */
+  .text-4xl {
+    font-size: 2.25rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.875rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.5rem !important;
+  }
+
+  /* Desktop padding */
+  .p-6 {
+    padding: 1.5rem !important;
+  }
+
+  .p-8 {
+    padding: 2rem !important;
+  }
+
+  /* Headings left aligned */
+  h1,
+  h2,
+  h3 {
+    text-align: left !important;
+  }
+}
+
+/* View Mode Toggle positioning */
+.view-mode-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile-specific: move toggle to bottom left for thumb reach */
+@media (max-width: 768px),
+(pointer: coarse) {
+  .view-mode-toggle {
+    bottom: 10px;
+    left: 10px;
+    right: auto;
+  }
+}
+
+/* Ensure proper mobile viewport */
+@media screen and (max-width: 768px) {
+
+  /* Base mobile improvements */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    min-width: 320px !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Prevent horizontal scroll */
+  *,
+  *::before,
+  *::after {
+    max-width: 100vw;
+  }
+
+  /* Better image scaling */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Full width sections */
+  main,
+  section,
+  article,
+  .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* iPhone specific safe areas */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .view-mode-toggle {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  body.force-mobile footer {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 768px) {
+  footer {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
