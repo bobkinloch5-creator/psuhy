@@ -34,11 +34,11 @@ const STYLE_OPTIONS = [
     { id: "anime", name: "Detailed Anime", icon: "✨", image: "/images/styles/anime.png" },
     { id: "stylized_anime", name: "Stylized Anime", icon: "🌸", image: "/images/styles/stylized.png" },
     { id: "lowpoly", name: "Low Poly", icon: "💎", image: "/images/styles/lowpoly.png" },
-    { id: "clay", name: "Clay Morphic", icon: "🧱", image: "/images/styles/clay.png" },
-    { id: "cozy", name: "Cozy Mobile", icon: "🏠", image: "/images/styles/cozy.png" },
-    { id: "isometric", name: "Isometric", icon: "🏰", image: "/images/styles/isometric.png" },
-    { id: "retro", name: "Retro/90s", icon: "📺", image: "/images/styles/retro.png" },
-    { id: "hand_painted", name: "Hand-Painted", icon: "🎨", image: "/images/styles/hand_painted.png" },
+    { id: "clay", name: "Clay Morphic", icon: "🧱", image: "/styles/clay-morphic.png" },
+    { id: "cozy", name: "Cozy Mobile", icon: "🏠", image: "/styles/cozy-mobile.png" },
+    { id: "isometric", name: "Isometric", icon: "🏰", image: "/styles/isometric.png" },
+    { id: "retro", name: "Retro/90s", icon: "📺", image: "/styles/retro-90s.png" },
+    { id: "hand_painted", name: "Hand-Painted", icon: "🎨", image: "/styles/hand-painted.png" },
 ]
 
 const QUALITY_OPTIONS = [
