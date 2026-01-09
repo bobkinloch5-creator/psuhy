@@ -33,7 +33,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
       },
       body: JSON.stringify({
         model: "flux-schnell",  // Fast image generation
-        prompt: `${prompt}, 3D render, single object, isometric view, centered, studio lighting, white background, high quality`,
+        prompt: `${prompt}, 3D render, single object, isometric view, centered, studio lighting, white background, high quality, vibrant colors, detailed textures, fully colored`,
         n: 1,
         size: "1024x1024",
       }),
@@ -57,7 +57,7 @@ async function generateWithCometAPI(prompt: string): Promise<ModelResult> {
     // Step 2: Generate 3D model using Hunyuan3D-2 via same endpoint (OpenAI-compatible)
     console.log("[CometAPI-3D] Step 2: Generating HIGH QUALITY 3D model with Hunyuan3D-2...")
 
-    const enhancedPrompt = `${prompt}, highly detailed 3D model, clean topology, sharp edges, professional quality, game-ready asset, 4K textures`
+    const enhancedPrompt = `${prompt}, highly detailed 3D model with FULL COLOR TEXTURES, vibrant colors, PBR materials, albedo map, normal map, clean topology, sharp edges, professional quality, game-ready asset, 4K textures, NOT WHITE, NOT GREY, FULLY TEXTURED AND COLORED`
 
     const modelResponse = await fetch("https://api.cometapi.com/v1/images/generations", {
       method: "POST",
@@ -150,7 +150,7 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
     // Use the correct /generation_all endpoint with 13 parameters:
     // [caption, image, mv_front, mv_back, mv_left, mv_right, steps, guidance_scale, seed, octree_res, rembg, num_chunks, randomize_seed]
     // ULTRA HIGH QUALITY: absolute maximum settings for best results
-    const enhancedPrompt = `${prompt}, highly detailed 3D model, clean topology, sharp edges, professional quality, game-ready asset`
+    const enhancedPrompt = `${prompt}, highly detailed 3D model with FULL COLOR TEXTURES, vibrant colors, PBR materials, clean topology, sharp edges, professional quality, game-ready asset, NOT WHITE, FULLY COLORED AND TEXTURED`
     const result = await Promise.race([
       client.predict("/generation_all", [
         enhancedPrompt,  // Enhanced caption for better quality
