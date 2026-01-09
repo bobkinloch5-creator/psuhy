@@ -152,6 +152,13 @@ export function Footer() {
                         </a>
                     </div>
                 </div>
+
+                {/* Bug Report Notice */}
+                <div className="text-center mt-8 pt-6 border-t border-white/5">
+                    <p className="text-zinc-500 text-sm">
+                        🐛 Found a bug or have feedback? <a href="https://discord.gg/xdFVu6cagw" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">Report it on our Discord</a>
+                    </p>
+                </div>
             </div>
         </footer>
     )
