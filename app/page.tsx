@@ -283,6 +283,12 @@ export default async function HomePage() {
                 >
                   YouTube
                 </a>
+                <a
+                  href="mailto:brotmank100@gmail.com"
+                  className="hover:text-green-400 transition-colors font-semibold"
+                >
+                  Contact
+                </a>
                 <a href="/docs" className="hover:text-white transition-colors">
                   Docs
                 </a>
