@@ -104,7 +104,7 @@ async function generateWithHunyuan3D(prompt: string): Promise<ModelResult> {
   }
 }
 
-// ============ CUBE3D FALLBACK (FREE - ROBLOX) ============
+// ============ CUBE3D (FREE - ROBLOX OPTIMIZED) ============
 async function generateWithCube3D(prompt: string): Promise<ModelResult> {
   console.log("[Cube3D] Generating with Roblox Cube3D:", prompt)
 
@@ -116,15 +116,23 @@ async function generateWithCube3D(prompt: string): Promise<ModelResult> {
       new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 30000))
     ]) as any
 
+    console.log("[Cube3D] Connected to Roblox space")
+
+    // Use the handle_text_prompt function with correct parameters:
+    // [input_prompt, use_bbox, bbox_x, bbox_y, bbox_z, hi_res]
     const result = await Promise.race([
-      client.predict("/predict", [
-        prompt,
-        1.0,
-        1.0,
-        1.0,
+      client.predict("/handle_text_prompt", [
+        prompt,       // input_prompt - the text description
+        false,        // use_bbox - whether to constrain dimensions
+        1.0,          // bbox_x - length (if use_bbox is true)
+        1.0,          // bbox_y - height (if use_bbox is true)
+        1.0,          // bbox_z - depth (if use_bbox is true)
+        true,         // hi_res - enable high resolution for better quality
       ]),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 120000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Generation timeout")), 180000))
     ]) as any
+
+    console.log("[Cube3D] Raw result:", JSON.stringify(result.data).slice(0, 500))
 
     const resultData = result.data as any[]
 
@@ -142,7 +150,7 @@ async function generateWithCube3D(prompt: string): Promise<ModelResult> {
             obj: modelUrl.includes('.obj') ? modelUrl : modelUrl,
             fbx: null,
           },
-          source: "Cube3D (Roblox)"
+          source: "Cube3D (Roblox Optimized)"
         }
       }
     }
@@ -410,14 +418,14 @@ async function generateWithLGM(prompt: string): Promise<ModelResult> {
 
 // ============ MAIN GENERATION (PRIORITIZE TEXTURED) ============
 async function generateModel(prompt: string, style?: string): Promise<ModelResult> {
-  // Try textured model generators first, then fall back to untextured
-  // Expanded variety of generators for more reliable 3D model generation
+  // Try generators in order of preference for Roblox assets
+  // Cube3D first (official Roblox model), then textured options, then fallbacks
   const generators = [
-    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },  // Tencent - high quality
+    { name: "Cube3D", fn: generateWithCube3D },           // Roblox's official - best for game assets
+    { name: "Hunyuan3D-2", fn: generateWithHunyuan3D },  // Tencent - high quality with textures
     { name: "TripoSR", fn: generateWithTripoSR },        // Stability AI - textured
     { name: "InstantMesh", fn: generateWithInstantMesh }, // TencentARC - textured
-    { name: "LGM", fn: generateWithLGM },                 // Large Gaussian Model
-    { name: "Cube3D", fn: generateWithCube3D },           // Roblox optimized
+    { name: "LGM", fn: generateWithLGM },                 // Large Gaussian Model - textured
     { name: "Shap-E", fn: generateWithShapE },            // OpenAI - fallback
   ]
 
